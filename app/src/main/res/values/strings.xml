@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Ad-Utils</string>
+    <string name="banner_ad_example">Banner Ad Example</string>
+    <string name="interstitial_ad_example">Interstitial Ad Example</string>
+    <string name="native_ad_example">Native Ad Example</string>
+    <string name="app_open_ad_example">App Open Ad Example</string>
+</resources>
