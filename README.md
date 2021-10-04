@@ -18,7 +18,7 @@ allprojects {
 }
 
 dependencies {
-        implementation 'com.github.Appyhigh:ad-utils:Tag'
+   implementation 'com.github.Appyhigh:ad-utils:1.0.0'
 }
 ```
 
