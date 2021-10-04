@@ -33,10 +33,10 @@ Initialize Sdk with App Open Ad
 
 ```kotlin
 AdSdk().initialize(
-            applicationContext as MyApp,
-            "ca-app-pub-3940256099942544/3419835294",
-            appOpenAdCallback
-        )
+    applicationContext as MyApp,
+    "ca-app-pub-3940256099942544/3419835294",
+    appOpenAdCallback
+)
 ```
 
 ## Banner Ad
@@ -54,11 +54,11 @@ AdSdk().initialize(
  */
      
 AdSdk().loadBannerAd(
-            binding.llRoot,
-            bannerAdUnit,
-            AdSize.BANNER,
-            null
-        )
+    binding.llRoot,
+    bannerAdUnit,
+    AdSize.BANNER,
+    null
+)
 ```
 
 ## Interstitial Ad
@@ -122,10 +122,10 @@ interstitialAd?.show(this)
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
  */
 AdSdk().loadNativeAd(
-            "ca-app-pub-3940256099942544/2247696110",
-            binding.llRoot,
-            null,
-            R.layout.ad_item_big
-        )
+    "ca-app-pub-3940256099942544/2247696110",
+    binding.llRoot,
+    null,
+    R.layout.ad_item_big
+)
 ```
 
