@@ -4,14 +4,21 @@
 An ad util library to facilitate easy and standardized implementation of latest Admob SDK
 
 ## Initialization
-Add the module to your `build.gradle` file and `settings.gradle`
+
 
 In your  `build.gradle`:
 
 ```groovy
 
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+
 dependencies {
-    implementation project(path: ':adutils')
+        implementation 'com.github.Appyhigh:ad-utils:Tag'
 }
 ```
 
@@ -32,35 +39,11 @@ AdSdk().initialize(
 Initialize Sdk with App Open Ad
 
 ```kotlin
-/**
-* Call initialize with you Application class object
-*
-* @param app -> Pass your application context here
-* @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
-* @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
-*/
 AdSdk().initialize(
     applicationContext as MyApp,
     "ca-app-pub-3940256099942544/3419835294",
     appOpenAdCallback
 )
-
-private val appOpenAdCallback = object : AppOpenAdCallback {
-    override fun onInitSuccess(manager: AppOpenManager) {
-        appOpenManager = manager
-    }
-
-    override fun onAdLoaded() {
-        if (appOpenManager != null) {
-            appOpenManager?.showIfAdLoaded(this@SplashActivity)
-        }
-    }
-
-    override fun onAdClosed() {
-        startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-        finish()
-    }
-}
 ```
 
 ## Banner Ad
@@ -151,6 +134,5 @@ AdSdk().loadNativeAd(
     null,
     R.layout.ad_item_big
 )
-
 ```
 
