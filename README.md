@@ -151,5 +151,6 @@ AdSdk().loadNativeAd(
     null,
     R.layout.ad_item_big
 )
+
 ```
 
