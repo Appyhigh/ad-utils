@@ -33,7 +33,7 @@ Add these configurations to you AndroidManifest.xml
 Initialize Sdk without App Open Ad
 
 ```kotlin
-AdSdk().initialize(
+AdSdk().initialize(applicationContext as MyApp)
 ```
 
 Initialize Sdk with App Open Ad
