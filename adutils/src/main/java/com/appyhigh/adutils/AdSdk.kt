@@ -14,6 +14,8 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
 class AdSdk {
     companion object {
@@ -153,6 +155,66 @@ class AdSdk {
                                     Log.d(TAG, "Ad showed fullscreen content.")
                                     mInterstitialAd = null
                                     interstitialAdUtilLoadCallback?.onAdShowedFullScreenContent()
+                                }
+                            }
+                    }
+                },
+            )
+        } else {
+            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
+        }
+    }
+
+    /**
+     * Call loadRewardedAd with following params to load an rewarded ad
+     *
+     * @param adUnit -> Pass the adUnit id in this parameter
+     * @param rewardedAdUtilLoadCallback -> nullable callback to register rewarded ad load events
+     *
+     * IMPORTANT: You wont be able to show ad if you pass a null callback
+     */
+
+    fun loadRewardedAd(
+        adUnit: String,
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
+    ) {
+        if (application != null) {
+            var mRewardedAd: RewardedAd?
+            val adRequest = AdRequest.Builder().build()
+            RewardedAd.load(
+                application!!,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        Log.d(TAG, adError.message)
+                        mRewardedAd = null
+                        rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, mRewardedAd)
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        Log.d(TAG, "Ad was loaded.")
+                        mRewardedAd = rewardedAd
+                        rewardedAdUtilLoadCallback?.onAdLoaded(rewardedAd)
+
+                        mRewardedAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdDismissedFullScreenContent() {
+                                    Log.d(TAG, "Ad was dismissed.")
+                                    rewardedAdUtilLoadCallback?.onAdDismissedFullScreenContent()
+                                }
+
+                                override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
+                                    Log.d(TAG, "Ad failed to show.")
+                                    rewardedAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
+                                        adError,
+                                    )
+                                }
+
+                                override fun onAdShowedFullScreenContent() {
+                                    Log.d(TAG, "Ad showed fullscreen content.")
+                                    mRewardedAd = null
+                                    rewardedAdUtilLoadCallback?.onAdShowedFullScreenContent()
                                 }
                             }
                     }
