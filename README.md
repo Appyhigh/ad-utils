@@ -117,6 +117,55 @@ interstitialAd?.show(this)
     
 ```
 
+## Rewarded Ad
+
+```kotlin
+/**
+ * Call loadRewardedAd with following params to load an rewarded ad
+ *
+ * @param adUnit -> Pass the adUnit id in this parameter
+ * @param rewardedAdUtilCallback -> nullable callback to register rewarded ad load events
+ *
+ * IMPORTANT: You wont be able to show ad if you pass a null callback
+ */
+
+AdSdk().loadRewardedAd(
+            "ca-app-pub-3940256099942544/5224354917",
+            mRewardedAdUtilCallback
+        )
+
+//Callback Registration
+
+    private val mRewardedAdUtilCallback = object : RewardedAdUtilLoadCallback {
+        override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
+            rewardedAd = ad
+        }
+
+        override fun onAdLoaded(ad: RewardedAd?) {
+            rewardedAd = ad
+        }
+
+        override fun onAdDismissedFullScreenContent() {
+            /**
+             * Comment this if you want the ad to load just once
+             * Uncomment this to load ad again once shown
+             */
+            loadRewardedAd()
+        }
+
+        override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
+
+        override fun onAdShowedFullScreenContent() {
+            rewardedAd = null
+        }
+    }
+
+//Show Ad
+
+rewardedAd?.show(this)
+    
+```
+
 ## Load a Native Ad
 
 ```kotlin
