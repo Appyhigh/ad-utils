@@ -16,6 +16,11 @@ import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import kotlin.concurrent.fixedRateTimer
+import com.google.android.gms.common.ConnectionResult
+
+import android.app.Activity
+import com.google.android.gms.common.GoogleApiAvailability
+
 
 class AdSdk {
     companion object {
@@ -42,59 +47,69 @@ class AdSdk {
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L
     ) {
-        if (application == null) {
-            bannerAdRefreshTimer = bannerRefreshTimer
-            nativeAdRefreshTimer = nativeRefreshTimer
+        if (isGooglePlayServicesAvailable(app)) {
+            if (application == null) {
+                bannerAdRefreshTimer = bannerRefreshTimer
+                nativeAdRefreshTimer = nativeRefreshTimer
 
-            if (bannerAdRefreshTimer != 0L) {
-                fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
-                    for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
-                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                            Handler(Looper.getMainLooper()).post {
-                                loadBannerAd(
-                                    item.value.lifecycle,
-                                    item.key,
-                                    item.value.adUnit,
-                                    item.value.adSize,
-                                    item.value.bannerAdLoadCallback
-                                )
+                if (bannerAdRefreshTimer != 0L) {
+                    fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
+                        for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
+                            if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                                Handler(Looper.getMainLooper()).post {
+                                    loadBannerAd(
+                                        item.value.lifecycle,
+                                        item.key,
+                                        item.value.adUnit,
+                                        item.value.adSize,
+                                        item.value.bannerAdLoadCallback
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (nativeAdRefreshTimer != 0L) {
+                    fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
+                        for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
+                            if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                                Handler(Looper.getMainLooper()).post {
+                                    loadNativeAd(
+                                        item.value.lifecycle,
+                                        item.value.adUnit,
+                                        item.key,
+                                        item.value.nativeAdLoadCallback,
+                                        item.value.layoutId
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            if (nativeAdRefreshTimer != 0L) {
-                fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
-                    for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                            Handler(Looper.getMainLooper()).post {
-                                loadNativeAd(
-                                    item.value.lifecycle,
-                                    item.value.adUnit,
-                                    item.key,
-                                    item.value.nativeAdLoadCallback,
-                                    item.value.layoutId
-                                )
-                            }
-                        }
+            application = app
+            application?.let { myApp ->
+                MobileAds.initialize(myApp) {
+                    if (appOpenAdUnit.isNotEmpty()) {
+                        val appOpenManager = AppOpenManager(myApp, appOpenAdUnit, appOpenAdCallback)
+                        appOpenAdCallback?.onInitSuccess(appOpenManager)
                     }
                 }
             }
         }
-
-        application = app
-        application?.let { myApp ->
-            MobileAds.initialize(myApp) {
-                if (appOpenAdUnit.isNotEmpty()) {
-                    val appOpenManager = AppOpenManager(myApp, appOpenAdUnit, appOpenAdCallback)
-                    appOpenAdCallback?.onInitSuccess(appOpenManager)
-                }
-            }
-        }
-
     }
 
+    private fun isGooglePlayServicesAvailable(application: Application): Boolean {
+        val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
+        val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(application)
+        if (status != ConnectionResult.SUCCESS) {
+            Toast.makeText(application, "Some Features might misbehave as Google Play Services are not available!", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
 
     /**
      * Call loadBannerAd with following parameters to load a banner ad
@@ -153,8 +168,6 @@ class AdSdk {
                     bannerAdLoadCallback?.onAdClosed()
                 }
             }
-        } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
     }
 
@@ -213,8 +226,6 @@ class AdSdk {
                     }
                 },
             )
-        } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
     }
 
@@ -273,8 +284,6 @@ class AdSdk {
                     }
                 },
             )
-        } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
     }
 
@@ -337,8 +346,6 @@ class AdSdk {
                 )
                 .build()
             adLoader?.loadAd(AdRequest.Builder().build())
-        } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
     }
 
