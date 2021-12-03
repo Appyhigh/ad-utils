@@ -18,7 +18,8 @@ class SplashActivity : AppCompatActivity() {
         AdSdk().initialize(
             applicationContext as MyApp,
             "ca-app-pub-3940256099942544/3419835294",
-            appOpenAdCallback
+            appOpenAdCallback,
+            0L,0L
         )
         Handler(Looper.getMainLooper()).postDelayed({
             if (appOpenManager == null) {
