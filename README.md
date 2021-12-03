@@ -64,8 +64,32 @@ AdSdk().loadBannerAd(
     binding.llRoot,
     bannerAdUnit,
     AdSize.BANNER,
-    null
+    bannerAdLoadCallback
 )
+
+private val bannerAdLoadCallback = object :BannerAdLoadCallback{
+    override fun onAdLoaded() {
+        Log.d("BannerAdLoadCallback","onAdLoaded")
+    }
+
+    override fun onAdFailedToLoad(adError: LoadAdError) {
+        Log.d("BannerAdLoadCallback","onAdFailedToLoad")
+    }
+
+    override fun onAdOpened() {
+        Log.d("BannerAdLoadCallback","onAdOpened")
+    }
+
+    override fun onAdClicked() {
+        Log.d("BannerAdLoadCallback","onAdClicked")
+    }
+
+    override fun onAdClosed() {
+        Log.d("BannerAdLoadCallback","onAdClosed")
+    }
+
+}
+
 ```
 
 ## Interstitial Ad
@@ -180,8 +204,22 @@ rewardedAd?.show(this)
 AdSdk().loadNativeAd(
     "ca-app-pub-3940256099942544/2247696110",
     binding.llRoot,
-    null,
+    nativeAdCallBack,
     R.layout.ad_item_big
 )
+
+private val nativeAdCallBack = object :NativeAdLoadCallback{
+    override fun onAdLoaded() {
+        Log.d("NativeAdLoadCallback","onAdLoaded")
+    }
+
+    override fun onAdFailed() {
+        Log.d("NativeAdLoadCallback","onAdFailed")
+    }
+
+    override fun onAdClicked() {
+        Log.d("NativeAdLoadCallback","onAdClicked")
+    }
+}
 ```
 
