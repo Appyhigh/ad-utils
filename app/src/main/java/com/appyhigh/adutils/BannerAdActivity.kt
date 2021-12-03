@@ -1,9 +1,11 @@
 package com.appyhigh.adutils
 
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.databinding.ActivityBannerAdBinding
 import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.LoadAdError
 
 class BannerAdActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBannerAdBinding
@@ -16,7 +18,7 @@ class BannerAdActivity : AppCompatActivity() {
             binding.llRoot,
             bannerAdUnit,
             AdSize.BANNER,
-            null
+            bannerAdLoadCallback
         )
 
         AdSdk().loadBannerAd(
@@ -32,6 +34,29 @@ class BannerAdActivity : AppCompatActivity() {
             AdSize.MEDIUM_RECTANGLE,
             null
         )
+    }
+
+    private val bannerAdLoadCallback = object :BannerAdLoadCallback{
+        override fun onAdLoaded() {
+            Log.d("BannerAdLoadCallback","onAdLoaded")
+        }
+
+        override fun onAdFailedToLoad(adError: LoadAdError) {
+            Log.d("BannerAdLoadCallback","onAdFailedToLoad")
+        }
+
+        override fun onAdOpened() {
+            Log.d("BannerAdLoadCallback","onAdOpened")
+        }
+
+        override fun onAdClicked() {
+            Log.d("BannerAdLoadCallback","onAdClicked")
+        }
+
+        override fun onAdClosed() {
+            Log.d("BannerAdLoadCallback","onAdClosed")
+        }
+
     }
 
     companion object {

@@ -247,6 +247,11 @@ class AdSdk {
                     nativeAd = ad
                 }
                 .withAdListener(object : AdListener() {
+
+                    override fun onAdClicked() {
+                        super.onAdClicked()
+                        nativeAdLoadCallback?.onAdClicked()
+                    }
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         Log.e("Ad Load Failed", adError.toString())
                         nativeAdLoadCallback?.onAdFailed()
