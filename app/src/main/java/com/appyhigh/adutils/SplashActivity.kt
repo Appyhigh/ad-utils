@@ -20,6 +20,7 @@ class SplashActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/3419835294",
             appOpenAdCallback
         )
+        AdSdk().setAdRefreshInterval(10000,10000)
         Handler(Looper.getMainLooper()).postDelayed({
             if (appOpenManager == null) {
                 startActivity(Intent(this@SplashActivity, MainActivity::class.java))

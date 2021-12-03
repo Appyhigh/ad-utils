@@ -15,46 +15,49 @@ class BannerAdActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         AdSdk().loadBannerAd(
-            binding.llRoot,
+            lifecycle,
+            binding.typeOne,
             bannerAdUnit,
             AdSize.BANNER,
             bannerAdLoadCallback
         )
 
         AdSdk().loadBannerAd(
-            binding.llRoot,
+            lifecycle,
+            binding.typeTwo,
             bannerAdUnit,
             AdSize.LARGE_BANNER,
-            null
+            bannerAdLoadCallback
         )
 
         AdSdk().loadBannerAd(
-            binding.llRoot,
+            lifecycle,
+            binding.typeThree,
             bannerAdUnit,
             AdSize.MEDIUM_RECTANGLE,
-            null
+            bannerAdLoadCallback
         )
     }
 
-    private val bannerAdLoadCallback = object :BannerAdLoadCallback{
+    private val bannerAdLoadCallback = object : BannerAdLoadCallback {
         override fun onAdLoaded() {
-            Log.d("BannerAdLoadCallback","onAdLoaded")
+            Log.d("BannerAdLoadCallback", "onAdLoaded")
         }
 
         override fun onAdFailedToLoad(adError: LoadAdError) {
-            Log.d("BannerAdLoadCallback","onAdFailedToLoad")
+            Log.d("BannerAdLoadCallback", "onAdFailedToLoad")
         }
 
         override fun onAdOpened() {
-            Log.d("BannerAdLoadCallback","onAdOpened")
+            Log.d("BannerAdLoadCallback", "onAdOpened")
         }
 
         override fun onAdClicked() {
-            Log.d("BannerAdLoadCallback","onAdClicked")
+            Log.d("BannerAdLoadCallback", "onAdClicked")
         }
 
         override fun onAdClosed() {
-            Log.d("BannerAdLoadCallback","onAdClosed")
+            Log.d("BannerAdLoadCallback", "onAdClosed")
         }
 
     }

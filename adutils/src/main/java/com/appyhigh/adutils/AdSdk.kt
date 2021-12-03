@@ -1,13 +1,12 @@
 package com.appyhigh.adutils
 
 import android.app.Application
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.RatingBar
-import android.widget.TextView
-import androidx.appcompat.widget.LinearLayoutCompat
+import android.widget.*
+import androidx.lifecycle.Lifecycle
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -16,11 +15,14 @@ import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import kotlin.concurrent.fixedRateTimer
 
 class AdSdk {
     companion object {
         private var application: Application? = null
         private var TAG = "AdSdk"
+        private var bannerAdRefreshTimer = 0L
+        private var nativeAdRefreshTimer = 0L
     }
 
     /**
@@ -34,14 +36,53 @@ class AdSdk {
     fun initialize(
         app: Application,
         appOpenAdUnit: String = "",
-        appOpenAdCallback: AppOpenAdCallback?=null
+        appOpenAdCallback: AppOpenAdCallback? = null
     ) {
         application = app
         application?.let { myApp ->
             MobileAds.initialize(myApp) {
                 if (appOpenAdUnit.isNotEmpty()) {
-                    val appOpenManager = AppOpenManager(myApp, appOpenAdUnit,appOpenAdCallback)
+                    val appOpenManager = AppOpenManager(myApp, appOpenAdUnit, appOpenAdCallback)
                     appOpenAdCallback?.onInitSuccess(appOpenManager)
+                }
+            }
+        }
+    }
+
+    fun setAdRefreshInterval(bannerRefreshTimer: Long, nativeRefreshTimer: Long) {
+        if (bannerAdRefreshTimer == 0L && nativeAdRefreshTimer==0L) {
+            bannerAdRefreshTimer = bannerRefreshTimer
+            nativeAdRefreshTimer = nativeRefreshTimer
+
+            fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
+                for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
+                    if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        Handler(Looper.getMainLooper()).post {
+                            loadBannerAd(
+                                item.value.lifecycle,
+                                item.key,
+                                item.value.adUnit,
+                                item.value.adSize,
+                                item.value.bannerAdLoadCallback
+                            )
+                        }
+                    }
+                }
+            }
+
+            fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
+                for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
+                    if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        Handler(Looper.getMainLooper()).post {
+                            loadNativeAd(
+                                item.value.lifecycle,
+                                item.value.adUnit,
+                                item.key,
+                                item.value.nativeAdLoadCallback,
+                                item.value.layoutId
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -59,17 +100,21 @@ class AdSdk {
      */
 
     fun loadBannerAd(
-        llRoot: LinearLayoutCompat,
+        lifecycle: Lifecycle,
+        llRoot: LinearLayout,
         adUnit: String,
         adSize: AdSize,
         bannerAdLoadCallback: BannerAdLoadCallback?
     ) {
         if (application != null) {
+            AdUtilConstants.bannerAdLifeCycleHashMap[llRoot] =
+                BannerAdItem(lifecycle, adUnit, adSize, bannerAdLoadCallback)
             val adRequest = AdRequest.Builder().build()
             val mAdView = AdView(llRoot.context)
             mAdView.adSize = adSize
             mAdView.adUnitId = adUnit
             mAdView.loadAd(adRequest)
+            llRoot.removeAllViews()
             llRoot.addView(mAdView)
 
             mAdView.adListener = object : AdListener() {
@@ -235,12 +280,16 @@ class AdSdk {
      */
 
     fun loadNativeAd(
+        lifecycle: Lifecycle,
         adUnit: String,
-        llRoot: LinearLayoutCompat,
+        llRoot: LinearLayout,
         nativeAdLoadCallback: NativeAdLoadCallback?,
         layoutId: Int = R.layout.ad_item
     ) {
         if (application != null) {
+            AdUtilConstants.nativeAdLifeCycleHashMap[llRoot] = NativeAdItem(
+                lifecycle, adUnit, nativeAdLoadCallback, layoutId
+            )
             var nativeAd: NativeAd? = null
             val adLoader: AdLoader? = AdLoader.Builder(application!!, adUnit)
                 .forNativeAd { ad: NativeAd ->
@@ -252,6 +301,7 @@ class AdSdk {
                         super.onAdClicked()
                         nativeAdLoadCallback?.onAdClicked()
                     }
+
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         Log.e("Ad Load Failed", adError.toString())
                         nativeAdLoadCallback?.onAdFailed()
@@ -325,5 +375,6 @@ class AdSdk {
         (adView.callToActionView as Button).text = nativeAd.callToAction
         adView.setNativeAd(nativeAd)
     }
+
 
 }
