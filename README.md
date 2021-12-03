@@ -39,10 +39,23 @@ AdSdk().initialize(applicationContext as MyApp)
 Initialize Sdk with App Open Ad
 
 ```kotlin
+
+/**
+ * Call initialize with you Application class object
+ *
+ * @param app -> Pass your application context here
+ * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
+ * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
+ * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
+ * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
+ */
+
 AdSdk().initialize(
     applicationContext as MyApp,
     "ca-app-pub-3940256099942544/3419835294",
-    appOpenAdCallback
+    appOpenAdCallback,
+    45000L,
+    60000L
 )
 ```
 

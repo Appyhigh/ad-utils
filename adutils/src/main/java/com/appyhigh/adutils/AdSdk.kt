@@ -21,8 +21,8 @@ class AdSdk {
     companion object {
         private var application: Application? = null
         private var TAG = "AdSdk"
-        private var bannerAdRefreshTimer = 0L
-        private var nativeAdRefreshTimer = 0L
+        private var bannerAdRefreshTimer = 45000L
+        private var nativeAdRefreshTimer = 45000L
     }
 
     /**
@@ -31,13 +31,58 @@ class AdSdk {
      * @param app -> Pass your application context here
      * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
      * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
+     * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
+     * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      */
 
     fun initialize(
         app: Application,
         appOpenAdUnit: String = "",
-        appOpenAdCallback: AppOpenAdCallback? = null
+        appOpenAdCallback: AppOpenAdCallback? = null,
+        bannerRefreshTimer: Long = 45000L,
+        nativeRefreshTimer: Long = 45000L
     ) {
+        if (application == null) {
+            bannerAdRefreshTimer = bannerRefreshTimer
+            nativeAdRefreshTimer = nativeRefreshTimer
+
+            if (bannerAdRefreshTimer != 0L) {
+                fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
+                    for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
+                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                            Handler(Looper.getMainLooper()).post {
+                                loadBannerAd(
+                                    item.value.lifecycle,
+                                    item.key,
+                                    item.value.adUnit,
+                                    item.value.adSize,
+                                    item.value.bannerAdLoadCallback
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (nativeAdRefreshTimer != 0L) {
+                fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
+                    for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
+                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                            Handler(Looper.getMainLooper()).post {
+                                loadNativeAd(
+                                    item.value.lifecycle,
+                                    item.value.adUnit,
+                                    item.key,
+                                    item.value.nativeAdLoadCallback,
+                                    item.value.layoutId
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         application = app
         application?.let { myApp ->
             MobileAds.initialize(myApp) {
@@ -47,46 +92,9 @@ class AdSdk {
                 }
             }
         }
+
     }
 
-    fun setAdRefreshInterval(bannerRefreshTimer: Long, nativeRefreshTimer: Long) {
-        if (bannerAdRefreshTimer == 0L && nativeAdRefreshTimer==0L) {
-            bannerAdRefreshTimer = bannerRefreshTimer
-            nativeAdRefreshTimer = nativeRefreshTimer
-
-            fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
-                for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
-                    if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                        Handler(Looper.getMainLooper()).post {
-                            loadBannerAd(
-                                item.value.lifecycle,
-                                item.key,
-                                item.value.adUnit,
-                                item.value.adSize,
-                                item.value.bannerAdLoadCallback
-                            )
-                        }
-                    }
-                }
-            }
-
-            fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
-                for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                    if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                        Handler(Looper.getMainLooper()).post {
-                            loadNativeAd(
-                                item.value.lifecycle,
-                                item.value.adUnit,
-                                item.key,
-                                item.value.nativeAdLoadCallback,
-                                item.value.layoutId
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * Call loadBannerAd with following parameters to load a banner ad
