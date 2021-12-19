@@ -1,7 +1,9 @@
 package com.appyhigh.adutils
 
-interface NativeAdLoadCallback {
-    fun onAdLoaded()
-    fun onAdFailed()
-    fun onAdClicked()
+import com.google.android.gms.ads.LoadAdError
+
+abstract class NativeAdLoadCallback {
+    open fun onAdLoaded() {}
+    open fun onAdFailed(adError: LoadAdError) {}
+    open fun onAdClicked() {}
 }

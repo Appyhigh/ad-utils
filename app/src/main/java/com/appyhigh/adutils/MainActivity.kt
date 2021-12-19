@@ -88,14 +88,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadInterstitialAd() {
-        AdSdk().loadInterstitialAd(
+        AdSdk.loadInterstitialAd(
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback
         )
     }
 
     private fun loadRewardedAd() {
-        AdSdk().loadRewardedAd(
+        AdSdk.loadRewardedAd(
             "ca-app-pub-3940256099942544/5224354917",
             mRewardedAdUtilCallback
         )

@@ -24,6 +24,7 @@ import java.util.*
 class AppOpenManager(
     private val myApplication: Application,
     private val appOpenAdUnit: String,
+    private val isShownOnlyOnce: Boolean,
     private var appOpenAdCallback: AppOpenAdCallback?
 ) :
     LifecycleObserver,
@@ -32,7 +33,7 @@ class AppOpenManager(
     private var currentActivity: Activity? = null
     private var loadCallback: AppOpenAdLoadCallback? = null
     private var loadTime: Long = 0
-    private var isShown = false
+    private var backgroundTime: Long = 0
 
     /**
      * Creates and returns ad request.
@@ -71,6 +72,7 @@ class AppOpenManager(
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                 super.onAdFailedToLoad(loadAdError)
                 Log.d(LOG_TAG, loadAdError.message)
+                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
             }
 
         }
@@ -110,23 +112,28 @@ class AppOpenManager(
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
             Log.d(LOG_TAG, "Will show ad.")
-            val fullScreenContentCallback: FullScreenContentCallback =
-                object : FullScreenContentCallback() {
+            appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
                     override fun onAdDismissedFullScreenContent() {
                         // Set the reference to null so isAdAvailable() returns false.
                         appOpenAd = null
                         isShowingAd = false
-                        isShown = true
+                        if(isShownOnlyOnce) {
+                            ProcessLifecycleOwner.get().lifecycle.removeObserver(this@AppOpenManager)
+                            currentActivity = null
+                        } else {
+                            fetchAd()
+                        }
                         appOpenAdCallback?.onAdClosed()
                     }
 
-                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {}
+                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                        appOpenAdCallback?.onAdFailedToShow(adError)
+                    }
                     override fun onAdShowedFullScreenContent() {
                         isShowingAd = true
                     }
                 }
-            appOpenAd!!.fullScreenContentCallback = fullScreenContentCallback
-            appOpenAd!!.show(currentActivity!!)
+            currentActivity?.let { appOpenAd!!.show(it) }
         } else {
             Log.d(LOG_TAG, "Ad not loaded yet")
             fetchAd()
@@ -138,13 +145,22 @@ class AppOpenManager(
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        if (!isShown)
-        showAdIfAvailable()
-        Log.d(LOG_TAG, "onStart")
+        val appBackgroundTime = System.currentTimeMillis() - backgroundTime
+        Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
+        if(appBackgroundTime > 30000)
+            showAdIfAvailable()
+    }
+
+    /**
+     * LifecycleObserver methods
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+    fun onStop() {
+        backgroundTime = System.currentTimeMillis()
     }
 
     companion object {
-        private const val LOG_TAG = "AppOpenManager"
+        private const val LOG_TAG = "AdSdk:AppOpenManager"
         private var isShowingAd = false
     }
 
@@ -152,7 +168,9 @@ class AppOpenManager(
      * Constructor
      */
     init {
-        myApplication.registerActivityLifecycleCallbacks(this)
+        if (!isShownOnlyOnce) {
+            myApplication.registerActivityLifecycleCallbacks(this)
+        }
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 }

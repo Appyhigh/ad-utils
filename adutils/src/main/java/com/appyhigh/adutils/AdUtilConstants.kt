@@ -1,7 +1,5 @@
 package com.appyhigh.adutils
 
-import android.widget.LinearLayout
-
 object AdUtilConstants {
 
     enum class BannerAdSize {
@@ -10,7 +8,7 @@ object AdUtilConstants {
         MEDIUM_RECTANGLE
     }
 
-    val bannerAdLifeCycleHashMap = HashMap<LinearLayout, BannerAdItem>()
-    val nativeAdLifeCycleHashMap = HashMap<LinearLayout, NativeAdItem>()
+    val bannerAdLifeCycleHashMap = HashMap<Long, BannerAdItem>()
+    val nativeAdLifeCycleHashMap = HashMap<Long, NativeAdItem>()
 
 }

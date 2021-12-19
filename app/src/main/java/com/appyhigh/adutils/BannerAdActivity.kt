@@ -14,7 +14,7 @@ class BannerAdActivity : AppCompatActivity() {
         binding = ActivityBannerAdBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        AdSdk().loadBannerAd(
+        AdSdk.loadBannerAd(
             lifecycle,
             binding.typeOne,
             bannerAdUnit,
@@ -22,7 +22,7 @@ class BannerAdActivity : AppCompatActivity() {
             bannerAdLoadCallback
         )
 
-        AdSdk().loadBannerAd(
+        AdSdk.loadBannerAd(
             lifecycle,
             binding.typeTwo,
             bannerAdUnit,
@@ -30,7 +30,7 @@ class BannerAdActivity : AppCompatActivity() {
             bannerAdLoadCallback
         )
 
-        AdSdk().loadBannerAd(
+        AdSdk.loadBannerAd(
             lifecycle,
             binding.typeThree,
             bannerAdUnit,
