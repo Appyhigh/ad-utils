@@ -18,7 +18,7 @@ allprojects {
 }
 
 dependencies {
-   implementation 'com.github.Appyhigh:ad-utils:1.0.6'
+   implementation 'com.github.Appyhigh:ad-utils:1.0.7'
 }
 ```
 
@@ -33,7 +33,7 @@ Add these configurations to you AndroidManifest.xml
 Initialize Sdk without App Open Ad
 
 ```kotlin
-AdSdk().initialize(applicationContext as MyApp)
+AdSdk.initialize(applicationContext as MyApp)
 ```
 
 Initialize Sdk with App Open Ad
@@ -50,7 +50,7 @@ Initialize Sdk with App Open Ad
  * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  */
 
-AdSdk().initialize(
+AdSdk.initialize(
     applicationContext as MyApp,
     "ca-app-pub-3940256099942544/3419835294",
     appOpenAdCallback,
@@ -65,15 +65,16 @@ AdSdk().initialize(
 /**
  * Call loadBannerAd with following parameters to load a banner ad
  *
- *
- * @param llRoot -> This is the view (LinearLayoutCompat) you need to supply in which your ad unit will be loaded
- * @param adSize -> Pass the adUnit id in this parameter
+ * @param lifecycle -> Lifecycle of activity in which ad will be loaded
+ * @param viewGroup -> Pass the parent ViewGroup in which your ad unit will be loaded
+ * @param adUnit -> Pass the adUnit id in this parameter
  * @param adSize -> Pass the AdSize for banner that you want to load eg: AdSize.BANNER
  * @param bannerAdLoadCallback -> it is a nullable callback to register ad load events, pass null if you don't need callbacks
  *
  */
-     
-AdSdk().loadBannerAd(
+
+AdSdk.loadBannerAd(
+    lifecycle,
     binding.llRoot,
     bannerAdUnit,
     AdSize.BANNER,
@@ -117,7 +118,7 @@ private val bannerAdLoadCallback = object :BannerAdLoadCallback{
  * IMPORTANT: You wont be able to show ad if you pass a null callback
  */
 
-AdSdk().loadInterstitialAd(
+AdSdk.loadInterstitialAd(
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback
         )
@@ -166,7 +167,7 @@ interstitialAd?.show(this)
  * IMPORTANT: You wont be able to show ad if you pass a null callback
  */
 
-AdSdk().loadRewardedAd(
+AdSdk.loadRewardedAd(
             "ca-app-pub-3940256099942544/5224354917",
             mRewardedAdUtilCallback
         )
@@ -207,18 +208,39 @@ rewardedAd?.show(this)
 
 ```kotlin
 /**
- * Call loadNativeAd with following params to load an interstitial ad
+ * Call loadNativeAd with following params to load a Native Ad
  *
+ *
+ * @param lifecycle -> Lifecycle of activity in which ad will be loaded
  * @param adUnit -> Pass the adUnit id in this parameter
- * @param llRoot -> Pass the parent LinearLayoutCompat to add a native ad in that layout
- * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+ * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
  */
-AdSdk().loadNativeAd(
+AdSdk.loadNativeAd(
+    lifecycle,
+    "ca-app-pub-3940256099942544/2247696110",
+    binding.llRoot,
+    nativeAdCallBack
+)
+
+/**
+ * Call loadNativeAd with following params to load a Native Ad
+ *
+ *
+ * @param lifecycle -> Lifecycle of activity in which ad will be loaded
+ * @param adUnit -> Pass the adUnit id in this parameter
+ * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
+ * @param nativeAdLoadCallback -> nullable callback to register native ad load events
+ * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+ * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView) as params
+ */
+AdSdk.loadNativeAd(
+    lifecycle,
     "ca-app-pub-3940256099942544/2247696110",
     binding.llRoot,
     nativeAdCallBack,
-    R.layout.ad_item_big
+    R.layout.ad_item,
+    this::populateNativeAdView
 )
 
 private val nativeAdCallBack = object :NativeAdLoadCallback{
@@ -226,13 +248,23 @@ private val nativeAdCallBack = object :NativeAdLoadCallback{
         Log.d("NativeAdLoadCallback","onAdLoaded")
     }
 
-    override fun onAdFailed() {
+    override fun onAdFailed(adError: LoadAdError) {
         Log.d("NativeAdLoadCallback","onAdFailed")
     }
 
     override fun onAdClicked() {
         Log.d("NativeAdLoadCallback","onAdClicked")
     }
+}
+
+fun populateNativeAdView(nativeAd: NativeAd, adView: NativeAdView) {
+    val ratingBar = adView.findViewById(R.id.stars) as View
+    adView.starRatingView = ratingBar
+    val adHeadline = adView.findViewById(R.id.headline) as TextView
+    adView.headlineView = adHeadline
+    val adBody = adView.findViewById(R.id.body) as TextView
+    adView.bodyView = adBody
+    adView.setNativeAd(nativeAd)
 }
 ```
 

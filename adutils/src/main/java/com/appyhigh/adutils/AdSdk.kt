@@ -136,9 +136,9 @@ object AdSdk {
     /**
      * Call loadBannerAd with following parameters to load a banner ad
      *
-     *
+     * @param lifecycle -> Lifecycle of activity in which ad will be loaded
      * @param viewGroup -> Pass the parent ViewGroup in which your ad unit will be loaded
-     * @param adSize -> Pass the adUnit id in this parameter
+     * @param adUnit -> Pass the adUnit id in this parameter
      * @param adSize -> Pass the AdSize for banner that you want to load eg: AdSize.BANNER
      * @param bannerAdLoadCallback -> it is a nullable callback to register ad load events, pass null if you don't need callbacks
      *
@@ -327,8 +327,10 @@ object AdSdk {
     }
 
     /**
-     * Call loadNativeAd with following params to load an interstitial ad
+     * Call loadNativeAd with following params to load a Native Ad
      *
+     *
+     * @param lifecycle -> Lifecycle of activity in which ad will be loaded
      * @param adUnit -> Pass the adUnit id in this parameter
      * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
      * @param callback -> nullable callback to register native ad load events
@@ -345,8 +347,10 @@ object AdSdk {
     }
 
     /**
-     * Call loadNativeAd with following params to load an interstitial ad
+     * Call loadNativeAd with following params to load a Native Ad
      *
+     *
+     * @param lifecycle -> Lifecycle of activity in which ad will be loaded
      * @param adUnit -> Pass the adUnit id in this parameter
      * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
@@ -363,13 +367,15 @@ object AdSdk {
     }
 
     /**
-     * Call loadNativeAd with following params to load an interstitial ad
+     * Call loadNativeAd with following params to load a Native Ad
      *
+     *
+     * @param lifecycle -> Lifecycle of activity in which ad will be loaded
      * @param adUnit -> Pass the adUnit id in this parameter
      * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
-     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
      * @param nativeAdLoadCallback -> nullable callback to register native ad load events
-     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
+     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+     * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView?) as params
      */
     fun loadNativeAd(
         lifecycle: Lifecycle,
@@ -388,7 +394,7 @@ object AdSdk {
      * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
      * @param nativeAdLoadCallback -> nullable callback to register native ad load events
-     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
+     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView) as params
      */
     private fun loadNativeAd(
         id: Long,
