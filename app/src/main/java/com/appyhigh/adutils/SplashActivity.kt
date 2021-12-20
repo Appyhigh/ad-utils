@@ -15,7 +15,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        AdSdk().initialize(
+        AdSdk.initialize(
             applicationContext as MyApp,
             "ca-app-pub-3940256099942544/3419835294",
             appOpenAdCallback,
@@ -29,7 +29,7 @@ class SplashActivity : AppCompatActivity() {
         }, 4000)
     }
 
-    private val appOpenAdCallback = object : AppOpenAdCallback {
+    private val appOpenAdCallback = object : AppOpenAdCallback() {
         override fun onInitSuccess(manager: AppOpenManager) {
             appOpenManager = manager
         }

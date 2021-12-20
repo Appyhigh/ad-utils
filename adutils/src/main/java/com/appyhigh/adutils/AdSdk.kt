@@ -5,8 +5,12 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
+import androidx.annotation.LayoutRes
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -15,20 +19,17 @@ import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import kotlin.concurrent.fixedRateTimer
 import com.google.android.gms.common.ConnectionResult
-
-import android.app.Activity
 import com.google.android.gms.common.GoogleApiAvailability
+import kotlin.concurrent.fixedRateTimer
 
 
-class AdSdk {
-    companion object {
-        private var application: Application? = null
-        private var TAG = "AdSdk"
-        private var bannerAdRefreshTimer = 45000L
-        private var nativeAdRefreshTimer = 45000L
-    }
+object AdSdk {
+
+    private var application: Application? = null
+    private var TAG = "AdSdk"
+    private var bannerAdRefreshTimer = 45000L
+    private var nativeAdRefreshTimer = 45000L
 
     /**
      * Call initialize with you Application class object
@@ -39,7 +40,6 @@ class AdSdk {
      * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      */
-
     fun initialize(
         app: Application,
         appOpenAdUnit: String = "",
@@ -58,8 +58,9 @@ class AdSdk {
                             if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                                 Handler(Looper.getMainLooper()).post {
                                     loadBannerAd(
+                                        item.value.id,
                                         item.value.lifecycle,
-                                        item.key,
+                                        item.value.viewGroup,
                                         item.value.adUnit,
                                         item.value.adSize,
                                         item.value.bannerAdLoadCallback
@@ -76,11 +77,13 @@ class AdSdk {
                             if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                                 Handler(Looper.getMainLooper()).post {
                                     loadNativeAd(
+                                        item.value.id,
                                         item.value.lifecycle,
                                         item.value.adUnit,
-                                        item.key,
+                                        item.value.viewGroup,
                                         item.value.nativeAdLoadCallback,
-                                        item.value.layoutId
+                                        item.value.layoutId,
+                                        item.value.populator
                                     )
                                 }
                             }
@@ -93,8 +96,7 @@ class AdSdk {
             application?.let { myApp ->
                 MobileAds.initialize(myApp) {
                     if (appOpenAdUnit.isNotEmpty()) {
-                        val appOpenManager = AppOpenManager(myApp, appOpenAdUnit, appOpenAdCallback)
-                        appOpenAdCallback?.onInitSuccess(appOpenManager)
+                        attachAppOpenAdManager(appOpenAdUnit, true, appOpenAdCallback)
                     }
                 }
             }
@@ -112,33 +114,71 @@ class AdSdk {
     }
 
     /**
+     * Call initialize with you Application class object
+     *
+     * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
+     * @param isShownOnlyOnce -> Pass true if you want to show ad only once
+     * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
+     **/
+    fun attachAppOpenAdManager(
+        appOpenAdUnit: String,
+        isShownOnlyOnce: Boolean = false,
+        appOpenAdCallback: AppOpenAdCallback? = null,
+    ) {
+        if (application != null) {
+            val appOpenManager = AppOpenManager(application!!, appOpenAdUnit, isShownOnlyOnce, appOpenAdCallback)
+            appOpenAdCallback?.onInitSuccess(appOpenManager)
+        } else {
+            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
+        }
+    }
+
+    /**
      * Call loadBannerAd with following parameters to load a banner ad
      *
      *
-     * @param llRoot -> This is the view (LinearLayoutCompat) you need to supply in which your ad unit will be loaded
+     * @param viewGroup -> Pass the parent ViewGroup in which your ad unit will be loaded
      * @param adSize -> Pass the adUnit id in this parameter
      * @param adSize -> Pass the AdSize for banner that you want to load eg: AdSize.BANNER
      * @param bannerAdLoadCallback -> it is a nullable callback to register ad load events, pass null if you don't need callbacks
      *
      */
-
     fun loadBannerAd(
         lifecycle: Lifecycle,
-        llRoot: LinearLayout,
+        viewGroup: ViewGroup,
+        adUnit: String,
+        adSize: AdSize,
+        bannerAdLoadCallback: BannerAdLoadCallback?) {
+        loadBannerAd(System.currentTimeMillis(), lifecycle, viewGroup, adUnit, adSize, bannerAdLoadCallback)
+    }
+
+    private fun loadBannerAd(
+        id: Long,
+        lifecycle: Lifecycle,
+        viewGroup: ViewGroup,
         adUnit: String,
         adSize: AdSize,
         bannerAdLoadCallback: BannerAdLoadCallback?
     ) {
         if (application != null) {
-            AdUtilConstants.bannerAdLifeCycleHashMap[llRoot] =
-                BannerAdItem(lifecycle, adUnit, adSize, bannerAdLoadCallback)
+            if(adUnit.isBlank()) return
+            if(AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+                AdUtilConstants.bannerAdLifeCycleHashMap[id] =
+                    BannerAdItem(id, lifecycle, viewGroup, adUnit, adSize, bannerAdLoadCallback)
+            }
+            lifecycle.addObserver(object : LifecycleObserver {
+                @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                fun onDestroy() {
+                    AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
+                }
+            })
             val adRequest = AdRequest.Builder().build()
-            val mAdView = AdView(llRoot.context)
+            val mAdView = AdView(viewGroup.context)
             mAdView.adSize = adSize
             mAdView.adUnitId = adUnit
             mAdView.loadAd(adRequest)
-            llRoot.removeAllViews()
-            llRoot.addView(mAdView)
+            viewGroup.removeAllViews()
+            viewGroup.addView(mAdView)
 
             mAdView.adListener = object : AdListener() {
                 // Code to be executed when an ad finishes loading.
@@ -179,7 +219,6 @@ class AdSdk {
      *
      * IMPORTANT: You wont be able to show ad if you pass a null callback
      */
-
     fun loadInterstitialAd(
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
@@ -291,22 +330,88 @@ class AdSdk {
      * Call loadNativeAd with following params to load an interstitial ad
      *
      * @param adUnit -> Pass the adUnit id in this parameter
-     * @param llRoot -> Pass the parent LinearLayoutCompat to add a native ad in that layout
+     * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
+     * @param callback -> nullable callback to register native ad load events
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
-     * @param nativeAdLoadCallback -> nullable callback to register native ad load events
      */
-
     fun loadNativeAd(
         lifecycle: Lifecycle,
         adUnit: String,
-        llRoot: LinearLayout,
+        viewGroup: ViewGroup,
+        callback: NativeAdLoadCallback?,
+        @LayoutRes layoutId: Int = R.layout.ad_item
+    ) {
+        loadNativeAd(lifecycle, adUnit, viewGroup, callback, layoutId, null)
+    }
+
+    /**
+     * Call loadNativeAd with following params to load an interstitial ad
+     *
+     * @param adUnit -> Pass the adUnit id in this parameter
+     * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
+     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
+     */
+    fun loadNativeAd(
+        lifecycle: Lifecycle,
+        adUnit: String,
+        viewGroup: ViewGroup,
+        @LayoutRes layoutId: Int = R.layout.ad_item,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
+    ) {
+        loadNativeAd(lifecycle, adUnit, viewGroup, null, layoutId, populator)
+    }
+
+    /**
+     * Call loadNativeAd with following params to load an interstitial ad
+     *
+     * @param adUnit -> Pass the adUnit id in this parameter
+     * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
+     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+     * @param nativeAdLoadCallback -> nullable callback to register native ad load events
+     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
+     */
+    fun loadNativeAd(
+        lifecycle: Lifecycle,
+        adUnit: String,
+        viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
-        layoutId: Int = R.layout.ad_item
+        @LayoutRes layoutId: Int = R.layout.ad_item,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null) {
+        loadNativeAd(System.currentTimeMillis(), lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator)
+    }
+
+    /**
+     * Call loadNativeAd with following params to load an interstitial ad
+     *
+     * @param adUnit -> Pass the adUnit id in this parameter
+     * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
+     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+     * @param nativeAdLoadCallback -> nullable callback to register native ad load events
+     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
+     */
+    private fun loadNativeAd(
+        id: Long,
+        lifecycle: Lifecycle,
+        adUnit: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        @LayoutRes layoutId: Int = R.layout.ad_item,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
     ) {
         if (application != null) {
-            AdUtilConstants.nativeAdLifeCycleHashMap[llRoot] = NativeAdItem(
-                lifecycle, adUnit, nativeAdLoadCallback, layoutId
-            )
+            if(adUnit.isBlank()) return
+            if(AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+                AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
+                    id, lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator
+                )
+            }
+            lifecycle.addObserver(object : LifecycleObserver {
+                @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                fun onDestroy() {
+                    AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
+                }
+            })
             var nativeAd: NativeAd? = null
             val adLoader: AdLoader? = AdLoader.Builder(application!!, adUnit)
                 .forNativeAd { ad: NativeAd ->
@@ -320,8 +425,8 @@ class AdSdk {
                     }
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        Log.e("Ad Load Failed", adError.toString())
-                        nativeAdLoadCallback?.onAdFailed()
+                        Log.e("$TAG: Ad Load Failed", adError.toString())
+                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
                     override fun onAdLoaded() {
@@ -334,9 +439,12 @@ class AdSdk {
                                     layoutId,
                                     null
                                 ) as NativeAdView
-                            populateUnifiedNativeAdView(nativeAd!!, adView)
-                            llRoot.removeAllViews()
-                            llRoot.addView(adView)
+                            if(populator != null)
+                                populator.invoke(nativeAd!!, adView)
+                            else
+                                populateUnifiedNativeAdView(nativeAd!!, adView)
+                            viewGroup.removeAllViews()
+                            viewGroup.addView(adView)
                         }
                     }
                 })
@@ -349,12 +457,9 @@ class AdSdk {
         }
     }
 
-    fun populateUnifiedNativeAdView(
-        nativeAd: NativeAd,
-        adView: NativeAdView?
-    ) {
+    fun populateUnifiedNativeAdView(nativeAd: NativeAd, adView: NativeAdView?) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
-        Log.e("nativead", "ad body : " + nativeAd.body)
+        Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
 
         val icon = nativeAd.icon
         adView.iconView = iconView

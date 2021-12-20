@@ -1,7 +1,12 @@
 package com.appyhigh.adutils
 
-interface AppOpenAdCallback {
-    fun onInitSuccess(manager: AppOpenManager)
-    fun onAdLoaded()
-    fun onAdClosed()
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.LoadAdError
+
+abstract class AppOpenAdCallback {
+    open fun onInitSuccess(manager: AppOpenManager) {}
+    open fun onAdLoaded() {}
+    open fun onAdFailedToLoad(loadAdError: LoadAdError) {}
+    open fun onAdFailedToShow(adError: AdError) {}
+    open fun onAdClosed() {}
 }
