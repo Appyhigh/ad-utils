@@ -14,6 +14,7 @@ import androidx.lifecycle.OnLifecycleEvent
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
@@ -335,15 +336,26 @@ object AdSdk {
      * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
      * @param callback -> nullable callback to register native ad load events
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+     * @param viewId -> according to the value from remote config, layout is loaded.
      */
     fun loadNativeAd(
         lifecycle: Lifecycle,
         adUnit: String,
         viewGroup: ViewGroup,
         callback: NativeAdLoadCallback?,
-        @LayoutRes layoutId: Int = R.layout.ad_item
+        viewId: String,
+        //@LayoutRes layoutId: Int = R.layout.ad_item
     ) {
-        loadNativeAd(lifecycle, adUnit, viewGroup, callback, layoutId, null)
+        @LayoutRes val layoutId = when(viewId) {
+            "1" -> R.layout.native_admob_ad_t1
+            "2" -> R.layout.native_admob_ad_t2
+            "3" -> R.layout.native_admob_ad_t3
+            "4" -> R.layout.native_admob_ad_t4
+            "5" -> R.layout.native_admob_ad_t5
+            else -> R.layout.native_admob_ad_t1
+        }
+        loadNativeAd(lifecycle,adUnit, viewGroup, callback, layoutId, null, viewId)
+
     }
 
     /**
@@ -356,15 +368,15 @@ object AdSdk {
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
      * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
      */
-    fun loadNativeAd(
-        lifecycle: Lifecycle,
-        adUnit: String,
-        viewGroup: ViewGroup,
-        @LayoutRes layoutId: Int = R.layout.ad_item,
-        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
-    ) {
-        loadNativeAd(lifecycle, adUnit, viewGroup, null, layoutId, populator)
-    }
+//    fun loadNativeAd(
+//        lifecycle: Lifecycle,
+//        adUnit: String,
+//        viewGroup: ViewGroup,
+//        @LayoutRes layoutId: Int = R.layout.ad_item,
+//        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
+//    ) {
+//        loadNativeAd(lifecycle, adUnit, viewGroup, null, layoutId, populator)
+//    }
 
     /**
      * Call loadNativeAd with following params to load a Native Ad
@@ -382,9 +394,10 @@ object AdSdk {
         adUnit: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
-        @LayoutRes layoutId: Int = R.layout.ad_item,
-        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null) {
-        loadNativeAd(System.currentTimeMillis(), lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator)
+        @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        viewId: String = "1") {
+        loadNativeAd(System.currentTimeMillis(), lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator, viewId)
     }
 
     /**
@@ -402,8 +415,9 @@ object AdSdk {
         adUnit: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
-        @LayoutRes layoutId: Int = R.layout.ad_item,
-        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
+        @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        viewId: String = "1"
     ) {
         if (application != null) {
             if(adUnit.isBlank()) return
@@ -448,7 +462,7 @@ object AdSdk {
                             if(populator != null)
                                 populator.invoke(nativeAd!!, adView)
                             else
-                                populateUnifiedNativeAdView(nativeAd!!, adView)
+                                populateUnifiedNativeAdView(nativeAd!!, adView, viewId)
                             viewGroup.removeAllViews()
                             viewGroup.addView(adView)
                         }
@@ -463,7 +477,7 @@ object AdSdk {
         }
     }
 
-    fun populateUnifiedNativeAdView(nativeAd: NativeAd, adView: NativeAdView?) {
+    fun populateUnifiedNativeAdView(nativeAd: NativeAd, adView: NativeAdView?, viewId: String) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
 
@@ -476,13 +490,14 @@ object AdSdk {
             adView.iconView?.visibility = View.VISIBLE
         }
 
-        val ratingBar = adView.findViewById(R.id.stars) as View
-        adView.starRatingView = ratingBar
-        if (nativeAd.starRating == null) {
-            adView.starRatingView?.visibility = View.INVISIBLE
+        val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+        adView.mediaView = mediaView
+        val mediaIcon = nativeAd.mediaContent
+        if(mediaIcon == null || viewId == "4") {
+            adView.mediaView?.visibility = View.GONE
         } else {
-            (adView.starRatingView as RatingBar).rating = nativeAd.starRating!!.toFloat()
-            adView.starRatingView?.visibility = View.VISIBLE
+            adView.mediaView?.visibility = View.VISIBLE
+            (adView.mediaView as MediaView).setMediaContent(mediaIcon)
         }
 
         val adHeadline = adView.findViewById(R.id.headline) as TextView
@@ -492,14 +507,29 @@ object AdSdk {
 
         val adBody = adView.findViewById(R.id.body) as TextView
         adView.bodyView = adBody
-        adView.bodyView?.visibility = View.VISIBLE
-        (adView.bodyView as TextView).text = nativeAd.body
+        if(viewId == "2") adView.bodyView?.visibility = View.GONE
+        else {
+            adView.bodyView?.visibility = View.VISIBLE
+            (adView.bodyView as TextView).text = nativeAd.body
+        }
+
+        val adStore = adView.findViewById<TextView>(R.id.ad_store)
+        adView.storeView = adStore
+        if(nativeAd.store!=null && viewId == "4") {
+            adView.storeView?.visibility = View.VISIBLE
+            (adView.storeView as TextView).text = nativeAd.store
+        } else {
+            adView.storeView?.visibility = View.GONE
+        }
+
 
         val cta = adView.findViewById(R.id.call_to_action) as Button
         adView.callToActionView = cta
         adView.callToActionView?.visibility = View.VISIBLE
         (adView.callToActionView as Button).text = nativeAd.callToAction
         adView.setNativeAd(nativeAd)
+
+
     }
 
 

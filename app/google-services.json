@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "973274986284",
+    "project_id": "test-8ac54",
+    "storage_bucket": "test-8ac54.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:973274986284:android:e97942d4e8ed442b9b5e89",
+        "android_client_info": {
+          "package_name": "com.appyhigh.adutils"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "973274986284-34rnq81kp40l9nhat7e841unbfn3vigt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.appyhigh.adutils",
+            "certificate_hash": "1410efb2fb53ec38fff9659cd1fb6a187a5e503a"
+          }
+        },
+        {
+          "client_id": "973274986284-6jq73v2ll2sabtoa57j851um24gmfmhd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOVA75_wQiDrILh2sX2dXb2TyTP6i7KnI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "973274986284-6jq73v2ll2sabtoa57j851um24gmfmhd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
