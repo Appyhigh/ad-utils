@@ -206,7 +206,39 @@ rewardedAd?.show(this)
 
 ## Load a Native Ad
 
+# Enable firebase remote config for the app.
+
 ```kotlin
+
+In your build.gradle(app) add:
+
+    ##IMPORTANT:
+    #Create a firebase account for this project.
+    #Add the google-services.json to your project. 
+
+    plugins {
+        ...
+        id 'com.google.gms.google-services'
+    }
+    
+    dependencies {
+        //Firebase Remote Config
+        implementation platform('com.google.firebase:firebase-bom:29.0.2')
+        implementation 'com.google.firebase:firebase-config-ktx'
+        implementation 'com.google.firebase:firebase-analytics-ktx'
+    }
+
+
+
+In your build.gradle(project) add:
+
+    buildscript {
+        dependencies {
+            classpath 'com.google.gms:google-services:4.3.10'
+            ...
+        }
+    }
+
 /**
  * Call loadNativeAd with following params to load a Native Ad
  *
@@ -215,12 +247,14 @@ rewardedAd?.show(this)
  * @param adUnit -> Pass the adUnit id in this parameter
  * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
+ * @param RemoteConfigUtils.getNativeAdTypeId() -> returns a value from remote config and according to the value, layout is loaded.
  */
 AdSdk.loadNativeAd(
     lifecycle,
     "ca-app-pub-3940256099942544/2247696110",
     binding.llRoot,
-    nativeAdCallBack
+    nativeAdCallBack,
+    RemoteConfigUtils.getNativeAdTypeId()
 )
 
 /**
