@@ -12,12 +12,13 @@ class NativeAdActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityNativeAdBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        Log.d("RemoteCoonfig", RemoteConfigUtils.getNativeAdTypeId())
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot,
             nativeAdCallBack,
-            R.layout.ad_item_big
+            RemoteConfigUtils.getNativeAdTypeId()
         )
     }
 
