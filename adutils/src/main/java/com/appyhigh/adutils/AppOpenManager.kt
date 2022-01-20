@@ -83,9 +83,9 @@ class AppOpenManager(
         )
     }
 
-    fun showIfAdLoaded(activity: Activity) {
+    fun showIfAdLoaded(activity: Activity): Boolean {
         currentActivity = activity
-        showAdIfAvailable()
+        return showAdIfAvailable()
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
@@ -106,8 +106,10 @@ class AppOpenManager(
 
     /**
      * Shows the ad if one isn't already showing.
+     *
+     * @return True if the ad is available and will try to show ad, False if the ad is not loaded yet
      */
-    private fun showAdIfAvailable() {
+    private fun showAdIfAvailable(): Boolean {
         // Only show ad if there is not already an app open ad currently showing
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
@@ -133,10 +135,15 @@ class AppOpenManager(
                         isShowingAd = true
                     }
                 }
-            currentActivity?.let { appOpenAd!!.show(it) }
+            currentActivity?.let {
+                appOpenAd!!.show(it)
+                return true
+            }
+            return false
         } else {
             Log.d(LOG_TAG, "Ad not loaded yet")
             fetchAd()
+            return false
         }
     }
 
