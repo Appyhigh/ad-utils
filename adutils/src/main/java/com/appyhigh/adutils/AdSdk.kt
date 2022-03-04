@@ -526,7 +526,7 @@ object AdSdk {
         adView.bodyView = adBody
         if(viewId == "2") adView.bodyView?.visibility = View.GONE
         else {
-            adView.bodyView?.visibility = View.VISIBLE
+            adView.bodyView?.visibility = View.GONE
             (adView.bodyView as TextView).text = nativeAd.body
         }
 
