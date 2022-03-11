@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.gms.ads.nativead.NativeAdView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.gms.ads.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="5dp"
-    android:layout_marginBottom="5dp"
-    android:paddingBottom="5dp"
+    android:layout_margin="5dp"
+    android:background="@drawable/nad_bg"
+    android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
     <RelativeLayout
@@ -22,18 +21,32 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="5dp"
             android:paddingBottom="5dp">
+
+            <TextView
+                android:id="@+id/ad_notification_view"
+                android:layout_width="@dimen/gnt_ad_indicator_width"
+                android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:layout_marginTop="@dimen/gnt_ad_indicator_top_margin"
+                android:background="@drawable/gnt_rounded_corners_shape"
+                android:gravity="center"
+                android:text="Ad"
+                android:textColor="@color/gnt_ad_green"
+                android:textSize="@dimen/gnt_ad_indicator_text_size"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"></TextView>
+
 
             <LinearLayout
                 android:id="@+id/linearLayout"
-                android:layout_width="fill_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:padding="8dip"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
+                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view">
 
                 <ImageView
                     android:id="@+id/icon"
@@ -53,18 +66,18 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:maxLines="1"
-                        tools:text="FITBIT INDIA"
                         android:textColor="@color/headLineColor"
-                        android:textSize="16sp" />
+                        android:textSize="16sp"
+                        tools:text="FITBIT INDIA" />
 
                     <TextView
                         android:id="@+id/body"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:maxLines="1"
                         android:ellipsize="end"
-                        android:textSize="12sp"
+                        android:maxLines="1"
                         android:textColor="@color/headLineColor"
+                        android:textSize="12sp"
                         android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent" />
@@ -101,8 +114,8 @@
                             android:layout_height="wrap_content"
                             android:isIndicator="true"
                             android:numStars="5"
-                            android:visibility="gone"
-                            android:stepSize="0.5" />
+                            android:stepSize="0.5"
+                            android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/ad_store"
@@ -137,9 +150,9 @@
                 android:textColor="@color/color_white"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                app:layout_constraintTop_toBottomOf="@id/ad_media"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="@+id/linearLayout" />
+                app:layout_constraintStart_toStartOf="@+id/linearLayout"
+                app:layout_constraintTop_toBottomOf="@id/ad_media" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
 

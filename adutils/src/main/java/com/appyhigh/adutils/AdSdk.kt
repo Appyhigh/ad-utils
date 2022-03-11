@@ -14,10 +14,7 @@ import androidx.lifecycle.OnLifecycleEvent
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-import com.google.android.gms.ads.nativead.MediaView
-import com.google.android.gms.ads.nativead.NativeAd
-import com.google.android.gms.ads.nativead.NativeAdOptions
-import com.google.android.gms.ads.nativead.NativeAdView
+import com.google.android.gms.ads.nativead.*
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
@@ -108,7 +105,11 @@ object AdSdk {
         val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
         val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(application)
         if (status != ConnectionResult.SUCCESS) {
-            Toast.makeText(application, "Some Features might misbehave as Google Play Services are not available!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                application,
+                "Some Features might misbehave as Google Play Services are not available!",
+                Toast.LENGTH_SHORT
+            ).show()
             return false
         }
         return true
@@ -127,7 +128,8 @@ object AdSdk {
         appOpenAdCallback: AppOpenAdCallback? = null,
     ) {
         if (application != null) {
-            val appOpenManager = AppOpenManager(application!!, appOpenAdUnit, isShownOnlyOnce, appOpenAdCallback)
+            val appOpenManager =
+                AppOpenManager(application!!, appOpenAdUnit, isShownOnlyOnce, appOpenAdCallback)
             appOpenAdCallback?.onInitSuccess(appOpenManager)
         } else {
             throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
@@ -149,8 +151,16 @@ object AdSdk {
         viewGroup: ViewGroup,
         adUnit: String,
         adSize: AdSize,
-        bannerAdLoadCallback: BannerAdLoadCallback?) {
-        loadBannerAd(System.currentTimeMillis(), lifecycle, viewGroup, adUnit, adSize, bannerAdLoadCallback)
+        bannerAdLoadCallback: BannerAdLoadCallback?
+    ) {
+        loadBannerAd(
+            System.currentTimeMillis(),
+            lifecycle,
+            viewGroup,
+            adUnit,
+            adSize,
+            bannerAdLoadCallback
+        )
     }
 
     private fun loadBannerAd(
@@ -162,8 +172,8 @@ object AdSdk {
         bannerAdLoadCallback: BannerAdLoadCallback?
     ) {
         if (application != null) {
-            if(adUnit.isBlank()) return
-            if(AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+            if (adUnit.isBlank()) return
+            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.bannerAdLifeCycleHashMap[id] =
                     BannerAdItem(id, lifecycle, viewGroup, adUnit, adSize, bannerAdLoadCallback)
             }
@@ -346,7 +356,7 @@ object AdSdk {
         viewId: String,
         //@LayoutRes layoutId: Int = R.layout.ad_item
     ) {
-        @LayoutRes val layoutId = when(viewId) {
+        @LayoutRes val layoutId = when (viewId) {
             "1" -> R.layout.native_admob_ad_t1
             "2" -> R.layout.native_admob_ad_t2
             "3" -> R.layout.native_admob_ad_t3
@@ -354,7 +364,7 @@ object AdSdk {
             "5" -> R.layout.native_admob_ad_t5
             else -> R.layout.native_admob_ad_t1
         }
-        loadNativeAd(lifecycle,adUnit, viewGroup, callback, layoutId, null, viewId)
+        loadNativeAd(lifecycle, adUnit, viewGroup, callback, layoutId, null, viewId)
 
     }
 
@@ -396,8 +406,18 @@ object AdSdk {
         nativeAdLoadCallback: NativeAdLoadCallback?,
         @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
-        viewId: String = "1") {
-        loadNativeAd(System.currentTimeMillis(), lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator, viewId)
+        viewId: String = "1"
+    ) {
+        loadNativeAd(
+            System.currentTimeMillis(),
+            lifecycle,
+            adUnit,
+            viewGroup,
+            nativeAdLoadCallback,
+            layoutId,
+            populator,
+            viewId
+        )
     }
 
     /**
@@ -420,8 +440,8 @@ object AdSdk {
         viewId: String = "1"
     ) {
         if (application != null) {
-            if(adUnit.isBlank()) return
-            if(AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+            if (adUnit.isBlank()) return
+            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
                     id, lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator
                 )
@@ -459,7 +479,7 @@ object AdSdk {
                                     layoutId,
                                     null
                                 ) as NativeAdView
-                            if(populator != null)
+                            if (populator != null)
                                 populator.invoke(nativeAd!!, adView)
                             else
                                 populateUnifiedNativeAdView(nativeAd!!, adView, viewId)
@@ -470,6 +490,8 @@ object AdSdk {
                 })
                 .withNativeAdOptions(
                     NativeAdOptions.Builder()
+                        .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                        .setRequestCustomMuteThisAd(true)
                         .build()
                 )
                 .build()
@@ -510,7 +532,7 @@ object AdSdk {
             override fun onChildViewRemoved(parent: View, child: View) {}
         })
         val mediaIcon = nativeAd.mediaContent
-        if(mediaIcon == null || viewId == "4") {
+        if (mediaIcon == null || viewId == "4") {
             adView.mediaView?.visibility = View.GONE
         } else {
             adView.mediaView?.visibility = View.VISIBLE
@@ -524,7 +546,7 @@ object AdSdk {
 
         val adBody = adView.findViewById(R.id.body) as TextView
         adView.bodyView = adBody
-        if(viewId == "2") adView.bodyView?.visibility = View.GONE
+        if (viewId == "2") adView.bodyView?.visibility = View.GONE
         else {
             adView.bodyView?.visibility = View.GONE
             (adView.bodyView as TextView).text = nativeAd.body
@@ -532,7 +554,7 @@ object AdSdk {
 
         val adStore = adView.findViewById<TextView>(R.id.ad_store)
         adView.storeView = adStore
-        if(nativeAd.store!=null && viewId == "4") {
+        if (nativeAd.store != null && viewId == "4") {
             adView.storeView?.visibility = View.VISIBLE
             (adView.storeView as TextView).text = nativeAd.store
         } else {
@@ -545,6 +567,11 @@ object AdSdk {
         adView.callToActionView?.visibility = View.VISIBLE
         (adView.callToActionView as Button).text = nativeAd.callToAction
         adView.setNativeAd(nativeAd)
+
+        if (nativeAd.adChoicesInfo != null) {
+            val choicesView = AdChoicesView(adView.adChoicesView.context)
+            adView.adChoicesView = choicesView
+        }
 
 
     }

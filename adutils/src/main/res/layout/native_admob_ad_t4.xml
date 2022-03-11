@@ -4,9 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="5dp"
-    android:layout_marginBottom="5dp"
-    android:paddingBottom="5dp"
+    android:layout_margin="5dp"
+    android:background="@drawable/nad_bg"
+    android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
     <RelativeLayout
@@ -21,8 +21,20 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="5dp"
             android:paddingBottom="5dp">
+
+            <TextView
+                android:id="@+id/ad_notification_view4"
+                android:layout_width="@dimen/gnt_ad_indicator_width"
+                android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:background="@drawable/gnt_rounded_corners_shape"
+                android:gravity="center"
+                android:text="Ad"
+                android:textColor="@color/gnt_ad_green"
+                android:textSize="@dimen/gnt_ad_indicator_text_size"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"></TextView>
 
             <ImageView
                 android:id="@+id/icon"
@@ -35,7 +47,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view4" />
 
             <TextView
                 android:id="@+id/headline"
@@ -59,10 +71,10 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="5dp"
+                android:ellipsize="end"
                 android:foregroundGravity="center"
                 android:gravity="center"
                 android:maxLines="1"
-                android:ellipsize="end"
                 android:textColor="@color/headLineColor"
                 android:textSize="12sp"
                 android:visibility="gone"

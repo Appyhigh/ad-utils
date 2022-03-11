@@ -1,32 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.gms.ads.nativead.NativeAdView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.gms.ads.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:layout_margin="5dp"
+    android:background="@drawable/nad_bg"
+    android:elevation="1dp">
 
     <RelativeLayout
         android:id="@+id/ad_unit_content"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
         android:orientation="vertical">
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_centerInParent="true"
             android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:layout_centerVertical="false"
             android:orientation="vertical">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/layout"
-                android:layout_marginTop="20dip"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_alignParentEnd="true"
                 android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/ad_notification_view3"
+                    android:layout_width="@dimen/gnt_ad_indicator_width"
+                    android:layout_height="@dimen/gnt_ad_indicator_height"
+                    android:background="@drawable/gnt_rounded_corners_shape"
+                    android:gravity="center"
+                    android:text="Ad"
+                    android:textColor="@color/gnt_ad_green"
+                    android:textSize="@dimen/gnt_ad_indicator_text_size"
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"></TextView>
 
                 <LinearLayout
                     android:id="@+id/linearLayout"
@@ -37,7 +51,7 @@
                     android:padding="8dip"
                     app:layout_constraintEnd_toStartOf="@+id/ad_media"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    app:layout_constraintTop_toBottomOf="@+id/ad_notification_view3">
 
                     <ImageView
                         android:id="@+id/icon"
@@ -141,23 +155,20 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-
-
             <Button
                 android:id="@+id/call_to_action"
                 android:layout_width="fill_parent"
                 android:layout_height="40dip"
+                android:layout_below="@id/layout"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentEnd="true"
+                android:layout_marginTop="20dip"
                 android:background="@drawable/ads_bg_lib"
                 android:gravity="center"
                 android:textColor="@color/color_white"
                 android:textSize="13sp"
-                android:layout_below="@id/layout"
-                android:textStyle="bold"
-                android:layout_marginTop="20dip"
-                android:layout_alignParentStart="true"
-                android:layout_alignParentEnd="true" />
+                android:textStyle="bold" />
         </RelativeLayout>
-
 
 
     </RelativeLayout>

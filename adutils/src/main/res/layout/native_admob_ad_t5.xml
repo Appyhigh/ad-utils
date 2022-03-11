@@ -4,9 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="5dp"
-    android:layout_marginBottom="5dp"
-    android:paddingBottom="5dp"
+    android:layout_margin="5dp"
+    android:background="@drawable/nad_bg"
+    android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
     <RelativeLayout
@@ -21,17 +21,29 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="5dp"
             android:paddingBottom="5dp">
+
+            <TextView
+                android:id="@+id/ad_notification_view5"
+                android:layout_width="@dimen/gnt_ad_indicator_width"
+                android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:background="@drawable/gnt_rounded_corners_shape"
+                android:gravity="center"
+                android:text="Ad"
+                android:textColor="@color/gnt_ad_green"
+                android:textSize="@dimen/gnt_ad_indicator_text_size"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <LinearLayout
                 android:id="@+id/linearLayout4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                app:layout_constraintTop_toBottomOf="@id/ad_media"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ad_media">
 
                 <LinearLayout
                     android:id="@+id/linearLayout"
@@ -66,8 +78,8 @@
                             android:id="@+id/body"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:maxLines="1"
                             android:ellipsize="end"
+                            android:maxLines="1"
                             android:textColor="@color/headLineColor"
                             android:textSize="12sp"
                             android:visibility="gone"
@@ -77,8 +89,8 @@
                         <LinearLayout
                             android:layout_width="fill_parent"
                             android:layout_height="wrap_content"
-                            android:visibility="gone"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:visibility="gone">
 
                             <TextView
                                 android:id="@+id/ad_advertiser"
@@ -107,8 +119,8 @@
                                 android:layout_height="wrap_content"
                                 android:isIndicator="true"
                                 android:numStars="5"
-                                android:visibility="gone"
-                                android:stepSize="0.5" />
+                                android:stepSize="0.5"
+                                android:visibility="gone" />
 
                             <TextView
                                 android:id="@+id/ad_store"
@@ -137,27 +149,18 @@
             </LinearLayout>
 
 
-
             <com.google.android.gms.ads.nativead.MediaView
                 android:id="@+id/ad_media"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:maxHeight="200dp"
-                app:layout_constraintBottom_toTopOf="@+id/linearLayout4"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view5" />
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <TextView
-            style="@style/AppTheme.Ads"
-            android:layout_width="28dp"
-            android:layout_alignParentEnd="true"
-            android:layout_height="wrap_content"
-            android:gravity="end" />
 
     </RelativeLayout>
 
