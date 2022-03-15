@@ -1,33 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.gms.ads.nativead.NativeAdView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.gms.ads.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
     xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_margin="5dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/nad_bg"
+    android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
     <RelativeLayout
         android:id="@+id/ad_unit_content"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical">
 
+
+            <TextView
+                android:id="@+id/ad_notification_view2"
+                android:layout_width="@dimen/gnt_ad_indicator_width"
+                android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:background="@drawable/gnt_rounded_corners_shape"
+                android:gravity="center"
+                android:text="Ad"
+                android:textColor="@color/gnt_ad_green"
+                android:textSize="@dimen/gnt_ad_indicator_text_size"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"></TextView>
 
             <com.google.android.gms.ads.nativead.MediaView
                 android:id="@+id/ad_media"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                app:layout_constraintBottom_toBottomOf="@+id/linearLayout2"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view2" />
 
             <LinearLayout
                 android:id="@+id/linearLayout2"
@@ -36,7 +50,7 @@
                 android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/ad_media">
+                app:layout_constraintTop_toBottomOf="@+id/ad_media">
 
                 <LinearLayout
                     android:id="@+id/linearLayout"
@@ -73,8 +87,8 @@
                             android:id="@+id/body"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:maxLines="1"
                             android:ellipsize="end"
+                            android:maxLines="1"
                             android:textColor="@color/headLineColor"
                             android:textSize="12sp"
                             android:visibility="gone"
