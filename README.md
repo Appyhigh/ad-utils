@@ -253,7 +253,16 @@ buildscript {
 
 # In the MainApplication add this line
 
+# in the firebase remote config of your application project ad this native_ad_layout_type
+
+# if you want to set layout via remote config
+
 ```kotlin
+/**
+ *Go to the Firebase of your Project and set this variable in Remore Config
+ * native_ad_layout_type - Type String - Value - 1 to 5, no need for quotes
+ */
+
 RemoteConfigUtils.init()
 
 
@@ -265,6 +274,7 @@ AdSdk.loadNativeAd(
     RemoteConfigUtils.getNativeAdTypeId()
 )
 
+
 /**
  * Call loadNativeAd with following params to load a Native Ad
  *
@@ -275,6 +285,10 @@ AdSdk.loadNativeAd(
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
  * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
  * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView) as params
+ * @param background -> nullable It is the Background Color or a Drawable you can put either, if it matches nothing then it'll choose default
+ * @param textColor1 -> nullable It is the primary color in Int that is Color Resource
+ * @param textColor1 -> nullable It is the Secondary color in Int that is Color Resource
+ * @param maxHeight -> nullable It is the height of the ad Media in Int
  */
 AdSdk.loadNativeAd(
     lifecycle,
