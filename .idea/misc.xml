@@ -3,6 +3,18 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/drawable/ads_bg_lib.xml" value="0.1055" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/drawable/gnt_rounded_corners_shape.xml" value="0.1055" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/drawable/nad_bg.xml" value="0.1055" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/ad_item.xml" value="0.11145833333333334" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/native_admob_ad_t1.xml" value="0.72" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/native_admob_ad_t2.xml" value="0.6" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/native_admob_ad_t3.xml" value="0.264" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/native_admob_ad_t4.xml" value="0.25" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/native_admob_ad_t5.xml" value="0.4312796208530806" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/adutils/src/main/res/layout/native_admob_ad_test.xml" value="0.25" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/app/src/main/res/layout/activity_main.xml" value="0.25" />
+        <entry key="..\:/Users/aishi/StudioProjects/ad-utils/app/src/main/res/layout/activity_native_ad.xml" value="0.25" />
         <entry key="adutils/src/main/res/layout/ad_item.xml" value="0.39791666666666664" />
         <entry key="app/src/main/res/layout/activity_banner_ad.xml" value="0.4125" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.3984375" />

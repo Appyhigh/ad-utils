@@ -18,35 +18,35 @@ class NativeAdActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot,
             nativeAdCallBack,
-            "1"
+            "1", null, null, null
         )
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot1,
             nativeAdCallBack,
-            "2"
+            "2", null, null, null
         )
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot2,
             nativeAdCallBack,
-            "3"
+            "3", null, null, null
         )
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot3,
             nativeAdCallBack,
-            "4"
+            "4", null, null, null
         )
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot4,
             nativeAdCallBack,
-            "5"
+            "5", null, null, null
         )
     }
 

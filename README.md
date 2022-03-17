@@ -1,10 +1,10 @@
 # ad-utils
 
 ## What
+
 An ad util library to facilitate easy and standardized implementation of latest Admob SDK
 
 ## Initialization
-
 
 In your  `build.gradle`:
 
@@ -18,15 +18,15 @@ allprojects {
 }
 
 dependencies {
-   implementation 'com.github.Appyhigh:ad-utils:1.1.3'
+    implementation 'com.github.Appyhigh:ad-utils:1.1.3'
 }
 ```
 
 Add these configurations to you AndroidManifest.xml
 
 ```xml
-<meta-data
-    android:name="com.google.android.gms.ads.APPLICATION_ID"
+
+<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
     android:value="ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX" /> 
 ```
 
@@ -81,25 +81,25 @@ AdSdk.loadBannerAd(
     bannerAdLoadCallback
 )
 
-private val bannerAdLoadCallback = object :BannerAdLoadCallback{
+private val bannerAdLoadCallback = object : BannerAdLoadCallback {
     override fun onAdLoaded() {
-        Log.d("BannerAdLoadCallback","onAdLoaded")
+        Log.d("BannerAdLoadCallback", "onAdLoaded")
     }
 
     override fun onAdFailedToLoad(adError: LoadAdError) {
-        Log.d("BannerAdLoadCallback","onAdFailedToLoad")
+        Log.d("BannerAdLoadCallback", "onAdFailedToLoad")
     }
 
     override fun onAdOpened() {
-        Log.d("BannerAdLoadCallback","onAdOpened")
+        Log.d("BannerAdLoadCallback", "onAdOpened")
     }
 
     override fun onAdClicked() {
-        Log.d("BannerAdLoadCallback","onAdClicked")
+        Log.d("BannerAdLoadCallback", "onAdClicked")
     }
 
     override fun onAdClosed() {
-        Log.d("BannerAdLoadCallback","onAdClosed")
+        Log.d("BannerAdLoadCallback", "onAdClosed")
     }
 
 }
@@ -119,40 +119,40 @@ private val bannerAdLoadCallback = object :BannerAdLoadCallback{
  */
 
 AdSdk.loadInterstitialAd(
-            "ca-app-pub-3940256099942544/1033173712",
-            mInterstitialAdUtilCallback
-        )
+    "ca-app-pub-3940256099942544/1033173712",
+    mInterstitialAdUtilCallback
+)
 
 //Callback Registration
 
-    private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {
-        override fun onAdFailedToLoad(adError: LoadAdError, ad: InterstitialAd?) {
-            interstitialAd = ad
-        }
-
-        override fun onAdLoaded(ad: InterstitialAd?) {
-            interstitialAd = ad
-        }
-
-        override fun onAdDismissedFullScreenContent() {
-            /**
-             * Comment this if you want the ad to load just once
-             * Uncomment this to load ad again once shown
-             */
-            loadInterstitialAd()
-        }
-
-        override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
-
-        override fun onAdShowedFullScreenContent() {
-            interstitialAd = null
-        }
+private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {
+    override fun onAdFailedToLoad(adError: LoadAdError, ad: InterstitialAd?) {
+        interstitialAd = ad
     }
+
+    override fun onAdLoaded(ad: InterstitialAd?) {
+        interstitialAd = ad
+    }
+
+    override fun onAdDismissedFullScreenContent() {
+        /**
+         * Comment this if you want the ad to load just once
+         * Uncomment this to load ad again once shown
+         */
+        loadInterstitialAd()
+    }
+
+    override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
+
+    override fun onAdShowedFullScreenContent() {
+        interstitialAd = null
+    }
+}
 
 //Show Ad
 
 interstitialAd?.show(this)
-    
+
 ```
 
 ## Rewarded Ad
@@ -168,40 +168,40 @@ interstitialAd?.show(this)
  */
 
 AdSdk.loadRewardedAd(
-            "ca-app-pub-3940256099942544/5224354917",
-            mRewardedAdUtilCallback
-        )
+    "ca-app-pub-3940256099942544/5224354917",
+    mRewardedAdUtilCallback
+)
 
 //Callback Registration
 
-    private val mRewardedAdUtilCallback = object : RewardedAdUtilLoadCallback {
-        override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
-            rewardedAd = ad
-        }
-
-        override fun onAdLoaded(ad: RewardedAd?) {
-            rewardedAd = ad
-        }
-
-        override fun onAdDismissedFullScreenContent() {
-            /**
-             * Comment this if you want the ad to load just once
-             * Uncomment this to load ad again once shown
-             */
-            loadRewardedAd()
-        }
-
-        override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
-
-        override fun onAdShowedFullScreenContent() {
-            rewardedAd = null
-        }
+private val mRewardedAdUtilCallback = object : RewardedAdUtilLoadCallback {
+    override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
+        rewardedAd = ad
     }
+
+    override fun onAdLoaded(ad: RewardedAd?) {
+        rewardedAd = ad
+    }
+
+    override fun onAdDismissedFullScreenContent() {
+        /**
+         * Comment this if you want the ad to load just once
+         * Uncomment this to load ad again once shown
+         */
+        loadRewardedAd()
+    }
+
+    override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
+
+    override fun onAdShowedFullScreenContent() {
+        rewardedAd = null
+    }
+}
 
 //Show Ad
 
 rewardedAd?.show(this)
-    
+
 ```
 
 ## Load a Native Ad
@@ -210,34 +210,34 @@ rewardedAd?.show(this)
 
 ```kotlin
 
-In your build.gradle(app) add:
+In your build.gradle(app) add :
 
-    ##IMPORTANT:
-    #Create a firebase account for this project.
-    #Add the google-services.json to your project. 
+##IMPORTANT:
+#Create a firebase account for this project .
+#Add the google - services.json to your project .
 
-    plugins {
-        ...
-        id 'com.google.gms.google-services'
-    }
-    
+plugins {
+    ...
+    id 'com.google.gms.google-services'
+}
+
+dependencies {
+    //Firebase Remote Config
+    implementation platform ('com.google.firebase:firebase-bom:29.0.2')
+    implementation 'com.google.firebase:firebase-config-ktx'
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+}
+
+
+
+In your build.gradle(project) add :
+
+buildscript {
     dependencies {
-        //Firebase Remote Config
-        implementation platform('com.google.firebase:firebase-bom:29.0.2')
-        implementation 'com.google.firebase:firebase-config-ktx'
-        implementation 'com.google.firebase:firebase-analytics-ktx'
+        classpath 'com.google.gms:google-services:4.3.10'
+        ...
     }
-
-
-
-In your build.gradle(project) add:
-
-    buildscript {
-        dependencies {
-            classpath 'com.google.gms:google-services:4.3.10'
-            ...
-        }
-    }
+}
 
 /**
  * Call loadNativeAd with following params to load a Native Ad
@@ -249,6 +249,23 @@ In your build.gradle(project) add:
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
  * @param RemoteConfigUtils.getNativeAdTypeId() -> returns a value from remote config and according to the value, layout is loaded.
  */
+```
+
+# In the MainApplication add this line
+
+# in the firebase remote config of your application project ad this native_ad_layout_type
+
+# if you want to set layout via remote config
+
+```kotlin
+/**
+ *Go to the Firebase of your Project and set this variable in Remore Config
+ * native_ad_layout_type - Type String - Value - 1 to 5, no need for quotes
+ */
+
+RemoteConfigUtils.init()
+
+
 AdSdk.loadNativeAd(
     lifecycle,
     "ca-app-pub-3940256099942544/2247696110",
@@ -256,6 +273,7 @@ AdSdk.loadNativeAd(
     nativeAdCallBack,
     RemoteConfigUtils.getNativeAdTypeId()
 )
+
 
 /**
  * Call loadNativeAd with following params to load a Native Ad
@@ -267,6 +285,10 @@ AdSdk.loadNativeAd(
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
  * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
  * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView) as params
+ * @param background -> nullable It is the Background Color or a Drawable you can put either, if it matches nothing then it'll choose default
+ * @param textColor1 -> nullable It is the primary color in Int that is Color Resource
+ * @param textColor1 -> nullable It is the Secondary color in Int that is Color Resource
+ * @param maxHeight -> nullable It is the height of the ad Media in Int
  */
 AdSdk.loadNativeAd(
     lifecycle,
@@ -277,17 +299,17 @@ AdSdk.loadNativeAd(
     this::populateNativeAdView
 )
 
-private val nativeAdCallBack = object :NativeAdLoadCallback{
+private val nativeAdCallBack = object : NativeAdLoadCallback {
     override fun onAdLoaded() {
-        Log.d("NativeAdLoadCallback","onAdLoaded")
+        Log.d("NativeAdLoadCallback", "onAdLoaded")
     }
 
     override fun onAdFailed(adError: LoadAdError) {
-        Log.d("NativeAdLoadCallback","onAdFailed")
+        Log.d("NativeAdLoadCallback", "onAdFailed")
     }
 
     override fun onAdClicked() {
-        Log.d("NativeAdLoadCallback","onAdClicked")
+        Log.d("NativeAdLoadCallback", "onAdClicked")
     }
 }
 
