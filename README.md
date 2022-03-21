@@ -155,6 +155,26 @@ interstitialAd?.show(this)
 
 ```
 
+### To Show Splash Ad Use this Method
+
+    AdSdk.loadSplashAd(
+                "ca-app-pub-3940256099942544/1033173712",
+                this,
+                object : SplashInterstitialCallback {
+                    override fun moveNext() {
+                        startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                    }
+                })
+
+> adUnit: String, activity: Activity?, callback: SplashInterstitialCallback, timer: Long = 5000L
+
+These are the parameters
+
+    fun moveNext()
+
+This is the callback of the splash it simply means to move to the next activity or do whatever you
+wanted to do on splash fail or user saw the ad or if the timer runs out
+
 ## Rewarded Ad
 
 ```kotlin
@@ -204,9 +224,9 @@ rewardedAd?.show(this)
 
 ```
 
-## Load a Native Ad
+# Load a Native Ad
 
-# Enable firebase remote config for the app.
+## Enable firebase remote config for the app.
 
 ```kotlin
 
@@ -253,9 +273,9 @@ buildscript {
 
 # In the MainApplication add this line
 
-# in the firebase remote config of your application project ad this native_ad_layout_type
+in the firebase remote config of your application project ad this native_ad_layout_type
 
-# if you want to set layout via remote config
+if you want to set layout via remote config
 
 ```kotlin
 /**
@@ -283,13 +303,33 @@ AdSdk.loadNativeAd(
  * @param adUnit -> Pass the adUnit id in this parameter
  * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
  * @param nativeAdLoadCallback -> nullable callback to register native ad load events
- * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
+ * @param adType -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
  * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView) as params
  * @param background -> nullable It is the Background Color or a Drawable you can put either, if it matches nothing then it'll choose default
  * @param textColor1 -> nullable It is the primary color in Int that is Color Resource
  * @param textColor1 -> nullable It is the Secondary color in Int that is Color Resource
  * @param maxHeight -> nullable It is the height of the ad Media in Int
+ *
+ *
+ * The adType can be either string size from "1" to "5"
+ * or one of these below
+ *
+ * class ADType {
+ * companion object {
+ * val SMALLEST = "3"
+ * val SMALLER = "4"
+ * val SEMIMEDIUM = "2"
+ * val MEDIUM = "1"
+ * val BIG = "5"
+ * }
+ * }
+ *
+ *e.g. AdType.SMALL
+ *
+ *
  */
+
+
 AdSdk.loadNativeAd(
     lifecycle,
     "ca-app-pub-3940256099942544/2247696110",

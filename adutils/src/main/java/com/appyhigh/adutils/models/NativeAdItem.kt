@@ -1,8 +1,8 @@
-package com.appyhigh.adutils
+package com.appyhigh.adutils.models
 
 import android.view.ViewGroup
 import androidx.lifecycle.Lifecycle
-import com.google.android.gms.ads.AdSize
+import com.appyhigh.adutils.callbacks.NativeAdLoadCallback
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 

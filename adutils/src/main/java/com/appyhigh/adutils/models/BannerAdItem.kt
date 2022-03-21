@@ -1,7 +1,8 @@
-package com.appyhigh.adutils
+package com.appyhigh.adutils.models
 
 import android.view.ViewGroup
 import androidx.lifecycle.Lifecycle
+import com.appyhigh.adutils.callbacks.BannerAdLoadCallback
 import com.google.android.gms.ads.AdSize
 
 data class BannerAdItem(

@@ -1,5 +1,6 @@
-package com.appyhigh.adutils
+package com.appyhigh.adutils.callbacks
 
+import com.appyhigh.adutils.AppOpenManager
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
 

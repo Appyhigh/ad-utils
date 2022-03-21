@@ -1,5 +1,8 @@
 package com.appyhigh.adutils
 
+import com.appyhigh.adutils.models.BannerAdItem
+import com.appyhigh.adutils.models.NativeAdItem
+
 object AdUtilConstants {
 
     enum class BannerAdSize {
