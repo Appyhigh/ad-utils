@@ -18,7 +18,7 @@ allprojects {
 }
 
 dependencies {
-    implementation 'com.github.Appyhigh:ad-utils:1.1.4'
+    implementation 'com.github.Appyhigh:ad-utils:1.1.5'
 }
 ```
 
