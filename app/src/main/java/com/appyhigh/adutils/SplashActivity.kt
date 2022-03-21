@@ -1,11 +1,9 @@
 package com.appyhigh.adutils
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.CountDownTimer
-import android.os.Handler
-import android.os.Looper
+import androidx.appcompat.app.AppCompatActivity
+import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 
 class SplashActivity : AppCompatActivity() {
@@ -18,17 +16,28 @@ class SplashActivity : AppCompatActivity() {
         AdSdk.initialize(
             applicationContext as MyApp,
             "ca-app-pub-3940256099942544/3419835294",
-            appOpenAdCallback,
-            0L,0L
+            null,
+            0L, 0L
         )
-        Handler(Looper.getMainLooper()).postDelayed({
+        AdSdk.loadSplashAd(
+            "ca-app-pub-3940256099942544/1033173712",
+            this,
+            object : SplashInterstitialCallback {
+                override fun moveNext() {
+                    finish()
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                }
+            }, 1000
+        )
+        /*Handler(Looper.getMainLooper()).postDelayed({
             if (appOpenManager == null) {
                 startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                 finish()
             }
-        }, 4000)
+        }, 4000)*/
     }
 
+/*
     private val appOpenAdCallback = object : AppOpenAdCallback() {
         override fun onInitSuccess(manager: AppOpenManager) {
             appOpenManager = manager
@@ -45,4 +54,5 @@ class SplashActivity : AppCompatActivity() {
             finish()
         }
     }
+*/
 }

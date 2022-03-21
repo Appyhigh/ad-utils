@@ -3,6 +3,7 @@ package com.appyhigh.adutils
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import com.appyhigh.adutils.callbacks.BannerAdLoadCallback
 import com.appyhigh.adutils.databinding.ActivityBannerAdBinding
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.LoadAdError

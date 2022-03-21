@@ -2,7 +2,11 @@ package com.appyhigh.adutils
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
+import com.appyhigh.adutils.callbacks.InterstitialAdUtilLoadCallback
+import com.appyhigh.adutils.callbacks.RewardedAdUtilLoadCallback
 import com.appyhigh.adutils.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
@@ -13,6 +17,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var interstitialAd: InterstitialAd? = null
     private var rewardedAd: RewardedAd? = null
+
+    override fun onBackPressed() {
+//        super.onBackPressed()
+        if (binding.exitAd.visibility == VISIBLE) {
+            binding.exitAd.visibility = GONE
+        } else {
+            binding.exitAd.visibility = VISIBLE
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +49,15 @@ class MainActivity : AppCompatActivity() {
 
         loadInterstitialAd()
         loadRewardedAd()
+        val height: Int = resources.displayMetrics.heightPixels
+        val maxHeight = height * 60 / 100
+        AdSdk.loadNativeAd(
+            lifecycle,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.adFrameLayout,
+            null,
+            AdSdk.ADType.MEDIUM, null, null, null, maxHeight = maxHeight
+        )
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {

@@ -1,8 +1,10 @@
 package com.appyhigh.adutils
 
+import android.app.Activity
 import android.app.Application
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -14,6 +16,9 @@ import androidx.annotation.LayoutRes
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
+import com.appyhigh.adutils.callbacks.*
+import com.appyhigh.adutils.models.BannerAdItem
+import com.appyhigh.adutils.models.NativeAdItem
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -291,6 +296,59 @@ object AdSdk {
         }
     }
 
+    fun loadSplashAd(
+        adUnit: String,
+        activity: Activity?,
+        callback: SplashInterstitialCallback,
+        timer: Long = 5000L
+    ) {
+        if (activity != null) {
+            var splash: InterstitialAd? = null
+            val ctd = object : CountDownTimer(timer, 1000) {
+                override fun onTick(millisUntilFinished: Long) {
+                    if (splash != null) {
+                        splash?.show(activity)
+                        this.cancel()
+                    }
+                }
+
+                override fun onFinish() {
+                    callback.moveNext()
+                }
+            }.start()
+            val adRequest = AdRequest.Builder().build()
+            InterstitialAd.load(
+                application!!,
+                adUnit,
+                adRequest, object : InterstitialAdLoadCallback() {
+                    override fun onAdLoaded(splashInters: InterstitialAd) {
+                        super.onAdLoaded(splashInters)
+                        splash = splashInters
+                        splash?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    super.onAdFailedToShowFullScreenContent(p0)
+                                    callback.moveNext()
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    super.onAdDismissedFullScreenContent()
+                                    callback.moveNext()
+                                }
+                            }
+                    }
+
+                    override fun onAdFailedToLoad(p0: LoadAdError) {
+                        super.onAdFailedToLoad(p0)
+                        callback.moveNext()
+                    }
+                }
+            )
+        } else {
+            callback.moveNext()
+        }
+    }
+
     /**
      * Call loadRewardedAd with following params to load an rewarded ad
      *
@@ -360,23 +418,34 @@ object AdSdk {
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
      * @param viewId -> according to the value from remote config, layout is loaded.
      */
+
+    class ADType {
+        companion object {
+            val SMALLEST = "3"
+            val SMALLER = "4"
+            val SEMIMEDIUM = "2"
+            val MEDIUM = "1"
+            val BIG = "5"
+        }
+    }
+
     fun loadNativeAd(
         lifecycle: Lifecycle,
         adUnit: String,
         viewGroup: ViewGroup,
         callback: NativeAdLoadCallback?,
-        viewId: String,
+        adType: String,
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
         maxHeight: Int = 300
     ) {
-        @LayoutRes val layoutId = when (viewId) {
-            "1" -> R.layout.native_admob_ad_t1
-            "2" -> R.layout.native_admob_ad_t2
-            "3" -> R.layout.native_admob_ad_t3
-            "4" -> R.layout.native_admob_ad_t4
-            "5" -> R.layout.native_admob_ad_t5
+        @LayoutRes val layoutId = when (adType) {
+            "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
+            "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
+            "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
+            "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
+            "5" -> R.layout.native_admob_ad_t5/*BIG*/
             else -> R.layout.native_admob_ad_t1
         }
         loadNativeAd(
@@ -386,7 +455,7 @@ object AdSdk {
             callback,
             layoutId,
             null,
-            viewId,
+            adType,
             background = background,
             textColor1,
             textColor2,
@@ -484,20 +553,16 @@ object AdSdk {
         val id1 = inflate.findViewById<View>(R.id.rl)
         val tv = inflate.findViewById<TextView>(R.id.tv)
         if (textColor1 != null) {
-            Log.d("aishik", "loadNativeAd: A")
             tv.setTextColor(textColor1)
         }
         when (background) {
             is String -> {
-                Log.d("aishik", "loadNativeAd: B")
                 id1.setBackgroundColor(Color.parseColor(background))
             }
             is Drawable -> {
-                Log.d("aishik", "loadNativeAd: C")
                 id1.background = background
             }
             is Int -> {
-                Log.d("aishik", "loadNativeAd: D")
                 id1.setBackgroundColor(background)
             }
         }
@@ -614,13 +679,15 @@ object AdSdk {
             override fun onChildViewAdded(parent: View, child: View) {
                 val scale: Float = adView.mediaView.context.resources.displayMetrics.density
                 val maxHeightPixels = maxHeight
-                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
+//                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
                 if (child is ImageView) { //Images
                     child.adjustViewBounds = true
-                    child.maxHeight = maxHeightDp
+                    val layoutParams = child.layoutParams
+                    layoutParams.height = maxHeight
+                    child.layoutParams = layoutParams
                 } else { //Videos
                     val params = child.layoutParams
-                    params.height = maxHeightDp
+                    params.height = maxHeightPixels
                     child.layoutParams = params
                 }
             }
