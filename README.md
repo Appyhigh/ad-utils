@@ -20,6 +20,11 @@ allprojects {
 dependencies {
     implementation 'com.github.Appyhigh:ad-utils:1.1.3'
 }
+...
+buildFeatures {
+    dataBinding true
+    viewBinding true
+}
 ```
 
 Add these configurations to you AndroidManifest.xml
