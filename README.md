@@ -292,6 +292,7 @@ RemoteConfigUtils.init()
 
 
 AdSdk.loadNativeAd(
+    activity,
     lifecycle,
     "ca-app-pub-3940256099942544/2247696110",
     binding.llRoot,
@@ -304,6 +305,7 @@ AdSdk.loadNativeAd(
  * Call loadNativeAd with following params to load a Native Ad
  *
  *
+ * @param activty -> Non-Null activity parameter
  * @param lifecycle -> Lifecycle of activity in which ad will be loaded
  * @param adUnit -> Pass the adUnit id in this parameter
  * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout

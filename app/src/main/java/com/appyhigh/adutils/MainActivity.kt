@@ -46,12 +46,16 @@ class MainActivity : AppCompatActivity() {
         binding.btnNativeAd.setOnClickListener {
             startActivity(Intent(this, NativeAdActivity::class.java))
         }
+        if (BuildConfig.DEBUG) {
+            binding.btnNativeAd.performClick()
+        }
 
         loadInterstitialAd()
         loadRewardedAd()
         val height: Int = resources.displayMetrics.heightPixels
         val maxHeight = height * 60 / 100
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.adFrameLayout,

@@ -15,6 +15,7 @@ class NativeAdActivity : AppCompatActivity() {
         setContentView(binding.root)
         Log.d("RemoteCoonfig", RemoteConfigUtils.getNativeAdTypeId())
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot,
@@ -23,6 +24,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot1,
@@ -30,6 +32,7 @@ class NativeAdActivity : AppCompatActivity() {
             AdSdk.ADType.SMALLER, null, null, null
         )
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot2,
@@ -37,6 +40,7 @@ class NativeAdActivity : AppCompatActivity() {
             AdSdk.ADType.SEMIMEDIUM, null, null, null
         )
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot3,
@@ -44,6 +48,7 @@ class NativeAdActivity : AppCompatActivity() {
             AdSdk.ADType.MEDIUM, null, null, null
         )
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot4,
