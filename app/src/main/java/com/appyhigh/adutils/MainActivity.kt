@@ -46,9 +46,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnNativeAd.setOnClickListener {
             startActivity(Intent(this, NativeAdActivity::class.java))
         }
-        if (BuildConfig.DEBUG) {
-            binding.btnNativeAd.performClick()
-        }
 
         loadInterstitialAd()
         loadRewardedAd()
