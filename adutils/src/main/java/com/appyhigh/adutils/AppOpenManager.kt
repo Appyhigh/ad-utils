@@ -72,7 +72,6 @@ class AppOpenManager(
 
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                 super.onAdFailedToLoad(loadAdError)
-                Log.d(LOG_TAG, loadAdError.message)
                 appOpenAdCallback?.onAdFailedToLoad(loadAdError)
             }
 
@@ -114,7 +113,6 @@ class AppOpenManager(
         // Only show ad if there is not already an app open ad currently showing
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
-            Log.d(LOG_TAG, "Will show ad.")
             appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
                     override fun onAdDismissedFullScreenContent() {
                         // Set the reference to null so isAdAvailable() returns false.
@@ -142,7 +140,6 @@ class AppOpenManager(
             }
             return false
         } else {
-            Log.d(LOG_TAG, "Ad not loaded yet")
             fetchAd()
             return false
         }

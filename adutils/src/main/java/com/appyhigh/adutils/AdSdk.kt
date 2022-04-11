@@ -37,11 +37,6 @@ object AdSdk {
     private var bannerAdRefreshTimer = 45000L
     private var nativeAdRefreshTimer = 45000L
 
-    private var lastBGColor: Any? = null
-    private var lastTColor1: Int? = null
-    private var lastTColor2: Int? = null
-    private var lastHeight: Int = 300
-
     /**
      * Call initialize with you Application class object
      *
@@ -57,13 +52,16 @@ object AdSdk {
         appOpenAdUnit: String = "",
         appOpenAdCallback: AppOpenAdCallback? = null,
         bannerRefreshTimer: Long = 45000L,
-        nativeRefreshTimer: Long = 45000L
+        nativeRefreshTimer: Long = 45000L,
     ) {
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-
+                /*if (BuildConfig.DEBUG) {
+                    bannerAdRefreshTimer = 5000L
+                    nativeAdRefreshTimer = 5000L
+                }*/
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
                         for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
@@ -89,7 +87,7 @@ object AdSdk {
                             if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                                 Handler(Looper.getMainLooper()).post {
                                     loadNativeAd(
-                                        activity,
+                                        item.value.activity,
                                         item.value.id,
                                         item.value.lifecycle,
                                         item.value.adUnit,
@@ -97,10 +95,11 @@ object AdSdk {
                                         item.value.nativeAdLoadCallback,
                                         item.value.layoutId,
                                         item.value.populator,
-                                        background = lastBGColor,
-                                        textColor1 = lastTColor1,
-                                        textColor2 = lastTColor2,
-                                        maxHeight = lastHeight
+                                        item.value.viewId,
+                                        item.value.background,
+                                        item.value.textColor1,
+                                        item.value.textColor2,
+                                        item.value.maxHeight
                                     )
                                 }
                             }
@@ -170,7 +169,7 @@ object AdSdk {
         viewGroup: ViewGroup,
         adUnit: String,
         adSize: AdSize,
-        bannerAdLoadCallback: BannerAdLoadCallback?
+        bannerAdLoadCallback: BannerAdLoadCallback?,
     ) {
         loadBannerAd(
             System.currentTimeMillis(),
@@ -188,7 +187,7 @@ object AdSdk {
         viewGroup: ViewGroup,
         adUnit: String,
         adSize: AdSize,
-        bannerAdLoadCallback: BannerAdLoadCallback?
+        bannerAdLoadCallback: BannerAdLoadCallback?,
     ) {
         if (application != null) {
             if (adUnit.isBlank()) return
@@ -251,7 +250,7 @@ object AdSdk {
      */
     fun loadInterstitialAd(
         adUnit: String,
-        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
+        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
     ) {
         if (application != null) {
             var mInterstitialAd: InterstitialAd?
@@ -262,32 +261,27 @@ object AdSdk {
                 adRequest,
                 object : InterstitialAdLoadCallback() {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        Log.d(TAG, adError.message)
                         mInterstitialAd = null
                         interstitialAdUtilLoadCallback?.onAdFailedToLoad(adError, mInterstitialAd)
                     }
 
                     override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                        Log.d(TAG, "Ad was loaded.")
                         mInterstitialAd = interstitialAd
                         interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
 
                         mInterstitialAd?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
                                 override fun onAdDismissedFullScreenContent() {
-                                    Log.d(TAG, "Ad was dismissed.")
                                     interstitialAdUtilLoadCallback?.onAdDismissedFullScreenContent()
                                 }
 
                                 override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
-                                    Log.d(TAG, "Ad failed to show.")
                                     interstitialAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
                                         adError,
                                     )
                                 }
 
                                 override fun onAdShowedFullScreenContent() {
-                                    Log.d(TAG, "Ad showed fullscreen content.")
                                     mInterstitialAd = null
                                     interstitialAdUtilLoadCallback?.onAdShowedFullScreenContent()
                                 }
@@ -302,7 +296,7 @@ object AdSdk {
         adUnit: String,
         activity: Activity?,
         callback: SplashInterstitialCallback,
-        timer: Long = 5000L
+        timer: Long = 5000L,
     ) {
         if (activity != null) {
             var splash: InterstitialAd? = null
@@ -362,7 +356,7 @@ object AdSdk {
 
     fun loadRewardedAd(
         adUnit: String,
-        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
     ) {
         if (application != null) {
             var mRewardedAd: RewardedAd?
@@ -373,32 +367,27 @@ object AdSdk {
                 adRequest,
                 object : RewardedAdLoadCallback() {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        Log.d(TAG, adError.message)
                         mRewardedAd = null
                         rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, mRewardedAd)
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
-                        Log.d(TAG, "Ad was loaded.")
                         mRewardedAd = rewardedAd
                         rewardedAdUtilLoadCallback?.onAdLoaded(rewardedAd)
 
                         mRewardedAd?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
                                 override fun onAdDismissedFullScreenContent() {
-                                    Log.d(TAG, "Ad was dismissed.")
                                     rewardedAdUtilLoadCallback?.onAdDismissedFullScreenContent()
                                 }
 
                                 override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
-                                    Log.d(TAG, "Ad failed to show.")
                                     rewardedAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
                                         adError,
                                     )
                                 }
 
                                 override fun onAdShowedFullScreenContent() {
-                                    Log.d(TAG, "Ad showed fullscreen content.")
                                     mRewardedAd = null
                                     rewardedAdUtilLoadCallback?.onAdShowedFullScreenContent()
                                 }
@@ -511,7 +500,7 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300
+        maxHeight: Int = 300,
     ) {
         loadNativeAd(
             activity,
@@ -552,7 +541,7 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300
+        maxHeight: Int = 300,
     ) {
         viewGroup.visibility = VISIBLE
         viewGroup.removeAllViews()
@@ -575,14 +564,22 @@ object AdSdk {
                 }
             }
             viewGroup.addView(inflate)
-            lastBGColor = background
-            lastTColor1 = textColor1
-            lastTColor2 = textColor2
-            lastHeight = maxHeight
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
-                    id, lifecycle, adUnit, viewGroup, nativeAdLoadCallback, layoutId, populator
+                    activity,
+                    id,
+                    lifecycle,
+                    adUnit,
+                    viewGroup,
+                    nativeAdLoadCallback,
+                    layoutId,
+                    populator,
+                    viewId,
+                    background,
+                    textColor1,
+                    textColor2,
+                    maxHeight
                 )
             }
             lifecycle.addObserver(object : LifecycleObserver {
@@ -662,7 +659,7 @@ object AdSdk {
         viewId: String,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300
+        maxHeight: Int = 300,
     ) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
