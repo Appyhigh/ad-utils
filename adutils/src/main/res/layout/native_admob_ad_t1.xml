@@ -9,154 +9,142 @@
     android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
-    <RelativeLayout
-        android:id="@+id/ad_unit_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="fill_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingTop="5dp"
-        android:paddingBottom="5dp">
+        android:paddingBottom="10dp">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <TextView
+            android:id="@+id/ad_notification_view"
+            android:layout_width="@dimen/gnt_ad_indicator_width"
+            android:layout_height="@dimen/gnt_ad_indicator_height"
+            android:layout_marginTop="@dimen/gnt_ad_indicator_top_margin"
+            android:background="@drawable/gnt_rounded_corners_shape"
+            android:gravity="center"
+            android:text="Ad"
+            android:textColor="@color/gnt_ad_green"
+            android:textSize="@dimen/gnt_ad_indicator_text_size"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="35dip"
+            android:layout_height="35dip"
+            android:adjustViewBounds="true"
+            android:layout_margin="8dip"
+            android:padding="4dip"
+            app:layout_constraintEnd_toStartOf="@+id/headline"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ad_notification_view" />
+
+        <TextView
+            android:id="@+id/headline"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/headLineColor"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/icon"
+            app:layout_constraintTop_toTopOf="@+id/icon"
+            app:layout_constraintWidth_percent="0.9"
+            tools:text="FITBIT INDIA" />
+
+        <TextView
+            android:id="@+id/body"
+            android:layout_marginTop="5dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/headLineColor"
+            android:textSize="12sp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="@+id/headline"
+            app:layout_constraintTop_toBottomOf="@+id/headline" />
+
+        <TextView
+            android:layout_marginTop="5dp"
+            android:id="@+id/ad_advertiser"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="bottom"
+            android:lines="1"
+            android:textColor="@color/color_ads"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="@+id/body"
+            app:layout_constraintTop_toBottomOf="@+id/body" />
+
+        <TextView
+            android:id="@+id/price"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="2dp"
+            android:textColor="@color/color_ads"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toEndOf="@+id/ad_advertiser"
+            app:layout_constraintTop_toTopOf="@+id/ad_advertiser" />
+
+        <RatingBar
+            android:id="@+id/stars"
+            android:layout_marginTop="5dp"
+            style="?android:ratingBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:isIndicator="true"
+            android:numStars="5"
+            android:stepSize="0.5"
+            android:visibility="gone"
+            android:layout_marginLeft="2dp"
+            app:layout_constraintStart_toEndOf="@+id/price"
+            app:layout_constraintTop_toBottomOf="@+id/body" />
+
+        <TextView
+            android:id="@+id/ad_store"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="2dp"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="11sp"
+            app:layout_constraintStart_toEndOf="@+id/stars"
+            app:layout_constraintTop_toTopOf="@+id/ad_advertiser" />
+
+        <com.google.android.gms.ads.nativead.MediaView
+            android:id="@+id/ad_media"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingBottom="5dp">
-
-            <TextView
-                android:id="@+id/ad_notification_view"
-                android:layout_width="@dimen/gnt_ad_indicator_width"
-                android:layout_height="@dimen/gnt_ad_indicator_height"
-                android:layout_marginTop="@dimen/gnt_ad_indicator_top_margin"
-                android:background="@drawable/gnt_rounded_corners_shape"
-                android:gravity="center"
-                android:text="Ad"
-                android:textColor="@color/gnt_ad_green"
-                android:textSize="@dimen/gnt_ad_indicator_text_size"
-                android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"></TextView>
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ad_advertiser" />
 
 
-            <LinearLayout
-                android:id="@+id/linearLayout"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="8dip"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view">
-
-                <ImageView
-                    android:id="@+id/icon"
-                    android:layout_width="35dip"
-                    android:layout_height="35dip"
-                    android:adjustViewBounds="true" />
-
-                <LinearLayout
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="5dip"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/headline"
-                        android:layout_width="fill_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:textColor="@color/headLineColor"
-                        android:textSize="16sp"
-                        tools:text="FITBIT INDIA" />
-
-                    <TextView
-                        android:id="@+id/body"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:textColor="@color/headLineColor"
-                        android:textSize="12sp"
-                        android:visibility="gone"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent" />
-
-                    <LinearLayout
-                        android:layout_width="fill_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/ad_advertiser"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="bottom"
-                            android:lines="1"
-                            android:textColor="@color/color_ads"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/price"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginLeft="5dip"
-                            android:layout_marginRight="5dip"
-                            android:textColor="@color/color_ads"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <RatingBar
-                            android:id="@+id/stars"
-                            style="?android:ratingBarStyleSmall"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:isIndicator="true"
-                            android:numStars="5"
-                            android:stepSize="0.5"
-                            android:visibility="gone" />
-
-                        <TextView
-                            android:id="@+id/ad_store"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginLeft="5dip"
-                            android:textColor="@android:color/darker_gray"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <com.google.android.gms.ads.nativead.MediaView
-                android:id="@+id/ad_media"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="5dp"
-                android:layout_marginBottom="5dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/linearLayout" />
-
-
-            <Button
-                android:id="@+id/call_to_action"
-                android:layout_width="fill_parent"
-                android:layout_height="40dip"
-                android:layout_margin="5dp"
-                android:background="@drawable/ads_bg_lib"
-                android:gravity="center"
-                android:textColor="@color/color_white"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="@+id/linearLayout"
-                app:layout_constraintTop_toBottomOf="@id/ad_media" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-    </RelativeLayout>
-
-
+        <Button
+            android:id="@+id/call_to_action"
+            android:layout_width="fill_parent"
+            android:layout_height="40dip"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:background="@drawable/ads_bg_lib"
+            android:gravity="center"
+            android:textColor="@color/color_white"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ad_media" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.gms.ads.nativead.NativeAdView>
