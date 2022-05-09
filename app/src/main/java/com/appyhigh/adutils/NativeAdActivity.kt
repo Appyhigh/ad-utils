@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -20,7 +21,8 @@ class NativeAdActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot,
             nativeAdCallBack,
-            AdSdk.ADType.SMALLEST, null, null, null
+            AdSdk.ADType.SMALLEST, null, null, null,
+            Color.BLACK
         )
 
         AdSdk.loadNativeAd(
@@ -54,6 +56,14 @@ class NativeAdActivity : AppCompatActivity() {
             binding.llRoot4,
             nativeAdCallBack,
             AdSdk.ADType.BIG, null, null, null
+        )
+        AdSdk.loadNativeAd(
+            this,
+            lifecycle,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot4,
+            nativeAdCallBack,
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 150
         )
     }
 

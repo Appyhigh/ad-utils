@@ -58,10 +58,6 @@ object AdSdk {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-                /*if (BuildConfig.DEBUG) {
-                    bannerAdRefreshTimer = 5000L
-                    nativeAdRefreshTimer = 5000L
-                }*/
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
                         for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
@@ -417,6 +413,7 @@ object AdSdk {
             val SEMIMEDIUM = "2"
             val MEDIUM = "1"
             val BIG = "5"
+            val DEFAULT_NATIVE_SMALL = "6"
         }
     }
 
@@ -430,7 +427,7 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300,
+        maxHeight: Int = 300
     ) {
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -438,6 +435,7 @@ object AdSdk {
             "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
             "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
             "5" -> R.layout.native_admob_ad_t5/*BIG*/
+            "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
             else -> R.layout.native_admob_ad_t1
         }
         loadNativeAd(
@@ -496,7 +494,7 @@ object AdSdk {
         nativeAdLoadCallback: NativeAdLoadCallback?,
         @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
-        viewId: String = "1",
+        adType: String = "1",
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
@@ -511,7 +509,7 @@ object AdSdk {
             nativeAdLoadCallback,
             layoutId,
             populator,
-            viewId,
+            adType,
             background = background,
             textColor1,
             textColor2,
@@ -537,14 +535,13 @@ object AdSdk {
         nativeAdLoadCallback: NativeAdLoadCallback?,
         @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
-        viewId: String = "1",
+        adType: String = "1",
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
         maxHeight: Int = 300,
     ) {
         viewGroup.visibility = VISIBLE
-        viewGroup.removeAllViews()
         if (activity != null) {
             val inflate = activity.layoutInflater.inflate(R.layout.ad_loading_layout, null)
             val id1 = inflate.findViewById<View>(R.id.rl)
@@ -563,6 +560,7 @@ object AdSdk {
                     id1.setBackgroundColor(background)
                 }
             }
+            viewGroup.removeAllViews()
             viewGroup.addView(inflate)
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
@@ -575,7 +573,7 @@ object AdSdk {
                     nativeAdLoadCallback,
                     layoutId,
                     populator,
-                    viewId,
+                    adType,
                     background,
                     textColor1,
                     textColor2,
@@ -631,7 +629,7 @@ object AdSdk {
                                 populateUnifiedNativeAdView(
                                     nativeAd!!,
                                     adView,
-                                    viewId,
+                                    adType,
                                     textColor1,
                                     textColor2,
                                     maxHeight
@@ -656,21 +654,26 @@ object AdSdk {
     fun populateUnifiedNativeAdView(
         nativeAd: NativeAd,
         adView: NativeAdView?,
-        viewId: String,
+        adType: String,
         textColor1: Int?,
         textColor2: Int?,
         maxHeight: Int = 300,
     ) {
+        Log.d("aishik", "populateUnifiedNativeAdView: " + adType)
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
-
         val icon = nativeAd.icon
         adView.iconView = iconView
+        val iconView1 = adView.iconView
         if (icon == null) {
-            adView.iconView?.visibility = View.GONE
+            iconView1?.visibility = View.GONE
         } else {
-            (adView.iconView as ImageView).setImageDrawable(icon.drawable)
-            adView.iconView?.visibility = VISIBLE
+            if (adType == ADType.DEFAULT_NATIVE_SMALL) {
+                val iconHeight = maxHeight
+                iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
+            }
+            (iconView1 as ImageView).setImageDrawable(icon.drawable)
+            iconView1?.visibility = VISIBLE
         }
 
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
@@ -695,8 +698,9 @@ object AdSdk {
             override fun onChildViewRemoved(parent: View, child: View) {}
         })
         val mediaIcon = nativeAd.mediaContent
-        if (mediaIcon == null || viewId == "4") {
+        if (mediaIcon == null || adType == "4") {
             adView.mediaView?.visibility = View.GONE
+            adView.mediaView
         } else {
             adView.mediaView?.visibility = VISIBLE
             (adView.mediaView as MediaView).setMediaContent(mediaIcon)
@@ -715,7 +719,7 @@ object AdSdk {
         val adBody = adView.findViewById(R.id.body) as TextView
         adView.bodyView = adBody
         val bodyView = adView.bodyView
-        if (viewId == "2") {
+        if (adType == "2") {
             bodyView?.visibility = View.GONE
         } else {
             bodyView?.visibility = View.GONE
@@ -728,7 +732,7 @@ object AdSdk {
 
         val adStore = adView.findViewById<TextView>(R.id.ad_store)
         adView.storeView = adStore
-        if (nativeAd.store != null && viewId == "4") {
+        if (nativeAd.store != null && adType == "4") {
             adView.storeView?.visibility = VISIBLE
             val textView1 = adView.storeView as TextView
             textView1.text = nativeAd.store

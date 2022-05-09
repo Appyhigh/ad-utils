@@ -1,6 +1,7 @@
 package com.appyhigh.adutils.models
 
 import android.app.Activity
+import android.graphics.Color
 import android.view.ViewGroup
 import androidx.lifecycle.Lifecycle
 import com.appyhigh.adutils.callbacks.NativeAdLoadCallback
@@ -21,4 +22,5 @@ data class NativeAdItem(
     var textColor1: Int? = null,
     var textColor2: Int? = null,
     var maxHeight: Int = 300,
+    var buttonColor: Int = Color.parseColor("#000000")
 )

@@ -47,10 +47,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, NativeAdActivity::class.java))
         }
 
+        if (BuildConfig.DEBUG) {
+            binding.btnNativeAd.performClick()
+        }
         loadInterstitialAd()
         loadRewardedAd()
         val height: Int = resources.displayMetrics.heightPixels
         val maxHeight = height * 60 / 100
+/*
         AdSdk.loadNativeAd(
             this,
             lifecycle,
@@ -59,6 +63,9 @@ class MainActivity : AppCompatActivity() {
             null,
             AdSdk.ADType.MEDIUM, null, null, null, maxHeight = maxHeight
         )
+*/
+
+
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {
