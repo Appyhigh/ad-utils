@@ -659,14 +659,17 @@ object AdSdk {
         textColor2: Int?,
         maxHeight: Int = 300,
     ) {
-        Log.d("aishik", "populateUnifiedNativeAdView: " + adType)
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
-        val icon = nativeAd.icon
+        var icon = nativeAd.icon
         adView.iconView = iconView
         val iconView1 = adView.iconView
         if (icon == null) {
-            iconView1?.visibility = View.GONE
+            if (adType == ADType.DEFAULT_NATIVE_SMALL) {
+                val iconHeight = maxHeight
+                iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
+            }
+            iconView1?.visibility = View.INVISIBLE
         } else {
             if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                 val iconHeight = maxHeight
