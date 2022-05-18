@@ -330,15 +330,6 @@ AdSdk.loadNativeAd(
  */
 
 
-AdSdk.loadNativeAd(
-    lifecycle,
-    "ca-app-pub-3940256099942544/2247696110",
-    binding.llRoot,
-    nativeAdCallBack,
-    R.layout.ad_item,
-    this::populateNativeAdView
-)
-
 private val nativeAdCallBack = object : NativeAdLoadCallback {
     override fun onAdLoaded() {
         Log.d("NativeAdLoadCallback", "onAdLoaded")
