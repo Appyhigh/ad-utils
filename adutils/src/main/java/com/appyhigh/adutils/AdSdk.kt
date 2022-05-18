@@ -53,6 +53,7 @@ object AdSdk {
         appOpenAdCallback: AppOpenAdCallback? = null,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
+        loadSplashAppOpenAd: Boolean = false
     ) {
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
@@ -109,10 +110,18 @@ object AdSdk {
                 MobileAds.initialize(myApp) {
                     if (appOpenAdUnit.isNotEmpty()) {
                         attachAppOpenAdManager(appOpenAdUnit, true, appOpenAdCallback)
+                        Log.d("aishik", "initialize: ")
+                        if (loadSplashAppOpenAd) {
+                            AppOpenManager.loadSplashAppOpenAd(
+                                myApp,
+                                appOpenAdUnit
+                            )
+                        }
                     }
                 }
             }
         }
+//        AppOpenManager.loadSplashAppOpenAd(application!!, appOpenAdUnit)
     }
 
     private fun isGooglePlayServicesAvailable(application: Application): Boolean {

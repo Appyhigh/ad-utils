@@ -30,7 +30,6 @@ class AppOpenManager(
 ) :
     LifecycleObserver,
     ActivityLifecycleCallbacks {
-    private var appOpenAd: AppOpenAd? = null
     private var currentActivity: Activity? = null
     private var loadCallback: AppOpenAdLoadCallback? = null
     private var loadTime: Long = 0
@@ -65,6 +64,7 @@ class AppOpenManager(
         loadCallback = object : AppOpenAdLoadCallback() {
             override fun onAdLoaded(ad: AppOpenAd) {
                 super.onAdLoaded(ad)
+                Log.d("aishik", "onAdLoaded: ")
                 appOpenAd = ad
                 loadTime = Date().time
                 appOpenAdCallback?.onAdLoaded()
@@ -72,15 +72,18 @@ class AppOpenManager(
 
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                 super.onAdFailedToLoad(loadAdError)
+                Log.d("aishik", "onAdFailedToLoad: " + loadAdError.message)
                 appOpenAdCallback?.onAdFailedToLoad(loadAdError)
             }
 
         }
         val request = adRequest
+/*
         AppOpenAd.load(
             myApplication, appOpenAdUnit, request,
             AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback!!
         )
+*/
     }
 
     fun showIfAdLoaded(activity: Activity): Boolean {
@@ -114,26 +117,27 @@ class AppOpenManager(
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
             appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
-                    override fun onAdDismissedFullScreenContent() {
-                        // Set the reference to null so isAdAvailable() returns false.
-                        appOpenAd = null
-                        isShowingAd = false
-                        if(isShownOnlyOnce) {
-                            ProcessLifecycleOwner.get().lifecycle.removeObserver(this@AppOpenManager)
-                            currentActivity = null
-                        } else {
-                            fetchAd()
-                        }
-                        appOpenAdCallback?.onAdClosed()
+                override fun onAdDismissedFullScreenContent() {
+                    // Set the reference to null so isAdAvailable() returns false.
+                    appOpenAd = null
+                    isShowingAd = false
+                    if (isShownOnlyOnce) {
+                        ProcessLifecycleOwner.get().lifecycle.removeObserver(this@AppOpenManager)
+                        currentActivity = null
+                    } else {
+                        fetchAd()
                     }
-
-                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                        appOpenAdCallback?.onAdFailedToShow(adError)
-                    }
-                    override fun onAdShowedFullScreenContent() {
-                        isShowingAd = true
-                    }
+                    appOpenAdCallback?.onAdClosed()
                 }
+
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    appOpenAdCallback?.onAdFailedToShow(adError)
+                }
+
+                override fun onAdShowedFullScreenContent() {
+                    isShowingAd = true
+                }
+            }
             currentActivity?.let {
                 appOpenAd!!.show(it)
                 return true
@@ -151,8 +155,7 @@ class AppOpenManager(
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
         val appBackgroundTime = System.currentTimeMillis() - backgroundTime
-        Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
-        if(appBackgroundTime > 30000)
+        if (appBackgroundTime > 30000)
             showAdIfAvailable()
     }
 
@@ -164,9 +167,83 @@ class AppOpenManager(
         backgroundTime = System.currentTimeMillis()
     }
 
+
+    private var appOpenAd: AppOpenAd? = null
+
     companion object {
-        private const val LOG_TAG = "AdSdk:AppOpenManager"
+        private const val LOG_TAG = "aishik"
         private var isShowingAd = false
+        private var splashAppOpenAd: AppOpenAd? = null
+        private var reason: String? = null
+
+        interface appOpenCallBack {
+            fun adDismissed()
+            fun adError(message: String?)
+            fun adShown()
+            fun adClicked()
+            fun adLoaded(appOpenAd: AppOpenAd)
+            fun adNotLoadedYet(reason: String?)
+        }
+
+        fun loadSplashAppOpenAd(application: Application, adUnit: String) {
+            Log.d("aishik", "loadSplashAppOpenAd: aaa " + application)
+            val build = AdRequest.Builder().build()
+            val adLoadCallBack = object : AppOpenAdLoadCallback() {
+                override fun onAdLoaded(p0: AppOpenAd) {
+                    super.onAdLoaded(p0)
+                    Log.d("aishik", "onAdLoaded: 123 " + p0)
+                    splashAppOpenAd = p0
+                    reason = null
+                }
+
+                override fun onAdFailedToLoad(p0: LoadAdError) {
+                    super.onAdFailedToLoad(p0)
+                    Log.d("aishik", "onAdFailedToLoad: 456" + p0.message)
+                    splashAppOpenAd = null
+                    reason = p0.message
+                }
+            }
+            val applicationContext = application.applicationContext
+            Log.d("aishik", "loadSplashAppOpenAd: 1 $adUnit $build $applicationContext")
+            AppOpenAd.load(
+                applicationContext, adUnit, build,
+                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, adLoadCallBack
+            )
+            Log.d("aishik", "loadSplashAppOpenAd: 2 ")
+        }
+
+        fun showAdIfAvailable(activity: Activity, appOpenCallBack: appOpenCallBack) {
+            Log.d("aishik", "showAdIfAvailable: 111")
+            if (splashAppOpenAd != null) {
+                Log.d("aishik", "showAdIfAvailable: 222")
+                splashAppOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
+                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                        super.onAdFailedToShowFullScreenContent(p0)
+                        appOpenCallBack.adError(p0.message)
+                    }
+
+                    override fun onAdShowedFullScreenContent() {
+                        super.onAdShowedFullScreenContent()
+                        appOpenCallBack.adShown()
+                    }
+
+                    override fun onAdDismissedFullScreenContent() {
+                        super.onAdDismissedFullScreenContent()
+                        appOpenCallBack.adDismissed()
+                    }
+
+                    override fun onAdClicked() {
+                        super.onAdClicked()
+                        appOpenCallBack.adClicked()
+                    }
+                }
+                Log.d("aishik", "showAdIfAvailable: SHOW")
+                appOpenCallBack.adLoaded(splashAppOpenAd!!)
+//                splashAppOpenAd!!.show(activity)
+            } else {
+                appOpenCallBack.adNotLoadedYet(reason)
+            }
+        }
     }
 
     /**

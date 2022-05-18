@@ -2,9 +2,10 @@ package com.appyhigh.adutils
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
+import com.google.android.gms.ads.appopen.AppOpenAd
 
 class SplashActivity : AppCompatActivity() {
     lateinit var binding: ActivitySplashBinding
@@ -18,8 +19,10 @@ class SplashActivity : AppCompatActivity() {
             applicationContext as MyApp,
             "ca-app-pub-3940256099942544/3419835294",
             null,
-            0L, 0L
+            0L,
+            0L
         )
+/*
         AdSdk.loadSplashAd(
             "ca-app-pub-3940256099942544/1033173712",
             this,
@@ -30,12 +33,63 @@ class SplashActivity : AppCompatActivity() {
                 }
             }, 1000
         )
+*/
+        AppOpenManager.loadSplashAppOpenAd(application, "ca-app-pub-3940256099942544/3419835294")
+        loadAppOpenAd()
         /*Handler(Looper.getMainLooper()).postDelayed({
             if (appOpenManager == null) {
                 startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                 finish()
             }
         }, 4000)*/
+    }
+
+    var waitTimeinSec = 5
+    private fun loadAppOpenAd() {
+        AppOpenManager.showAdIfAvailable(this,
+            object : AppOpenManager.Companion.appOpenCallBack {
+                override fun adDismissed() {
+                    Log.d("aishik", "adDismissed: ")
+                    finish()
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                }
+
+                override fun adLoaded(appOpenAd: AppOpenAd) {
+                    Log.d("aishik", "adLoaded: 11 ")
+                    runOnUiThread {
+                        appOpenAd.show(this@SplashActivity)
+                    }
+                }
+
+                override fun adError(message: String?) {
+                    Log.d("aishik", "adError: $message")
+                    finish()
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                }
+
+                override fun adShown() {
+                    Log.d("aishik", "adShown: ")
+                }
+
+                override fun adClicked() {
+                    Log.d("aishik", "adClicked: ")
+                }
+
+                override fun adNotLoadedYet(reason: String?) {
+                    //TODO : Add the Timer logic here
+                    //This is the example
+                    Log.d("aishik", "adNotLoaded: $reason")
+                    if (waitTimeinSec == 0) {
+                        this.adError(null)
+                    } else {
+                        Thread {
+                            //Infinite wait
+                            Thread.sleep(1000)
+                            loadAppOpenAd()
+                        }.start()
+                    }
+                }
+            })
     }
 
 /*
