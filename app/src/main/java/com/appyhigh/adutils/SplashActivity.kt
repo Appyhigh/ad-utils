@@ -76,18 +76,8 @@ class SplashActivity : AppCompatActivity() {
                 }
 
                 override fun adNotLoadedYet(reason: String?) {
-                    //TODO : Add the Timer logic here
-                    //This is the example
-                    Log.d("aishik", "adNotLoaded: $reason")
-                    if (waitTimeinSec == 0) {
-                        this.adError(null)
-                    } else {
-                        Thread {
-                            //Infinite wait
-                            Thread.sleep(1000)
-                            loadAppOpenAd()
-                        }.start()
-                    }
+                    finish()
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                 }
             })
     }

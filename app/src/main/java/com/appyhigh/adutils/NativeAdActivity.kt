@@ -54,16 +54,23 @@ class NativeAdActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot4,
             nativeAdCallBack,
-            AdSdk.ADType.BIG, null, null, null
-        )
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 150
+        )*/
+
         AdSdk.loadNativeAd(
             this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot4,
             nativeAdCallBack,
-            AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 150
-        )*/
+            AdSdk.ADType.BIG,
+            null,
+            null,
+            null,
+            500
+        )
+
+/*
         AdSdk.loadNativeAd(
             this,
             lifecycle,
@@ -72,6 +79,7 @@ class NativeAdActivity : AppCompatActivity() {
             nativeAdCallBack,
             AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 200
         )
+*/
     }
 
     private val nativeAdCallBack = object : NativeAdLoadCallback() {
