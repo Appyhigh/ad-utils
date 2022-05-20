@@ -690,6 +690,7 @@ object AdSdk {
 
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
         adView.mediaView = mediaView
+/*
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
                 val scale: Float = adView.mediaView.context.resources.displayMetrics.density
@@ -697,11 +698,13 @@ object AdSdk {
 //                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
                 if (child is ImageView) { //Images
                     child.adjustViewBounds = true
-                    val layoutParams = child.layoutParams
-                    layoutParams.height = maxHeight
-                    child.layoutParams = layoutParams
+                    val layoutParams1 = child.layoutParams
+                    layoutParams1.width = MATCH_PARENT
+                    layoutParams1.height = maxHeight
+                    child.layoutParams = layoutParams1
                 } else { //Videos
                     val params = child.layoutParams
+                    params.width = MATCH_PARENT
                     params.height = maxHeightPixels
                     child.layoutParams = params
                 }
@@ -709,6 +712,7 @@ object AdSdk {
 
             override fun onChildViewRemoved(parent: View, child: View) {}
         })
+*/
         val mediaIcon = nativeAd.mediaContent
         if (mediaIcon == null || adType == "4") {
             adView.mediaView?.visibility = View.GONE
