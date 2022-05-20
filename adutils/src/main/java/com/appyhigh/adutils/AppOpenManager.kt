@@ -78,12 +78,11 @@ class AppOpenManager(
 
         }
         val request = adRequest
-/*
+
         AppOpenAd.load(
             myApplication, appOpenAdUnit, request,
             AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback!!
         )
-*/
     }
 
     fun showIfAdLoaded(activity: Activity): Boolean {
@@ -152,8 +151,8 @@ class AppOpenManager(
     /**
      * LifecycleObserver methods
      */
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onStart() {
+    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    fun onResume() {
         val appBackgroundTime = System.currentTimeMillis() - backgroundTime
         if (appBackgroundTime > 30000)
             showAdIfAvailable()
@@ -162,9 +161,12 @@ class AppOpenManager(
     /**
      * LifecycleObserver methods
      */
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun onStop() {
+    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+    fun onPause() {
         backgroundTime = System.currentTimeMillis()
+        if (!isAdAvailable){
+           fetchAd()
+        }
     }
 
 

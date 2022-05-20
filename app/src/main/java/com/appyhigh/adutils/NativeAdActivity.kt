@@ -63,11 +63,11 @@ class NativeAdActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot4,
             nativeAdCallBack,
-            AdSdk.ADType.BIG,
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL,
             null,
             null,
             null,
-            200
+            250
         )
 
 /*

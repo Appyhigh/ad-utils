@@ -20,7 +20,8 @@ class SplashActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/3419835294",
             null,
             0L,
-            0L
+            0L,
+            true
         )
 /*
         AdSdk.loadSplashAd(
