@@ -54,15 +54,18 @@ Initialize Sdk with App Open Ad
  * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  * @param loadSplashAppOpenAd : Boolean = false-> Load the Splash App Open ad if set to true default is false
+ * @param showFGToBGAdOnlyOnce : Boolean = false-> show BG to FG ads only once or multiple times
  */
 
 AdSdk.initialize(
-    applicationContext as MyApp,
-    "ca-app-pub-3940256099942544/3419835294",
-    appOpenAdCallback,
-    45000L,
-    60000L,
-    false
+    activity = null,
+    app = applicationContext as MyApp,
+    appOpenAdUnit = "ca-app-pub-3940256099942544/3419835294",
+    appOpenAdCallback = null,
+    bannerRefreshTimer = 0L,
+    nativeRefreshTimer = 0L,
+    loadSplashAppOpenAd = true,
+    showFGToBGAdOnlyOnce = false
 )
 ```
 

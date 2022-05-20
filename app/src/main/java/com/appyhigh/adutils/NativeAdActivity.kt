@@ -67,7 +67,7 @@ class NativeAdActivity : AppCompatActivity() {
             null,
             null,
             null,
-            180
+            600
         )
 
 /*

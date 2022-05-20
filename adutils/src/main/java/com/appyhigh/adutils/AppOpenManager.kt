@@ -151,10 +151,15 @@ class AppOpenManager(
     /**
      * LifecycleObserver methods
      */
+    var bgTime = 30000
+
     @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
     fun onResume() {
+        if (BuildConfig.DEBUG) {
+            bgTime = 1000
+        }
         val appBackgroundTime = System.currentTimeMillis() - backgroundTime
-        if (appBackgroundTime > 30000)
+        if (appBackgroundTime > bgTime)
             showAdIfAvailable()
     }
 
@@ -253,9 +258,11 @@ class AppOpenManager(
      */
     //Todo Fix App open fg to bg
     init {
+        myApplication.registerActivityLifecycleCallbacks(this)
+/*
         if (!isShownOnlyOnce) {
-            myApplication.registerActivityLifecycleCallbacks(this)
         }
+*/
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 }

@@ -15,13 +15,14 @@ class SplashActivity : AppCompatActivity() {
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
         AdSdk.initialize(
-            null,
-            applicationContext as MyApp,
-            "ca-app-pub-3940256099942544/3419835294",
-            null,
-            0L,
-            0L,
-            true
+            activity = null,
+            app = applicationContext as MyApp,
+            appOpenAdUnit = "ca-app-pub-3940256099942544/3419835294",
+            appOpenAdCallback = null,
+            bannerRefreshTimer = 0L,
+            nativeRefreshTimer = 0L,
+            loadSplashAppOpenAd = true,
+            showBGToFGAdOnlyOnce = true
         )
 /*
         AdSdk.loadSplashAd(

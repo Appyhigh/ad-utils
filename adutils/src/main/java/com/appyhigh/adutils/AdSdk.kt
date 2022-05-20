@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.View
 import android.view.View.VISIBLE
 import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.*
 import androidx.annotation.LayoutRes
 import androidx.lifecycle.Lifecycle
@@ -53,7 +54,8 @@ object AdSdk {
         appOpenAdCallback: AppOpenAdCallback? = null,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
-        loadSplashAppOpenAd: Boolean = false
+        loadSplashAppOpenAd: Boolean = false,
+        showBGToFGAdOnlyOnce: Boolean = false
     ) {
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
@@ -109,7 +111,11 @@ object AdSdk {
             application?.let { myApp ->
                 MobileAds.initialize(myApp) {
                     if (appOpenAdUnit.isNotEmpty()) {
-                        attachAppOpenAdManager(appOpenAdUnit, true, appOpenAdCallback)
+                        attachAppOpenAdManager(
+                            appOpenAdUnit,
+                            showBGToFGAdOnlyOnce,
+                            appOpenAdCallback
+                        )
                         Log.d("aishik", "initialize: ")
                         if (loadSplashAppOpenAd) {
                             AppOpenManager.loadSplashAppOpenAd(
@@ -690,7 +696,7 @@ object AdSdk {
 
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
         adView.mediaView = mediaView
-/*
+        mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
                 val scale: Float = adView.mediaView.context.resources.displayMetrics.density
@@ -712,7 +718,6 @@ object AdSdk {
 
             override fun onChildViewRemoved(parent: View, child: View) {}
         })
-*/
         val mediaIcon = nativeAd.mediaContent
         if (mediaIcon == null || adType == "4") {
             adView.mediaView?.visibility = View.GONE
