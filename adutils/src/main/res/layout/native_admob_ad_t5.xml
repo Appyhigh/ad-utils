@@ -139,7 +139,7 @@
                     android:id="@+id/call_to_action"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
-                    android:layout_gravity="end"
+                    android:layout_gravity="center"
                     android:layout_margin="5dp"
                     android:background="@drawable/ads_bg_lib_curver"
                     android:gravity="center"
