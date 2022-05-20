@@ -249,6 +249,7 @@ class AppOpenManager(
     /**
      * Constructor
      */
+    //Todo Fix App open fg to bg
     init {
         if (!isShownOnlyOnce) {
             myApplication.registerActivityLifecycleCallbacks(this)
