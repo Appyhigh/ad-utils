@@ -22,7 +22,7 @@ class SplashActivity : AppCompatActivity() {
             bannerRefreshTimer = 0L,
             nativeRefreshTimer = 0L,
             loadSplashAppOpenAd = true,
-            showBGToFGAdOnlyOnce = true
+            showBGToFGAdOnlyOnce = false
         )
 /*
         AdSdk.loadSplashAd(
