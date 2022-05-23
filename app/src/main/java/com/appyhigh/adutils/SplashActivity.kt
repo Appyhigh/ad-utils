@@ -2,6 +2,7 @@ package com.appyhigh.adutils
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
@@ -36,8 +37,10 @@ class SplashActivity : AppCompatActivity() {
             }, 1000
         )
 */
-        AppOpenManager.loadSplashAppOpenAd(application, "ca-app-pub-3940256099942544/3419835294")
-        loadAppOpenAd()
+//        AppOpenManager.loadSplashAppOpenAd(application, "ca-app-pub-3940256099942544/3419835294")
+        Handler().postDelayed({
+            loadAppOpenAd()
+        },3500)
         /*Handler(Looper.getMainLooper()).postDelayed({
             if (appOpenManager == null) {
                 startActivity(Intent(this@SplashActivity, MainActivity::class.java))

@@ -34,6 +34,8 @@ class AppOpenManager(
     private var loadCallback: AppOpenAdLoadCallback? = null
     private var loadTime: Long = 0
     private var backgroundTime: Long = 0
+    private var appCount = 0
+
 
     /**
      * Creates and returns ad request.
@@ -155,12 +157,15 @@ class AppOpenManager(
 
     @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
     fun onResume() {
-        if (BuildConfig.DEBUG) {
-            bgTime = 1000
+        if (appCount > 0) {
+            if (BuildConfig.DEBUG) {
+                bgTime = 1000
+            }
+            val appBackgroundTime = System.currentTimeMillis() - backgroundTime
+            if (appBackgroundTime > bgTime)
+                showAdIfAvailable()
         }
-        val appBackgroundTime = System.currentTimeMillis() - backgroundTime
-        if (appBackgroundTime > bgTime)
-            showAdIfAvailable()
+        appCount += 1;
     }
 
     /**
