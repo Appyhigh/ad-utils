@@ -9,7 +9,6 @@ An ad util library to facilitate easy and standardized implementation of latest 
 In your  `build.gradle`:
 
 ```groovy
-
 allprojects {
     repositories {
         ...
@@ -30,13 +29,15 @@ Add these configurations to you AndroidManifest.xml
     android:value="ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX" /> 
 ```
 
-Initialize Sdk without App Open Ad
+Initialize Sdk with default refresh timers i.e. 45 seconds
 
 ```kotlin
 AdSdk.initialize(applicationContext as MyApp)
 ```
 
-Initialize Sdk with App Open Ad
+--- OR ---
+
+Initialize Sdk with custom refresh timers
 
 ```kotlin
 
@@ -44,20 +45,78 @@ Initialize Sdk with App Open Ad
  * Call initialize with you Application class object
  *
  * @param app -> Pass your application context here
- * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
- * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
  * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  */
 
-AdSdk.initialize(
-    applicationContext as MyApp,
-    "ca-app-pub-3940256099942544/3419835294",
-    appOpenAdCallback,
-    45000L,
-    60000L
-)
+AdSdk.initialize(applicationContext as MyApp, 55000L, 60000L)
 ```
+
+---
+
+## To show AppOpenAd when app comes from Background to Foreground
+
+```kotlin
+/**
+ * Call initialize with you Application class object
+ *
+ * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
+ * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
+ * @param backgroundThreshold -> Minimum time in millis that app should remain in background before showing AppOpenAd
+ **/
+AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 30000)
+```
+
+> Implement `BypassAppOpenAd` interface in Activities where you do not want to show AppOpenAd when app resumes
+
+---
+
+### Show AppOpen Ad on SplashScreen
+
+```kotlin
+AdSdk.loadAppOpenAd(this, "ca-app-pub-3940256099942544/3419835294", true,
+    object : AppOpenAdLoadCallback() {
+
+        override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+            launchHomeActivity()
+        }
+
+        override fun onAdFailedToShow(adError: AdError) {
+            launchHomeActivity()
+        }
+
+        override fun onAdClosed() {
+            launchHomeActivity()
+        }
+
+    })
+```
+
+---
+
+### Show Interstitial Ad on SplashScreen
+
+```kotlin
+AdSdk.loadSplashAd(
+            "ca-app-pub-3940256099942544/1033173712",
+            this,
+            object : SplashInterstitialCallback {
+                override fun moveNext() {
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                }
+            })
+```
+
+> adUnit: String, activity: Activity?, callback: SplashInterstitialCallback, timer: Long = 5000L
+
+These are the parameters
+
+    fun moveNext()
+
+This is the callback of the splash it simply means to move to the next activity or do whatever you
+wanted to do on splash fail or user saw the ad or if the timer runs out
+
+---
 
 ## Banner Ad
 
@@ -103,8 +162,9 @@ private val bannerAdLoadCallback = object : BannerAdLoadCallback {
     }
 
 }
-
 ```
+
+---
 
 ## Interstitial Ad
 
@@ -155,25 +215,7 @@ interstitialAd?.show(this)
 
 ```
 
-### To Show Splash Ad Use this Method
-
-    AdSdk.loadSplashAd(
-                "ca-app-pub-3940256099942544/1033173712",
-                this,
-                object : SplashInterstitialCallback {
-                    override fun moveNext() {
-                        startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-                    }
-                })
-
-> adUnit: String, activity: Activity?, callback: SplashInterstitialCallback, timer: Long = 5000L
-
-These are the parameters
-
-    fun moveNext()
-
-This is the callback of the splash it simply means to move to the next activity or do whatever you
-wanted to do on splash fail or user saw the ad or if the timer runs out
+---
 
 ## Rewarded Ad
 
@@ -224,17 +266,19 @@ rewardedAd?.show(this)
 
 ```
 
+---
+
 # Load a Native Ad
 
 ## Enable firebase remote config for the app.
 
-```kotlin
+```groovy
 
 In your build.gradle(app) add :
 
 ##IMPORTANT:
-#Create a firebase account for this project .
-#Add the google - services.json to your project .
+// Create a firebase account for this project .
+// Add the google - services.json to your project .
 
 plugins {
     ...
@@ -279,7 +323,7 @@ if you want to set layout via remote config
 
 ```kotlin
 /**
- *Go to the Firebase of your Project and set this variable in Remore Config
+ * Go to the Firebase of your Project and set this variable in Remote Config
  * native_ad_layout_type - Type String - Value - 1 to 5, no need for quotes
  */
 

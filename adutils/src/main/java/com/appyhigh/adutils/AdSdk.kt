@@ -20,6 +20,7 @@ import com.appyhigh.adutils.callbacks.*
 import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
 import com.google.android.gms.ads.*
+import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.nativead.*
@@ -27,6 +28,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import java.util.*
 import kotlin.concurrent.fixedRateTimer
 
 
@@ -46,15 +48,11 @@ object AdSdk {
      * Call initialize with you Application class object
      *
      * @param app -> Pass your application context here
-     * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
-     * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
      * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      */
     fun initialize(
         app: Application,
-        appOpenAdUnit: String = "",
-        appOpenAdCallback: AppOpenAdCallback? = null,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L
     ) {
@@ -108,13 +106,6 @@ object AdSdk {
             }
 
             application = app
-            application?.let { myApp ->
-                MobileAds.initialize(myApp) {
-                    if (appOpenAdUnit.isNotEmpty()) {
-                        attachAppOpenAdManager(appOpenAdUnit, true, appOpenAdCallback)
-                    }
-                }
-            }
         }
     }
 
@@ -136,21 +127,64 @@ object AdSdk {
      * Call initialize with you Application class object
      *
      * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
-     * @param isShownOnlyOnce -> Pass true if you want to show ad only once
      * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
+     * @param backgroundThreshold -> Minimum time in millis that app should remain in background before showing [AppOpenAd]
      **/
     fun attachAppOpenAdManager(
         appOpenAdUnit: String,
-        isShownOnlyOnce: Boolean = false,
         appOpenAdCallback: AppOpenAdCallback? = null,
+        backgroundThreshold: Int = 30000
     ) {
         if (application != null) {
             val appOpenManager =
-                AppOpenManager(application!!, appOpenAdUnit, isShownOnlyOnce, appOpenAdCallback)
+                AppOpenManager(application!!, appOpenAdUnit, backgroundThreshold, appOpenAdCallback)
             appOpenAdCallback?.onInitSuccess(appOpenManager)
         } else {
             throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
+    }
+
+    /**
+     * Load an App Open Ad for Splash Screen
+     *
+     * @param activity -> instance of your Activity which will load and display AppOpen Ad
+     * @param appOpenAdUnit -> the ad-unit id for app open ad
+     * @param showWhenLoaded -> if true, ad will be shown as soon as its loaded after calling callbacks
+     * @param appOpenAdCallback a nullable callback, __*if this is null ad will be shown as soon as its loaded*__
+     */
+    fun loadAppOpenAd(
+        activity: Activity,
+        appOpenAdUnit: String,
+        showWhenLoaded: Boolean,
+        appOpenAdCallback: AppOpenAdLoadCallback? = null
+    ) {
+        val loadCallback = object : AppOpenAd.AppOpenAdLoadCallback() {
+
+            override fun onAdLoaded(ad: AppOpenAd) {
+                ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                    override fun onAdDismissedFullScreenContent() {
+                        appOpenAdCallback?.onAdClosed()
+                    }
+
+                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                        appOpenAdCallback?.onAdFailedToShow(adError)
+                    }
+                }
+                appOpenAdCallback?.onAdLoaded(ad)
+                if (showWhenLoaded)
+                    ad.show(activity)
+            }
+
+            override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                Log.d(TAG, loadAdError.message)
+                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+            }
+
+        }
+        AppOpenAd.load(
+            application!!, appOpenAdUnit, AdRequest.Builder().build(),
+            AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
+        )
     }
 
     /**
@@ -304,7 +338,7 @@ object AdSdk {
     ) {
         if (activity != null) {
             var splash: InterstitialAd? = null
-            val ctd = object : CountDownTimer(timer, 1000) {
+            object : CountDownTimer(timer, 1000) {
                 override fun onTick(millisUntilFinished: Long) {
                     if (splash != null) {
                         splash?.show(activity)
@@ -327,12 +361,10 @@ object AdSdk {
                         splash?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
                                 override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                                    super.onAdFailedToShowFullScreenContent(p0)
                                     callback.moveNext()
                                 }
 
                                 override fun onAdDismissedFullScreenContent() {
-                                    super.onAdDismissedFullScreenContent()
                                     callback.moveNext()
                                 }
                             }
@@ -340,6 +372,7 @@ object AdSdk {
 
                     override fun onAdFailedToLoad(p0: LoadAdError) {
                         super.onAdFailedToLoad(p0)
+                        Log.i(TAG, "Failed to load SplashAd: ${p0.message}")
                         callback.moveNext()
                     }
                 }
@@ -754,5 +787,6 @@ object AdSdk {
 
     }
 
+    interface BypassAppOpenAd
 
 }

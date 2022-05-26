@@ -25,7 +25,7 @@ import java.util.*
 class AppOpenManager(
     private val myApplication: Application,
     private val appOpenAdUnit: String,
-    private val isShownOnlyOnce: Boolean,
+    private val backgroundThreshold: Int = 30000,
     private var appOpenAdCallback: AppOpenAdCallback?
 ) :
     LifecycleObserver,
@@ -67,7 +67,7 @@ class AppOpenManager(
                 super.onAdLoaded(ad)
                 appOpenAd = ad
                 loadTime = Date().time
-                appOpenAdCallback?.onAdLoaded()
+                appOpenAdCallback?.onAdLoaded(ad)
             }
 
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
@@ -114,18 +114,17 @@ class AppOpenManager(
         // Only show ad if there is not already an app open ad currently showing
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
+            if(currentActivity is AdSdk.BypassAppOpenAd) {
+                Log.d(LOG_TAG, "AppOpen Ad Bypassed")
+                return false
+            }
             Log.d(LOG_TAG, "Will show ad.")
             appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
                     override fun onAdDismissedFullScreenContent() {
                         // Set the reference to null so isAdAvailable() returns false.
                         appOpenAd = null
                         isShowingAd = false
-                        if(isShownOnlyOnce) {
-                            ProcessLifecycleOwner.get().lifecycle.removeObserver(this@AppOpenManager)
-                            currentActivity = null
-                        } else {
-                            fetchAd()
-                        }
+                        fetchAd()
                         appOpenAdCallback?.onAdClosed()
                     }
 
@@ -155,7 +154,7 @@ class AppOpenManager(
     fun onStart() {
         val appBackgroundTime = System.currentTimeMillis() - backgroundTime
         Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
-        if(appBackgroundTime > 30000)
+        if(appBackgroundTime > backgroundThreshold)
             showAdIfAvailable()
     }
 
@@ -176,9 +175,7 @@ class AppOpenManager(
      * Constructor
      */
     init {
-        if (!isShownOnlyOnce) {
-            myApplication.registerActivityLifecycleCallbacks(this)
-        }
+        myApplication.registerActivityLifecycleCallbacks(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 }
