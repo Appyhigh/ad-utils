@@ -14,11 +14,10 @@ class SplashActivity : AppCompatActivity() {
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
         AdSdk.initialize(
-            applicationContext as MyApp,
-            "ca-app-pub-3940256099942544/3419835294",
-            null,
-            0L, 0L
+            this,
+            applicationContext as MyApp
         )
+        AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 5000)
         AdSdk.loadSplashAd(
             "ca-app-pub-3940256099942544/1033173712",
             this,
