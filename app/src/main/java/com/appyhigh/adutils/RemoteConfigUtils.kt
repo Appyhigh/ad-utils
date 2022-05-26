@@ -1,9 +1,7 @@
 package com.appyhigh.adutils
 
-import android.content.Context
 import android.util.Log
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.ktx.initialize
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfigSettings

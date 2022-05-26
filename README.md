@@ -20,11 +20,6 @@ allprojects {
 dependencies {
     implementation 'com.github.Appyhigh:ad-utils:1.1.3'
 }
-...
-buildFeatures {
-    dataBinding true
-    viewBinding true
-}
 ```
 
 Add these configurations to you AndroidManifest.xml
@@ -49,75 +44,51 @@ Initialize Sdk with App Open Ad
  * Call initialize with you Application class object
  *
  * @param app -> Pass your application context here
- * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
- * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
  * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
- * @param loadSplashAppOpenAd : Boolean = false-> Load the Splash App Open ad if set to true default is false
- * @param showFGToBGAdOnlyOnce : Boolean = false-> show BG to FG ads only once or multiple times
  */
 
-AdSdk.initialize(
-    activity = null,
-    app = applicationContext as MyApp,
-    appOpenAdUnit = "ca-app-pub-3940256099942544/3419835294",
-    appOpenAdCallback = null,
-    bannerRefreshTimer = 0L,
-    nativeRefreshTimer = 0L,
-    loadSplashAppOpenAd = true,
-    showFGToBGAdOnlyOnce = false
-)
+AdSdk.initialize(applicationContext as MyApp, 55000L, 60000L)
 ```
 
-## Show App Open Ad
+---
+
+## To show AppOpenAd when app comes from Background to Foreground
 
 ```kotlin
-//Use this to Start App Open Ad Loading
+/**
+ * Call initialize with you Application class object
+ *
+ * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
+ * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
+ * @param backgroundThreshold -> Minimum time in millis that app should remain in background before showing AppOpenAd
+ **/
+AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 30000)
+```
 
-AppOpenManager.loadSplashAppOpenAd(application, adID)
+> Implement `BypassAppOpenAd` interface in Activities where you do not want to show AppOpenAd when app resumes
 
-//This is an example load method
-var waitTimeinSec = 5
-private fun loadAppOpenAd() {
-    AppOpenManager.showAdIfAvailable(this,
-        object : AppOpenManager.Companion.appOpenCallBack {
-            override fun adDismissed() {
-                Log.d("appOpenCallBack", "adDismissed: ")
-            }
+---
 
-            override fun adLoaded(appOpenAd: AppOpenAd) {
-                Log.d("appOpenCallBack", "adLoaded: 11 ")
-                //TODO: Show the Ad Here
-            }
+### Show AppOpen Ad on SplashScreen
 
-            override fun adError(message: String?) {
+```kotlin
+AdSdk.loadAppOpenAd(this, "ca-app-pub-3940256099942544/3419835294", true,
+    object : AppOpenAdLoadCallback() {
 
-            }
+        override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+            launchHomeActivity()
+        }
 
-            override fun adShown() {
+        override fun onAdFailedToShow(adError: AdError) {
+            launchHomeActivity()
+        }
 
-            }
+        override fun onAdClosed() {
+            launchHomeActivity()
+        }
 
-            override fun adClicked() {
-
-            }
-
-            override fun adNotLoaded(reason: String?) {
-                //TODO : Add the Timer logic here
-                //This is the example
-                Log.d("appOpenCallBack", "adNotLoaded: $reason")
-                if (waitTimeinSec == 0) {
-                    this.adError(null)
-                } else {
-                    Thread {
-                        //Infinite wait
-                        Thread.sleep(1000)
-                        loadAppOpenAd()
-                    }.start()
-                }
-            }
-        })
-}
+    })
 ```
 
 ## Banner Ad
@@ -347,12 +318,19 @@ if you want to set layout via remote config
 RemoteConfigUtils.init()
 
 
+AdSdk.loadNativeAd(
+    lifecycle,
+    "ca-app-pub-3940256099942544/2247696110",
+    binding.llRoot,
+    nativeAdCallBack,
+    RemoteConfigUtils.getNativeAdTypeId()
+)
+
 
 /**
  * Call loadNativeAd with following params to load a Native Ad
  *
  *
- * @param activty -> Non-Null activity parameter
  * @param lifecycle -> Lifecycle of activity in which ad will be loaded
  * @param adUnit -> Pass the adUnit id in this parameter
  * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
@@ -383,28 +361,15 @@ RemoteConfigUtils.init()
  *
  */
 
-/**
- * Examples
- */
 
 AdSdk.loadNativeAd(
-    this,
-    lifecycle,
-    "ca-app-pub-3940256099942544/2247696110",
-    binding.adView,
-    nativeAdCallBack,
-    AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 200
-)
-
-AdSdk.loadNativeAd(
-    activity,
     lifecycle,
     "ca-app-pub-3940256099942544/2247696110",
     binding.llRoot,
     nativeAdCallBack,
-    RemoteConfigUtils.getNativeAdTypeId()
+    R.layout.ad_item,
+    this::populateNativeAdView
 )
-
 
 private val nativeAdCallBack = object : NativeAdLoadCallback {
     override fun onAdLoaded() {
