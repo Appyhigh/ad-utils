@@ -153,13 +153,16 @@ class AppOpenManager(
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        val appBackgroundTime = System.currentTimeMillis() - backgroundTime
-        if (BuildConfig.DEBUG) {
-            backgroundThreshold = 1000
+        if (appCount > 0) {
+            val appBackgroundTime = System.currentTimeMillis() - backgroundTime
+            if (BuildConfig.DEBUG) {
+                backgroundThreshold = 1000
+            }
+            Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
+            if (appBackgroundTime > backgroundThreshold)
+                showAdIfAvailable()
         }
-        Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
-        if (appBackgroundTime > backgroundThreshold)
-            showAdIfAvailable()
+        appCount++
     }
 
     /**
@@ -253,6 +256,7 @@ class AppOpenManager(
      * Constructor
      */
     init {
+        this.appCount = 0
         myApplication.registerActivityLifecycleCallbacks(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }

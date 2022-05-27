@@ -40,24 +40,22 @@ object AdSdk {
     private var bannerAdRefreshTimer = 45000L
     private var nativeAdRefreshTimer = 45000L
 
+    private var lastBGColor: Any? = null
+    private var lastTColor1: Int? = null
+    private var lastTColor2: Int? = null
+    private var lastHeight: Int = 300
+
     /**
      * Call initialize with you Application class object
      *
      * @param app -> Pass your application context here
-     * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad
-     * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks
      * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      */
     fun initialize(
-        activity: Activity?,
         app: Application,
-        appOpenAdUnit: String = "",
-        appOpenAdCallback: AppOpenAdCallback? = null,
         bannerRefreshTimer: Long = 45000L,
-        nativeRefreshTimer: Long = 45000L,
-        loadSplashAppOpenAd: Boolean = false,
-        showBGToFGAdOnlyOnce: Boolean = false
+        nativeRefreshTimer: Long = 45000L
     ) {
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
@@ -97,11 +95,10 @@ object AdSdk {
                                         item.value.nativeAdLoadCallback,
                                         item.value.layoutId,
                                         item.value.populator,
-                                        item.value.viewId,
-                                        item.value.background,
-                                        item.value.textColor1,
-                                        item.value.textColor2,
-                                        item.value.maxHeight
+                                        background = lastBGColor,
+                                        textColor1 = lastTColor1,
+                                        textColor2 = lastTColor2,
+                                        maxHeight = lastHeight
                                     )
                                 }
                             }
@@ -111,25 +108,7 @@ object AdSdk {
             }
 
             application = app
-            application?.let { myApp ->
-                MobileAds.initialize(myApp) {
-                    if (appOpenAdUnit.isNotEmpty()) {
-                        attachAppOpenAdManager(
-                            appOpenAdUnit,
-                            appOpenAdCallback
-                        )
-                        Log.d("aishik", "initialize: ")
-                        if (loadSplashAppOpenAd) {
-                            AppOpenManager.loadSplashAppOpenAd(
-                                myApp,
-                                appOpenAdUnit
-                            )
-                        }
-                    }
-                }
-            }
         }
-//        AppOpenManager.loadSplashAppOpenAd(application!!, appOpenAdUnit)
     }
 
     private fun isGooglePlayServicesAvailable(application: Application): Boolean {
