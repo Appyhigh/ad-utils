@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View.GONE
@@ -31,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        AdSdk.loadNPAForm("https://www.google.com", this, "pub-3940256099942544")
         binding.btnBannerAd.setOnClickListener {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
@@ -50,8 +51,8 @@ class MainActivity : AppCompatActivity() {
         if (BuildConfig.DEBUG) {
 //            binding.btnNativeAd.performClick()
         }
-        loadInterstitialAd()
-        loadRewardedAd()
+        loadInterstitialAd(this)
+        loadRewardedAd(this)
         val height: Int = resources.displayMetrics.heightPixels
         val maxHeight = height * 60 / 100
 /*
@@ -82,7 +83,7 @@ class MainActivity : AppCompatActivity() {
              * Comment this if you want the ad to load just once
              * Uncomment this to load ad again once shown
              */
-            loadInterstitialAd()
+            loadInterstitialAd(this@MainActivity)
         }
 
         override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
@@ -106,7 +107,7 @@ class MainActivity : AppCompatActivity() {
              * Comment this if you want the ad to load just once
              * Uncomment this to load ad again once shown
              */
-            loadRewardedAd()
+            loadRewardedAd(this@MainActivity)
         }
 
         override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
@@ -117,15 +118,17 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun loadInterstitialAd() {
+    private fun loadInterstitialAd(activity: Activity) {
         AdSdk.loadInterstitialAd(
+            activity,
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback
         )
     }
 
-    private fun loadRewardedAd() {
+    private fun loadRewardedAd(activity: Activity) {
         AdSdk.loadRewardedAd(
+            activity,
             "ca-app-pub-3940256099942544/5224354917",
             mRewardedAdUtilCallback
         )

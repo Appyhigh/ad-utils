@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
@@ -20,6 +21,8 @@ import androidx.lifecycle.OnLifecycleEvent
 import com.appyhigh.adutils.callbacks.*
 import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
+import com.google.ads.consent.*
+import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
@@ -29,6 +32,8 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import java.net.MalformedURLException
+import java.net.URL
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 
@@ -44,6 +49,76 @@ object AdSdk {
     private var lastTColor1: Int? = null
     private var lastTColor2: Int? = null
     private var lastHeight: Int = 300
+
+    lateinit var form: com.google.ads.consent.ConsentForm
+
+    fun loadNPAForm(
+        privacyPolicyLink: String,
+        activity: Activity,
+        pubValue: String,
+        testDevice: String = "E35970227779CE2270F80558896619BC"
+    ) {
+        val consentInformation: ConsentInformation = ConsentInformation
+            .getInstance(activity)
+        consentInformation.addTestDevice(testDevice)
+        consentInformation.debugGeography = DebugGeography.DEBUG_GEOGRAPHY_EEA
+        val publisherIds = arrayOf(pubValue)
+        consentInformation.requestConsentInfoUpdate(
+            publisherIds,
+            object : ConsentInfoUpdateListener {
+                override fun onConsentInfoUpdated(consentStatus: ConsentStatus) {
+                    // User's consent status successfully updated.
+                    Log.d("aishik", "onConsentInfoUpdated: $consentStatus")
+                    var privacyUrl: URL? = null
+                    try {
+                        privacyUrl = URL(privacyPolicyLink)
+                    } catch (e: MalformedURLException) {
+                        e.printStackTrace()
+                        Log.d("aishik", "loadNPAForm: " + e.localizedMessage)
+                    }
+
+                    form = com.google.ads.consent.ConsentForm.Builder(activity, privacyUrl)
+                        .withListener(object : ConsentFormListener() {
+                            override fun onConsentFormLoaded() {
+                                // Consent form loaded successfully.
+                                Log.d("aishik", "onConsentFormLoaded: ")
+                                form.show()
+                            }
+
+                            override fun onConsentFormOpened() {
+                                // Consent form was displayed.
+                                Log.d("aishik", "onConsentFormOpened: ")
+                            }
+
+                            override fun onConsentFormClosed(
+                                consentStatus: ConsentStatus, userPrefersAdFree: Boolean
+                            ) {
+                                Log.d("aishik", "onConsentFormClosed: " + consentStatus)
+                            }
+
+                            override fun onConsentFormError(errorDescription: String) {
+                                // Consent form error.
+                                Log.d("aishik", "onConsentFormError: " + errorDescription)
+                            }
+                        })
+                        .withPersonalizedAdsOption()
+                        .withNonPersonalizedAdsOption()
+                        .build()
+                    if (consentInformation.consentStatus == ConsentStatus.UNKNOWN) {
+                        form.load()
+                        Log.d("aishik", "loadNPAForm: ")
+                    }
+                }
+
+                override fun onFailedToUpdateConsentInfo(errorDescription: String) {
+                    // User's consent status failed to update.
+                    Log.d("aishik", "onFailedToUpdateConsentInfo: " + errorDescription)
+                }
+            })
+
+
+    }
+
 
     /**
      * Call initialize with you Application class object
@@ -68,6 +143,7 @@ object AdSdk {
                             if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                                 Handler(Looper.getMainLooper()).post {
                                     loadBannerAd(
+                                        item.value.activity,
                                         item.value.id,
                                         item.value.lifecycle,
                                         item.value.viewGroup,
@@ -184,10 +260,25 @@ object AdSdk {
 
         }
         AppOpenAd.load(
-            application!!, appOpenAdUnit, AdRequest.Builder().build(),
+            application!!, appOpenAdUnit,
+            AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .build(),
             AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
         )
     }
+
+    fun getConsentEnabledBundle(activity: Activity): Bundle {
+        val extras = Bundle()
+        val consentInformation: ConsentInformation = ConsentInformation
+            .getInstance(activity)
+        if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
+            extras.putString("npa", "1")
+        }
+        Log.d("aishik", "getConsentEnabledBundle: $extras")
+        return extras
+    }
+
 
     /**
      * Call loadBannerAd with following parameters to load a banner ad
@@ -200,6 +291,7 @@ object AdSdk {
      *
      */
     fun loadBannerAd(
+        activity: Activity,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
         adUnit: String,
@@ -207,6 +299,7 @@ object AdSdk {
         bannerAdLoadCallback: BannerAdLoadCallback?
     ) {
         loadBannerAd(
+            activity,
             System.currentTimeMillis(),
             lifecycle,
             viewGroup,
@@ -217,6 +310,7 @@ object AdSdk {
     }
 
     private fun loadBannerAd(
+        activity: Activity,
         id: Long,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
@@ -228,7 +322,15 @@ object AdSdk {
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.bannerAdLifeCycleHashMap[id] =
-                    BannerAdItem(id, lifecycle, viewGroup, adUnit, adSize, bannerAdLoadCallback)
+                    BannerAdItem(
+                        activity,
+                        id,
+                        lifecycle,
+                        viewGroup,
+                        adUnit,
+                        adSize,
+                        bannerAdLoadCallback
+                    )
             }
             lifecycle.addObserver(object : LifecycleObserver {
                 @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
@@ -236,7 +338,9 @@ object AdSdk {
                     AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
                 }
             })
-            val adRequest = AdRequest.Builder().build()
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .build()
             val mAdView = AdView(viewGroup.context)
             mAdView.adSize = adSize
             mAdView.adUnitId = adUnit
@@ -284,12 +388,15 @@ object AdSdk {
      * IMPORTANT: You wont be able to show ad if you pass a null callback
      */
     fun loadInterstitialAd(
+        activity: Activity,
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
     ) {
         if (application != null) {
             var mInterstitialAd: InterstitialAd?
-            val adRequest = AdRequest.Builder().build()
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .build()
             InterstitialAd.load(
                 application!!,
                 adUnit,
@@ -347,7 +454,9 @@ object AdSdk {
                     callback.moveNext()
                 }
             }.start()
-            val adRequest = AdRequest.Builder().build()
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .build()
             InterstitialAd.load(
                 application!!,
                 adUnit,
@@ -388,12 +497,15 @@ object AdSdk {
      */
 
     fun loadRewardedAd(
+        activity: Activity,
         adUnit: String,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
     ) {
         if (application != null) {
             var mRewardedAd: RewardedAd?
-            val adRequest = AdRequest.Builder().build()
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .build()
             RewardedAd.load(
                 application!!,
                 adUnit,
@@ -684,7 +796,13 @@ object AdSdk {
                         .build()
                 )
                 .build()
-            adLoader?.loadAd(AdRequest.Builder().build())
+            adLoader?.loadAd(
+                AdRequest.Builder().addNetworkExtrasBundle(
+                    AdMobAdapter::class.java,
+                    getConsentEnabledBundle(activity)
+                )
+                    .build()
+            )
         }
     }
 

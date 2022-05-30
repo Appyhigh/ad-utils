@@ -16,6 +16,7 @@ class BannerAdActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         AdSdk.loadBannerAd(
+            this,
             lifecycle,
             binding.typeOne,
             bannerAdUnit,
@@ -24,6 +25,7 @@ class BannerAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadBannerAd(
+            this,
             lifecycle,
             binding.typeTwo,
             bannerAdUnit,
@@ -32,6 +34,7 @@ class BannerAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadBannerAd(
+            this,
             lifecycle,
             binding.typeThree,
             bannerAdUnit,

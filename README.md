@@ -34,6 +34,19 @@ Initialize Sdk without App Open Ad
 
 ```kotlin
 AdSdk.initialize(applicationContext as MyApp)
+
+AdSdk.loadNPAForm([Privacy Policy URL], [activity], [Publisher_ID])
+
+fun loadNPAForm(
+    privacyPolicyLink: String,
+    activity: Activity,
+    pubValue: String,
+    testDevice: String = "59106BA0F480E2EC4CD8CC7AA2C49B81"
+)
+//if this is your app ID - ca-app-pub-3940256099942544~3347511713
+//Then this is your PubID pub-3940256099942544
+// if you want to test the consent form pass the testdeviceID as 4th parameter
+
 ```
 
 Initialize Sdk with App Open Ad
