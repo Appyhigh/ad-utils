@@ -153,7 +153,7 @@ class AppOpenManager(
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        if (appCount > 0) {
+        if (appCount > 0 && !currentActivity.toString().contains("CallerIdActivity")) {
             val appBackgroundTime = System.currentTimeMillis() - backgroundTime
             if (BuildConfig.DEBUG) {
                 backgroundThreshold = 1000
