@@ -82,7 +82,15 @@ object AdSdk {
                             override fun onConsentFormLoaded() {
                                 // Consent form loaded successfully.
                                 Log.d("aishik", "onConsentFormLoaded: ")
-                                form.show()
+                                activity.runOnUiThread {
+                                    try {
+                                        if (!activity.isFinishing) {
+                                            form.show()
+                                        }
+                                    }catch (e:Exception){
+                                        e.printStackTrace()
+                                    }
+                                }
                             }
 
                             override fun onConsentFormOpened() {
@@ -112,7 +120,6 @@ object AdSdk {
 
                 override fun onFailedToUpdateConsentInfo(errorDescription: String) {
                     // User's consent status failed to update.
-                    Log.d("aishik", "onFailedToUpdateConsentInfo: " + errorDescription)
                 }
             })
 
@@ -236,36 +243,41 @@ object AdSdk {
         showWhenLoaded: Boolean,
         appOpenAdCallback: AppOpenAdLoadCallback? = null
     ) {
-        val loadCallback = object : AppOpenAd.AppOpenAdLoadCallback() {
+        if (application != null) {
+            val loadCallback = object : AppOpenAd.AppOpenAdLoadCallback() {
 
-            override fun onAdLoaded(ad: AppOpenAd) {
-                ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                    override fun onAdDismissedFullScreenContent() {
-                        appOpenAdCallback?.onAdClosed()
-                    }
+                override fun onAdLoaded(ad: AppOpenAd) {
+                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                        override fun onAdDismissedFullScreenContent() {
+                            appOpenAdCallback?.onAdClosed()
+                        }
 
-                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                        appOpenAdCallback?.onAdFailedToShow(adError)
+                        override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                            appOpenAdCallback?.onAdFailedToShow(adError)
+                        }
                     }
+                    appOpenAdCallback?.onAdLoaded(ad)
+                    if (showWhenLoaded)
+                        ad.show(activity)
                 }
-                appOpenAdCallback?.onAdLoaded(ad)
-                if (showWhenLoaded)
-                    ad.show(activity)
-            }
 
-            override fun onAdFailedToLoad(loadAdError: LoadAdError) {
-                Log.d(TAG, loadAdError.message)
-                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
-            }
+                override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                    Log.d(TAG, loadAdError.message)
+                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                }
 
+            }
+            AppOpenAd.load(
+                application!!, appOpenAdUnit,
+                AdRequest.Builder()
+                    .addNetworkExtrasBundle(
+                        AdMobAdapter::class.java,
+                        getConsentEnabledBundle(activity)
+                    )
+                    .build(),
+                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
+            )
         }
-        AppOpenAd.load(
-            application!!, appOpenAdUnit,
-            AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
-                .build(),
-            AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
-        )
     }
 
     fun getConsentEnabledBundle(activity: Activity): Bundle {
