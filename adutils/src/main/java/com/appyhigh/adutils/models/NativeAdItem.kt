@@ -22,5 +22,6 @@ data class NativeAdItem(
     var textColor1: Int? = null,
     var textColor2: Int? = null,
     var maxHeight: Int = 300,
+    var textSize: Int = 48,
     var buttonColor: Int = Color.parseColor("#000000")
 )

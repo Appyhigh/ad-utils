@@ -87,7 +87,7 @@ object AdSdk {
                                         if (!activity.isFinishing) {
                                             form.show()
                                         }
-                                    }catch (e:Exception){
+                                    } catch (e: Exception) {
                                         e.printStackTrace()
                                     }
                                 }
@@ -139,6 +139,12 @@ object AdSdk {
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L
     ) {
+        val build = RequestConfiguration.Builder()
+            .setTestDeviceIds(listOf("437957E3DD881FE6EAA3ED71A26AFDD7")).build()
+        MobileAds.setRequestConfiguration(build)
+        MobileAds.initialize(app) {
+            Log.d("aishik", "initialize: ")
+        }
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
@@ -167,21 +173,23 @@ object AdSdk {
                 if (nativeAdRefreshTimer != 0L) {
                     fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
                         for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                            if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                            val value = item.value
+                            if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                                 Handler(Looper.getMainLooper()).post {
                                     loadNativeAd(
-                                        item.value.activity,
-                                        item.value.id,
-                                        item.value.lifecycle,
-                                        item.value.adUnit,
-                                        item.value.viewGroup,
-                                        item.value.nativeAdLoadCallback,
-                                        item.value.layoutId,
-                                        item.value.populator,
-                                        background = lastBGColor,
-                                        textColor1 = lastTColor1,
-                                        textColor2 = lastTColor2,
-                                        maxHeight = lastHeight
+                                        value.activity,
+                                        value.id,
+                                        value.lifecycle,
+                                        value.adUnit,
+                                        value.viewGroup,
+                                        value.nativeAdLoadCallback,
+                                        value.layoutId,
+                                        value.populator,
+                                        background = value.background,
+                                        textColor1 = value.textColor1,
+                                        textColor2 = value.textColor2,
+                                        maxHeight = value.maxHeight,
+                                        loadingTextSize = value.textSize
                                     )
                                 }
                             }
@@ -189,7 +197,6 @@ object AdSdk {
                     }
                 }
             }
-
             application = app
         }
     }
@@ -287,7 +294,6 @@ object AdSdk {
         if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
             extras.putString("npa", "1")
         }
-        Log.d("aishik", "getConsentEnabledBundle: $extras")
         return extras
     }
 
@@ -588,7 +594,8 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300
+        maxHeight: Int = 300,
+        loadingTextSize: Int = 48
     ) {
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -611,7 +618,8 @@ object AdSdk {
             background = background,
             textColor1,
             textColor2,
-            maxHeight
+            maxHeight,
+            loadingTextSize
         )
 
     }
@@ -660,6 +668,7 @@ object AdSdk {
         textColor1: Int?,
         textColor2: Int?,
         maxHeight: Int = 300,
+        loadingTextSize: Int
     ) {
         loadNativeAd(
             activity,
@@ -674,7 +683,8 @@ object AdSdk {
             background = background,
             textColor1,
             textColor2,
-            maxHeight
+            maxHeight,
+            loadingTextSize
         )
     }
 
@@ -701,12 +711,14 @@ object AdSdk {
         textColor1: Int?,
         textColor2: Int?,
         maxHeight: Int = 300,
+        loadingTextSize: Int
     ) {
         viewGroup.visibility = VISIBLE
         if (activity != null) {
             val inflate = activity.layoutInflater.inflate(R.layout.ad_loading_layout, null)
             val id1 = inflate.findViewById<View>(R.id.rl)
             val tv = inflate.findViewById<TextView>(R.id.tv)
+            tv.textSize = loadingTextSize.toFloat()
             if (textColor1 != null) {
                 tv.setTextColor(textColor1)
             }
@@ -738,7 +750,8 @@ object AdSdk {
                     background,
                     textColor1,
                     textColor2,
-                    maxHeight
+                    maxHeight,
+                    loadingTextSize
                 )
             }
             lifecycle.addObserver(object : LifecycleObserver {
@@ -756,16 +769,18 @@ object AdSdk {
 
                     override fun onAdClicked() {
                         super.onAdClicked()
+                        Log.d("aishik", "onAdClicked: ")
                         nativeAdLoadCallback?.onAdClicked()
                     }
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        Log.e("$TAG: Ad Load Failed", adError.toString())
+                        Log.d("aishik", "onAdFailedToLoad: " + adError.message)
                         nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
                     override fun onAdLoaded() {
                         super.onAdLoaded()
+                        Log.d("aishik", "onAdLoaded: ")
                         nativeAdLoadCallback?.onAdLoaded()
                         if (nativeAd != null) {
                             val adView =

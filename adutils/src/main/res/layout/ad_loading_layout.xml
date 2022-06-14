@@ -11,6 +11,7 @@
         android:layout_height="100dp"
         android:gravity="center"
         android:text="Loading"
-        android:textAppearance="@style/TextAppearance.AppCompat.Display1"
-        android:textColor="@android:color/black" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="@android:color/black"
+        android:textSize="48sp" />
 </RelativeLayout>

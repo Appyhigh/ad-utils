@@ -354,6 +354,7 @@ AdSdk.loadNativeAd(
  * @param textColor1 -> nullable It is the primary color in Int that is Color Resource
  * @param textColor1 -> nullable It is the Secondary color in Int that is Color Resource
  * @param maxHeight -> nullable It is the height of the ad Media in Int
+ * @param loadingTextSize: Int -> nullable It is the textSize of the loading text default is 48
  *
  *
  * The adType can be either string size from "1" to "5"
