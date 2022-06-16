@@ -67,8 +67,8 @@ class NativeAdActivity : AppCompatActivity() {
             null,
             null,
             null,
-            600,
-            24
+            maxHeight = 600,
+            loadingTextSize = 24
         )
 
 /*
