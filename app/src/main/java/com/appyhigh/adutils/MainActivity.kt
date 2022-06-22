@@ -3,6 +3,7 @@ package com.appyhigh.adutils
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
@@ -76,6 +77,13 @@ class MainActivity : AppCompatActivity() {
 
         override fun onAdLoaded(ad: InterstitialAd?) {
             interstitialAd = ad
+        }
+
+        override fun onAdImpression() {
+            super.onAdImpression()
+            if (BuildConfig.DEBUG) {
+                Log.d("aishik", "onAdImpression: ")
+            }
         }
 
         override fun onAdDismissedFullScreenContent() {

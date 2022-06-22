@@ -137,11 +137,14 @@ object AdSdk {
     fun initialize(
         app: Application,
         bannerRefreshTimer: Long = 45000L,
-        nativeRefreshTimer: Long = 45000L
+        nativeRefreshTimer: Long = 45000L,
+        testDevice: String? = null
     ) {
-        val build = RequestConfiguration.Builder()
-            .setTestDeviceIds(listOf("437957E3DD881FE6EAA3ED71A26AFDD7")).build()
-        MobileAds.setRequestConfiguration(build)
+        if (testDevice != null) {
+            val build = RequestConfiguration.Builder()
+                .setTestDeviceIds(listOf(testDevice)).build()
+            MobileAds.setRequestConfiguration(build)
+        }
         MobileAds.initialize(app) {
             Log.d("aishik", "initialize: ")
         }
@@ -188,7 +191,7 @@ object AdSdk {
                                         background = value.background,
                                         textColor1 = value.textColor1,
                                         textColor2 = value.textColor2,
-                                        maxHeight = value.maxHeight,
+                                        mediaMaxHeight = value.mediaMaxHeight,
                                         loadingTextSize = value.textSize
                                     )
                                 }
@@ -431,6 +434,11 @@ object AdSdk {
 
                         mInterstitialAd?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
+                                override fun onAdImpression() {
+                                    super.onAdImpression()
+                                    interstitialAdUtilLoadCallback?.onAdImpression()
+                                }
+
                                 override fun onAdDismissedFullScreenContent() {
                                     interstitialAdUtilLoadCallback?.onAdDismissedFullScreenContent()
                                 }
@@ -594,7 +602,7 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300,
+        mediaMaxHeight: Int = 300,
         loadingTextSize: Int = 48
     ) {
         @LayoutRes val layoutId = when (adType) {
@@ -618,7 +626,7 @@ object AdSdk {
             background = background,
             textColor1,
             textColor2,
-            maxHeight,
+            mediaMaxHeight,
             loadingTextSize
         )
 
@@ -667,7 +675,7 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300,
+        mediaMaxHeight: Int = 300,
         loadingTextSize: Int
     ) {
         loadNativeAd(
@@ -683,7 +691,7 @@ object AdSdk {
             background = background,
             textColor1,
             textColor2,
-            maxHeight,
+            mediaMaxHeight,
             loadingTextSize
         )
     }
@@ -710,7 +718,7 @@ object AdSdk {
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300,
+        mediaMaxHeight: Int = 300,
         loadingTextSize: Int
     ) {
         viewGroup.visibility = VISIBLE
@@ -750,7 +758,7 @@ object AdSdk {
                     background,
                     textColor1,
                     textColor2,
-                    maxHeight,
+                    mediaMaxHeight,
                     loadingTextSize
                 )
             }
@@ -808,7 +816,7 @@ object AdSdk {
                                     adType,
                                     textColor1,
                                     textColor2,
-                                    maxHeight
+                                    mediaMaxHeight
                                 )
                             }
                             viewGroup.removeAllViews()
@@ -839,7 +847,7 @@ object AdSdk {
         adType: String,
         textColor1: Int?,
         textColor2: Int?,
-        maxHeight: Int = 300,
+        mediaMaxHeight: Int = 300,
     ) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
@@ -848,13 +856,13 @@ object AdSdk {
         val iconView1 = adView.iconView
         if (icon == null) {
             if (adType == ADType.DEFAULT_NATIVE_SMALL) {
-                val iconHeight = maxHeight
+                val iconHeight = mediaMaxHeight
                 iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
             }
             iconView1?.visibility = View.INVISIBLE
         } else {
             if (adType == ADType.DEFAULT_NATIVE_SMALL) {
-                val iconHeight = maxHeight
+                val iconHeight = mediaMaxHeight
                 iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
             }
             (iconView1 as ImageView).setImageDrawable(icon.drawable)
@@ -867,13 +875,13 @@ object AdSdk {
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
                 val scale: Float = adView.mediaView.context.resources.displayMetrics.density
-                val maxHeightPixels = maxHeight
+                val maxHeightPixels = mediaMaxHeight
 //                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
                 if (child is ImageView) { //Images
                     child.adjustViewBounds = true
                     val layoutParams1 = child.layoutParams
                     layoutParams1.width = MATCH_PARENT
-                    layoutParams1.height = maxHeight
+                    layoutParams1.height = mediaMaxHeight
                     child.layoutParams = layoutParams1
                 } else { //Videos
                     val params = child.layoutParams

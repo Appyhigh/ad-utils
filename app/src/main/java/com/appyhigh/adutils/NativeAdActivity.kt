@@ -67,7 +67,7 @@ class NativeAdActivity : AppCompatActivity() {
             null,
             null,
             null,
-            maxHeight = 600,
+            mediaMaxHeight = 600,
             loadingTextSize = 24
         )
 
@@ -85,15 +85,15 @@ class NativeAdActivity : AppCompatActivity() {
 
     private val nativeAdCallBack = object : NativeAdLoadCallback() {
         override fun onAdLoaded() {
-            Log.d("NativeAdLoadCallback", "onAdLoaded")
+            Log.d("aishik", "onAdLoaded")
         }
 
         override fun onAdFailed(adError: LoadAdError) {
-            Log.d("NativeAdLoadCallback", "onAdFailed")
+            Log.d("aishik", "onAdFailed " + adError.message)
         }
 
         override fun onAdClicked() {
-            Log.d("NativeAdLoadCallback", "onAdClicked")
+            Log.d("aishik", "onAdClicked")
         }
     }
 }

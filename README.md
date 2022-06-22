@@ -59,9 +59,10 @@ Initialize Sdk with App Open Ad
  * @param app -> Pass your application context here
  * @param bannerRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
  * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
+ * @param testDeviceID -> You can pass the testdeviceid here to get test ads
  */
 
-AdSdk.initialize(applicationContext as MyApp, 55000L, 60000L)
+AdSdk.initialize(applicationContext as MyApp, 55000L, 60000L, "[Test Device ID]")
 ```
 
 ---
@@ -161,6 +162,15 @@ private val bannerAdLoadCallback = object : BannerAdLoadCallback {
  * @param interstitialAdUtilLoadCallback -> nullable callback to register interstitial ad load events
  *
  * IMPORTANT: You wont be able to show ad if you pass a null callback
+ *
+ * interstitialAdUtilLoadCallback callbacks available
+ *
+ * fun onAdFailedToLoad(adError: LoadAdError, ad: InterstitialAd?)
+ * fun onAdLoaded(ad: InterstitialAd?)
+ * fun onAdImpression()
+ * fun onAdDismissedFullScreenContent()
+ * fun onAdFailedToShowFullScreenContent(adError: AdError?)
+ * fun onAdShowedFullScreenContent()
  */
 
 AdSdk.loadInterstitialAd(
@@ -353,7 +363,7 @@ AdSdk.loadNativeAd(
  * @param background -> nullable It is the Background Color or a Drawable you can put either, if it matches nothing then it'll choose default
  * @param textColor1 -> nullable It is the primary color in Int that is Color Resource
  * @param textColor1 -> nullable It is the Secondary color in Int that is Color Resource
- * @param maxHeight -> nullable It is the height of the ad Media in Int
+ * @param mediaMaxHeight -> nullable It is the height of the ad Media in Int
  * @param loadingTextSize: Int -> nullable It is the textSize of the loading text default is 48
  *
  *

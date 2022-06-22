@@ -14,7 +14,8 @@ class SplashActivity : AppCompatActivity() {
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
         AdSdk.initialize(
-            applicationContext as MyApp
+            applicationContext as MyApp,
+            testDevice = "037CDCC60DB2EB75232FCC1738C3917C"
         )
         if (BuildConfig.DEBUG) {
             AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 1000)
