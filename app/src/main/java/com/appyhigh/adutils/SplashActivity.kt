@@ -15,7 +15,9 @@ class SplashActivity : AppCompatActivity() {
         setContentView(binding.root)
         AdSdk.initialize(
             applicationContext as MyApp,
-            testDevice = "037CDCC60DB2EB75232FCC1738C3917C"
+            testDevice = "037CDCC60DB2EB75232FCC1738C3917C",
+            bannerRefreshTimer = 5000L, nativeRefreshTimer = 5000L
+
         )
         if (BuildConfig.DEBUG) {
             AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 1000)

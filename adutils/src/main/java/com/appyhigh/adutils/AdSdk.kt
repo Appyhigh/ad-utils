@@ -2,6 +2,7 @@ package com.appyhigh.adutils
 
 import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.view.View.VISIBLE
 import android.view.ViewGroup
@@ -21,6 +23,7 @@ import androidx.lifecycle.OnLifecycleEvent
 import com.appyhigh.adutils.callbacks.*
 import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
+import com.appyhigh.adutils.models.NativeAdItemService
 import com.google.ads.consent.*
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.*
@@ -68,7 +71,6 @@ object AdSdk {
             object : ConsentInfoUpdateListener {
                 override fun onConsentInfoUpdated(consentStatus: ConsentStatus) {
                     // User's consent status successfully updated.
-                    Log.d("aishik", "onConsentInfoUpdated: $consentStatus")
                     var privacyUrl: URL? = null
                     try {
                         privacyUrl = URL(privacyPolicyLink)
@@ -81,7 +83,6 @@ object AdSdk {
                         .withListener(object : ConsentFormListener() {
                             override fun onConsentFormLoaded() {
                                 // Consent form loaded successfully.
-                                Log.d("aishik", "onConsentFormLoaded: ")
                                 activity.runOnUiThread {
                                     try {
                                         if (!activity.isFinishing) {
@@ -95,18 +96,15 @@ object AdSdk {
 
                             override fun onConsentFormOpened() {
                                 // Consent form was displayed.
-                                Log.d("aishik", "onConsentFormOpened: ")
                             }
 
                             override fun onConsentFormClosed(
                                 consentStatus: ConsentStatus, userPrefersAdFree: Boolean
                             ) {
-                                Log.d("aishik", "onConsentFormClosed: " + consentStatus)
                             }
 
                             override fun onConsentFormError(errorDescription: String) {
                                 // Consent form error.
-                                Log.d("aishik", "onConsentFormError: " + errorDescription)
                             }
                         })
                         .withPersonalizedAdsOption()
@@ -114,7 +112,6 @@ object AdSdk {
                         .build()
                     if (consentInformation.consentStatus == ConsentStatus.UNKNOWN) {
                         form.load()
-                        Log.d("aishik", "loadNPAForm: ")
                     }
                 }
 
@@ -146,7 +143,7 @@ object AdSdk {
             MobileAds.setRequestConfiguration(build)
         }
         MobileAds.initialize(app) {
-            Log.d("aishik", "initialize: ")
+            Log.d("aishik", "initialize: " + it.toString())
         }
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
@@ -195,6 +192,25 @@ object AdSdk {
                                         loadingTextSize = value.textSize
                                     )
                                 }
+                            }
+                        }
+                        for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
+                            val value = item.value
+                            Handler(Looper.getMainLooper()).post {
+                                loadNativeAdFromService(
+                                    value.layoutInflater,
+                                    value.context,
+                                    value.adUnit,
+                                    value.viewGroup,
+                                    value.nativeAdLoadCallback,
+                                    background = value.background,
+                                    textColor1 = value.textColor1,
+                                    textColor2 = value.textColor2,
+                                    mediaMaxHeight = value.mediaMaxHeight,
+                                    loadingTextSize = value.textSize,
+                                    id = value.id,
+                                    populator = value.populator
+                                )
                             }
                         }
                     }
@@ -294,6 +310,16 @@ object AdSdk {
         val extras = Bundle()
         val consentInformation: ConsentInformation = ConsentInformation
             .getInstance(activity)
+        if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
+            extras.putString("npa", "1")
+        }
+        return extras
+    }
+
+    fun getConsentEnabledBundle(context: Context): Bundle {
+        val extras = Bundle()
+        val consentInformation: ConsentInformation = ConsentInformation
+            .getInstance(context)
         if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
             extras.putString("npa", "1")
         }
@@ -777,7 +803,6 @@ object AdSdk {
 
                     override fun onAdClicked() {
                         super.onAdClicked()
-                        Log.d("aishik", "onAdClicked: ")
                         nativeAdLoadCallback?.onAdClicked()
                     }
 
@@ -788,7 +813,6 @@ object AdSdk {
 
                     override fun onAdLoaded() {
                         super.onAdLoaded()
-                        Log.d("aishik", "onAdLoaded: ")
                         nativeAdLoadCallback?.onAdLoaded()
                         if (nativeAd != null) {
                             val adView =
@@ -839,6 +863,138 @@ object AdSdk {
                     .build()
             )
         }
+    }
+
+    fun loadNativeAdFromService(
+        layoutInflater: LayoutInflater,
+        context: Context,
+        adUnit: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        adType: String = "1",
+        mediaMaxHeight: Int = 300,
+        loadingTextSize: Int,
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        id: Long = System.currentTimeMillis(),
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+    ) {
+        @LayoutRes val layoutId = when (adType) {
+            "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
+            "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
+            "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
+            "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
+            "5" -> R.layout.native_admob_ad_t5/*BIG*/
+            "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
+            else -> R.layout.native_admob_ad_t1
+        }
+        viewGroup.visibility = VISIBLE
+        val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+        val id1 = inflate.findViewById<View>(R.id.rl)
+        val tv = inflate.findViewById<TextView>(R.id.tv)
+        tv.textSize = loadingTextSize.toFloat()
+        if (textColor1 != null) {
+            tv.setTextColor(textColor1)
+        }
+        when (background) {
+            is String -> {
+                id1.setBackgroundColor(Color.parseColor(background))
+            }
+            is Drawable -> {
+                id1.background = background
+            }
+            is Int -> {
+                id1.setBackgroundColor(background)
+            }
+        }
+        viewGroup.removeAllViews()
+        viewGroup.addView(inflate)
+        if (adUnit.isBlank()) return
+        if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null) {
+            AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
+                layoutInflater,
+                context,
+                id,
+                adUnit,
+                viewGroup,
+                nativeAdLoadCallback,
+                populator,
+                adType,
+                background,
+                textColor1,
+                textColor2,
+                mediaMaxHeight,
+                loadingTextSize
+            )
+        }
+        var nativeAd: NativeAd? = null
+        val adLoader: AdLoader? = AdLoader.Builder(context, adUnit)
+            .forNativeAd { ad: NativeAd ->
+                nativeAd = ad
+            }
+            .withAdListener(object : AdListener() {
+
+                override fun onAdClicked() {
+                    super.onAdClicked()
+                    nativeAdLoadCallback?.onAdClicked()
+                }
+
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    Log.d("aishik", "onAdFailedToLoad: " + adError.message)
+                    nativeAdLoadCallback?.onAdFailed(adError)
+                }
+
+                override fun onAdLoaded() {
+                    super.onAdLoaded()
+                    nativeAdLoadCallback?.onAdLoaded()
+                    if (nativeAd != null) {
+                        val adView = layoutInflater.inflate(layoutId, null)
+                                as NativeAdView
+                        if (background != null) {
+                            when (background) {
+                                is String -> {
+                                    adView.setBackgroundColor(Color.parseColor(background))
+                                }
+                                is Drawable -> {
+                                    adView.background = background
+                                }
+                                is Int -> {
+                                    adView.setBackgroundColor(background)
+                                }
+                            }
+                        }
+                        if (populator != null) {
+                            populator.invoke(nativeAd!!, adView)
+                        } else {
+                            populateUnifiedNativeAdView(
+                                nativeAd!!,
+                                adView,
+                                adType,
+                                textColor1,
+                                textColor2,
+                                mediaMaxHeight
+                            )
+                        }
+                        viewGroup.removeAllViews()
+                        viewGroup.addView(adView)
+                    }
+                }
+            })
+            .withNativeAdOptions(
+                NativeAdOptions.Builder()
+                    .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                    .setRequestCustomMuteThisAd(true)
+                    .build()
+            )
+            .build()
+        adLoader?.loadAd(
+            AdRequest.Builder().addNetworkExtrasBundle(
+                AdMobAdapter::class.java,
+                getConsentEnabledBundle(context)
+            )
+                .build()
+        )
     }
 
     fun populateUnifiedNativeAdView(

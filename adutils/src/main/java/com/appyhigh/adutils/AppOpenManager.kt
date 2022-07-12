@@ -192,36 +192,29 @@ class AppOpenManager(
         }
 
         fun loadSplashAppOpenAd(application: Application, adUnit: String) {
-            Log.d("aishik", "loadSplashAppOpenAd: aaa " + application)
             val build = AdRequest.Builder().build()
             val adLoadCallBack = object : AppOpenAdLoadCallback() {
                 override fun onAdLoaded(p0: AppOpenAd) {
                     super.onAdLoaded(p0)
-                    Log.d("aishik", "onAdLoaded: 123 " + p0)
                     splashAppOpenAd = p0
                     reason = null
                 }
 
                 override fun onAdFailedToLoad(p0: LoadAdError) {
                     super.onAdFailedToLoad(p0)
-                    Log.d("aishik", "onAdFailedToLoad: 456" + p0.message)
                     splashAppOpenAd = null
                     reason = p0.message
                 }
             }
             val applicationContext = application.applicationContext
-            Log.d("aishik", "loadSplashAppOpenAd: 1 $adUnit $build $applicationContext")
             AppOpenAd.load(
                 applicationContext, adUnit, build,
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, adLoadCallBack
             )
-            Log.d("aishik", "loadSplashAppOpenAd: 2 ")
         }
 
         fun showAdIfAvailable(activity: Activity, appOpenCallBack: appOpenCallBack) {
-            Log.d("aishik", "showAdIfAvailable: 111")
             if (splashAppOpenAd != null) {
-                Log.d("aishik", "showAdIfAvailable: 222")
                 splashAppOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
                     override fun onAdFailedToShowFullScreenContent(p0: AdError) {
                         super.onAdFailedToShowFullScreenContent(p0)
@@ -243,7 +236,6 @@ class AppOpenManager(
                         appOpenCallBack.adClicked()
                     }
                 }
-                Log.d("aishik", "showAdIfAvailable: SHOW")
                 appOpenCallBack.adLoaded(splashAppOpenAd!!)
 //                splashAppOpenAd!!.show(activity)
             } else {

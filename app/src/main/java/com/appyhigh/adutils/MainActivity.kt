@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (BuildConfig.DEBUG) {
-//            binding.btnNativeAd.performClick()
+            binding.btnNativeAd.performClick()
         }
         loadInterstitialAd(this)
         loadRewardedAd(this)

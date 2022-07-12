@@ -57,7 +57,19 @@ class NativeAdActivity : AppCompatActivity() {
             AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 150
         )*/
 
-        AdSdk.loadNativeAd(
+        AdSdk.loadNativeAdFromService(
+            layoutInflater,
+            applicationContext,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot4,
+            nativeAdCallBack,
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+            mediaMaxHeight = 150,
+            loadingTextSize = 24,
+            null, null, null
+        )
+
+        /*AdSdk.loadNativeAd(
             this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
@@ -69,7 +81,8 @@ class NativeAdActivity : AppCompatActivity() {
             null,
             mediaMaxHeight = 600,
             loadingTextSize = 24
-        )
+        )*/
+
 
 /*
         AdSdk.loadNativeAd(
@@ -85,15 +98,15 @@ class NativeAdActivity : AppCompatActivity() {
 
     private val nativeAdCallBack = object : NativeAdLoadCallback() {
         override fun onAdLoaded() {
-            Log.d("aishik", "onAdLoaded")
+
         }
 
         override fun onAdFailed(adError: LoadAdError) {
-            Log.d("aishik", "onAdFailed " + adError.message)
+
         }
 
         override fun onAdClicked() {
-            Log.d("aishik", "onAdClicked")
+
         }
     }
 }
