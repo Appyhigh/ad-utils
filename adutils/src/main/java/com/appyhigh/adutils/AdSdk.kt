@@ -143,7 +143,7 @@ object AdSdk {
             MobileAds.setRequestConfiguration(build)
         }
         MobileAds.initialize(app) {
-            Log.d("aishik", "initialize: " + it.toString())
+
         }
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
@@ -197,7 +197,6 @@ object AdSdk {
                         for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
                             val value = item.value
                             Handler(Looper.getMainLooper()).post {
-                                Log.d("aishik", "initialize: " + value)
                                 loadNativeAdFromService(
                                     value.layoutInflater,
                                     value.context,
@@ -866,6 +865,19 @@ object AdSdk {
         }
     }
 
+    fun removeNativeAdFromService(
+        viewGroup: ViewGroup,
+    ): Boolean {
+        val id = viewGroup.id.toLong()
+        return if (AdUtilConstants.nativeAdLifeCycleServiceHashMap.containsKey(id)) {
+            viewGroup.removeAllViews()
+            AdUtilConstants.nativeAdLifeCycleServiceHashMap.remove(id)
+            true
+        } else {
+            false
+        }
+    }
+
     fun loadNativeAdFromService(
         layoutInflater: LayoutInflater,
         context: Context,
@@ -881,7 +893,7 @@ object AdSdk {
         id: Long = viewGroup.id.toLong(),
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
     ) {
-        Log.d("aishik", "loadNativeAdFromService: $id $context")
+        Log.d("aishik", "loadNativeAdFromService: FROM B $id")
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
             "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/

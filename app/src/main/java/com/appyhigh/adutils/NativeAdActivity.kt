@@ -69,6 +69,10 @@ class NativeAdActivity : AppCompatActivity() {
             null, null, null
         )
 
+        binding.removeAds.setOnClickListener {
+            AdSdk.removeNativeAdFromService(binding.llRoot4)
+        }
+
         /*AdSdk.loadNativeAd(
             this,
             lifecycle,
