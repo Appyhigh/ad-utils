@@ -9,6 +9,16 @@ import com.google.android.gms.ads.LoadAdError
 
 class NativeAdActivity : AppCompatActivity() {
     lateinit var binding: ActivityNativeAdBinding
+
+    override fun onPause() {
+        super.onPause()
+        AdSdk.removeNativeAdFromService(binding.llRoot4)
+    }
+
+    override fun onStop() {
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityNativeAdBinding.inflate(layoutInflater)
@@ -66,7 +76,8 @@ class NativeAdActivity : AppCompatActivity() {
             AdSdk.ADType.DEFAULT_NATIVE_SMALL,
             mediaMaxHeight = 150,
             loadingTextSize = 24,
-            null, null, null
+            null, null, null,
+            preloadAds = true
         )
 
         binding.removeAds.setOnClickListener {
