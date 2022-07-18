@@ -3,7 +3,6 @@ package com.appyhigh.adutils
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
@@ -21,12 +20,17 @@ class MainActivity : AppCompatActivity() {
     private var rewardedAd: RewardedAd? = null
 
     override fun onBackPressed() {
-//        super.onBackPressed()
+//      super.onBackPressed()
         if (binding.exitAd.visibility == VISIBLE) {
             binding.exitAd.visibility = GONE
         } else {
             binding.exitAd.visibility = VISIBLE
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AdSdk.preloadAds(layoutInflater, applicationContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +54,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (BuildConfig.DEBUG) {
-            binding.btnNativeAd.performClick()
+//            binding.btnNativeAd.performClick()
         }
         loadInterstitialAd(this)
         loadRewardedAd(this)
@@ -82,7 +86,6 @@ class MainActivity : AppCompatActivity() {
         override fun onAdImpression() {
             super.onAdImpression()
             if (BuildConfig.DEBUG) {
-                Log.d("aishik", "onAdImpression: ")
             }
         }
 
