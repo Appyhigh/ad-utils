@@ -115,27 +115,28 @@ class AppOpenManager(
         // Only show ad if there is not already an app open ad currently showing
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
-            if(currentActivity is AdSdk.BypassAppOpenAd) {
+            if (currentActivity is AdSdk.BypassAppOpenAd) {
                 Log.d(LOG_TAG, "AppOpen Ad Bypassed")
                 return false
             }
             Log.d(LOG_TAG, "Will show ad.")
             appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
-                    override fun onAdDismissedFullScreenContent() {
-                        // Set the reference to null so isAdAvailable() returns false.
-                        appOpenAd = null
-                        isShowingAd = false
-                        fetchAd()
-                        appOpenAdCallback?.onAdClosed()
-                    }
-
-                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                        appOpenAdCallback?.onAdFailedToShow(adError)
-                    }
-                    override fun onAdShowedFullScreenContent() {
-                        isShowingAd = true
-                    }
+                override fun onAdDismissedFullScreenContent() {
+                    // Set the reference to null so isAdAvailable() returns false.
+                    appOpenAd = null
+                    isShowingAd = false
+                    fetchAd()
+                    appOpenAdCallback?.onAdClosed()
                 }
+
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    appOpenAdCallback?.onAdFailedToShow(adError)
+                }
+
+                override fun onAdShowedFullScreenContent() {
+                    isShowingAd = true
+                }
+            }
             currentActivity?.let {
                 appOpenAd!!.show(it)
                 return true
