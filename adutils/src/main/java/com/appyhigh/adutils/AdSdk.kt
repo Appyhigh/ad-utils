@@ -916,6 +916,9 @@ object AdSdk {
         }
     }
 
+    /**
+     * Call loadNativeAdFromService if activity is not available
+     **/
     fun loadNativeAdFromService(
         layoutInflater: LayoutInflater,
         context: Context,
@@ -1054,20 +1057,11 @@ object AdSdk {
                 if (preloadAds) {
                     preloadAds(layoutInflater, context)
                 }
-                /*object : CountDownTimer(5000, 1000) {
-                    override fun onTick(millisUntilFinished: Long) {
-
-                    }
-
-                    override fun onFinish() {
-                        loadAd(adLoader, context, adUnit, "b")
-                    }
-                }.start()*/
             } else {
                 if (preloadAds) {
                     preloadAds(layoutInflater, context)
                 }
-                loadAd(adLoader, context, adUnit, "c")
+                loadAd(adLoader, context, adUnit, "c")/*The Extra Parameters are just for logging*/
             }
         } else {
             if (preloadAds) {
