@@ -23,6 +23,7 @@ data class NativeAdItemService(
     var mediaMaxHeight: Int = 300,
     var textSize: Int = 48,
     var preloadAds: Boolean = false,
+    var autoRefresh: Boolean = true,
     var buttonColor: Int = Color.parseColor("#000000")
 ) {
 }

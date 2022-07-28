@@ -158,7 +158,10 @@ object AdSdk {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-
+                if (BuildConfig.DEBUG) {
+                    bannerAdRefreshTimer = 5000L
+                    nativeAdRefreshTimer = 5000L
+                }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
                         for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
@@ -205,23 +208,26 @@ object AdSdk {
                         }
                         for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
                             val value = item.value
-                            Handler(Looper.getMainLooper()).post {
-                                loadNativeAdFromService(
-                                    value.layoutInflater,
-                                    value.context,
-                                    value.adUnit,
-                                    value.viewGroup,
-                                    value.nativeAdLoadCallback,
-                                    background = value.background,
-                                    textColor1 = value.textColor1,
-                                    textColor2 = value.textColor2,
-                                    mediaMaxHeight = value.mediaMaxHeight,
-                                    loadingTextSize = value.textSize,
-                                    id = value.id,
-                                    populator = value.populator,
-                                    adType = value.viewId,
-                                    preloadAds = value.preloadAds
-                                )
+                            if (value.autoRefresh) {
+                                Handler(Looper.getMainLooper()).post {
+                                    loadNativeAdFromService(
+                                        value.layoutInflater,
+                                        value.context,
+                                        value.adUnit,
+                                        value.viewGroup,
+                                        value.nativeAdLoadCallback,
+                                        background = value.background,
+                                        textColor1 = value.textColor1,
+                                        textColor2 = value.textColor2,
+                                        mediaMaxHeight = value.mediaMaxHeight,
+                                        loadingTextSize = value.textSize,
+                                        id = value.id,
+                                        populator = value.populator,
+                                        adType = value.viewId,
+                                        preloadAds = value.preloadAds,
+                                        autoRefresh = value.preloadAds
+                                    )
+                                }
                             }
                         }
                     }
@@ -232,10 +238,8 @@ object AdSdk {
     }
 
     fun preloadAds(layoutInflater: LayoutInflater, context: Context) {
-        Log.d("aishik", "preloadAds: ")
         preloadNativeAdList?.keys?.iterator()?.forEach {
             val preloadNativeAds = preloadNativeAdList!![it]
-            Log.d("aishik", "preloadAds: " + it)
             if (preloadNativeAds != null && preloadNativeAds.ad == null) {
                 preLoadNativeAd(
                     layoutInflater,
@@ -840,10 +844,12 @@ object AdSdk {
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         nativeAdLoadCallback?.onAdFailed(adError)
+                        logAdUnit(adUnit, failedHmapHmap, "b failed ${adError.message}")
                     }
 
                     override fun onAdLoaded() {
                         super.onAdLoaded()
+                        logAdUnit(adUnit, loadedHmap, "loaded")
                         nativeAdLoadCallback?.onAdLoaded()
                         if (nativeAd != null) {
                             val adView =
@@ -886,6 +892,7 @@ object AdSdk {
                         .build()
                 )
                 .build()
+            logAdUnit(adUnit, reqHmapHmap, "req a")
             adLoader?.loadAd(
                 AdRequest.Builder().addNetworkExtrasBundle(
                     AdMobAdapter::class.java,
@@ -924,6 +931,7 @@ object AdSdk {
         id: Long = viewGroup.id.toLong(),
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
         preloadAds: Boolean = false,
+        autoRefresh: Boolean = false,
     ) {
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -971,7 +979,8 @@ object AdSdk {
                 textColor2,
                 mediaMaxHeight,
                 loadingTextSize,
-                preloadAds
+                preloadAds,
+                autoRefresh
             )
         }
         var nativeAd: NativeAd? = null
@@ -987,11 +996,14 @@ object AdSdk {
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
+                    logAdUnit(adUnit, failedHmapHmap, "c failed ${adError.message}")
                     nativeAdLoadCallback?.onAdFailed(adError)
                 }
 
                 override fun onAdLoaded() {
                     super.onAdLoaded()
+                    logAdUnit(adUnit, loadedHmap, "loaded")
+
                     nativeAdLoadCallback?.onAdLoaded()
                     if (nativeAd != null) {
                         val adView = layoutInflater.inflate(layoutId, null)
@@ -1031,38 +1043,43 @@ object AdSdk {
                     .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
                     .setRequestCustomMuteThisAd(true)
                     .build()
-            )
-            .build()
+            ).build()
         if (preloadNativeAdList != null) {
             val preloadNativeAds = preloadNativeAdList!![adUnit]
             val ad = preloadNativeAds?.ad
             if (ad != null) {
-                Log.d("aishik", "loadNativeAdFromService: PRELOADED AD")
                 viewGroup.removeAllViews()
                 viewGroup.addView(ad)
                 preloadNativeAds.ad = null
-                Log.d("aishik", "loadNativeAdFromService: " + preloadAds)
                 if (preloadAds) {
                     preloadAds(layoutInflater, context)
                 }
-                object : CountDownTimer(5000, 1000) {
+                /*object : CountDownTimer(5000, 1000) {
                     override fun onTick(millisUntilFinished: Long) {
 
                     }
 
                     override fun onFinish() {
-                        loadAd(adLoader, context)
+                        loadAd(adLoader, context, adUnit, "b")
                     }
-                }.start()
+                }.start()*/
             } else {
-                Log.d("aishik", "loadNativeAdFromService: NEW AD")
-                loadAd(adLoader, context)
+                if (preloadAds) {
+                    preloadAds(layoutInflater, context)
+                }
+                loadAd(adLoader, context, adUnit, "c")
             }
         } else {
-            Log.d("aishik", "loadNativeAdFromService: NEW AD")
-            loadAd(adLoader, context)
+            if (preloadAds) {
+                preloadAds(layoutInflater, context)
+            }
+            loadAd(adLoader, context, adUnit, "d")
         }
     }
+
+    val loadedHmap: HashMap<String, Int?> = hashMapOf()
+    val reqHmapHmap: HashMap<String, Int?> = hashMapOf()
+    val failedHmapHmap: HashMap<String, Int?> = hashMapOf()
 
     private fun preLoadNativeAd(
         layoutInflater: LayoutInflater,
@@ -1085,6 +1102,7 @@ object AdSdk {
             "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
             else -> R.layout.native_admob_ad_t1
         }
+        val preloadNativeAds = preloadNativeAdList?.get(adUnit)
         val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
         val id1 = inflate.findViewById<View>(R.id.rl)
         val tv = inflate.findViewById<TextView>(R.id.tv)
@@ -1112,12 +1130,12 @@ object AdSdk {
             .withAdListener(object : AdListener() {
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-
+                    logAdUnit(adUnit, failedHmapHmap, "a failed ${adError.message}")
                 }
 
                 override fun onAdLoaded() {
                     super.onAdLoaded()
-                    Log.d("aishik", "preLoadNativeAd: $adUnit")
+                    logAdUnit(adUnit, loadedHmap, "loaded")
                     if (nativeAd != null) {
                         val adView = layoutInflater.inflate(layoutId, null)
                                 as NativeAdView
@@ -1146,7 +1164,6 @@ object AdSdk {
                                 mediaMaxHeight
                             )
                         }
-                        val preloadNativeAds = preloadNativeAdList?.get(adUnit)
                         if (preloadNativeAds != null) {
                             preloadNativeAds.ad = adView
                         }
@@ -1160,13 +1177,21 @@ object AdSdk {
                     .build()
             )
             .build()
-        loadAd(adLoader, context)
+        loadAd(adLoader, context, adUnit, "e")
+    }
+
+    private fun logAdUnit(adUnit: String, loadedHmap: HashMap<String, Int?>, s: String) {
+        val i = loadedHmap[adUnit] ?: 0
+        loadedHmap[adUnit] = i + 1
     }
 
     private fun loadAd(
         adLoader: AdLoader?,
-        context: Context
+        context: Context,
+        adUnit: String,
+        s: String
     ) {
+        logAdUnit(adUnit, reqHmapHmap, "$s req")
         adLoader?.loadAd(
             AdRequest.Builder().addNetworkExtrasBundle(
                 AdMobAdapter::class.java,
