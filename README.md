@@ -225,7 +225,8 @@ fun loadNativeAdFromService(
   textColor2: Int?,  
   id: Long = viewGroup.id.toLong(),  
   populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,  
-  preloadAds: Boolean = false,  
+  preloadAds: Boolean = false, -> preload ads on ads shown once or only show preloaded ads once 
+  autoRefresh: Boolean = false, -> Enable or disable auto refresh 
 )
 */
 ```  
