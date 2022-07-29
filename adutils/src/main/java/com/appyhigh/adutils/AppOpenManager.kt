@@ -25,16 +25,17 @@ import java.util.*
 class AppOpenManager(
     private val myApplication: Application,
     private val appOpenAdUnit: String,
-    private val isShownOnlyOnce: Boolean,
+    private var backgroundThreshold: Int = 30000,
     private var appOpenAdCallback: AppOpenAdCallback?
 ) :
     LifecycleObserver,
     ActivityLifecycleCallbacks {
-    private var appOpenAd: AppOpenAd? = null
     private var currentActivity: Activity? = null
     private var loadCallback: AppOpenAdLoadCallback? = null
     private var loadTime: Long = 0
     private var backgroundTime: Long = 0
+    private var appCount = 0
+
 
     /**
      * Creates and returns ad request.
@@ -67,7 +68,7 @@ class AppOpenManager(
                 super.onAdLoaded(ad)
                 appOpenAd = ad
                 loadTime = Date().time
-                appOpenAdCallback?.onAdLoaded()
+                appOpenAdCallback?.onAdLoaded(ad)
             }
 
             override fun onAdFailedToLoad(loadAdError: LoadAdError) {
@@ -114,28 +115,28 @@ class AppOpenManager(
         // Only show ad if there is not already an app open ad currently showing
         // and an ad is available.
         if (!isShowingAd && isAdAvailable) {
+            if (currentActivity is AdSdk.BypassAppOpenAd) {
+                Log.d(LOG_TAG, "AppOpen Ad Bypassed")
+                return false
+            }
             Log.d(LOG_TAG, "Will show ad.")
             appOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
-                    override fun onAdDismissedFullScreenContent() {
-                        // Set the reference to null so isAdAvailable() returns false.
-                        appOpenAd = null
-                        isShowingAd = false
-                        if(isShownOnlyOnce) {
-                            ProcessLifecycleOwner.get().lifecycle.removeObserver(this@AppOpenManager)
-                            currentActivity = null
-                        } else {
-                            fetchAd()
-                        }
-                        appOpenAdCallback?.onAdClosed()
-                    }
-
-                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                        appOpenAdCallback?.onAdFailedToShow(adError)
-                    }
-                    override fun onAdShowedFullScreenContent() {
-                        isShowingAd = true
-                    }
+                override fun onAdDismissedFullScreenContent() {
+                    // Set the reference to null so isAdAvailable() returns false.
+                    appOpenAd = null
+                    isShowingAd = false
+                    fetchAd()
+                    appOpenAdCallback?.onAdClosed()
                 }
+
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    appOpenAdCallback?.onAdFailedToShow(adError)
+                }
+
+                override fun onAdShowedFullScreenContent() {
+                    isShowingAd = true
+                }
+            }
             currentActivity?.let {
                 appOpenAd!!.show(it)
                 return true
@@ -153,10 +154,16 @@ class AppOpenManager(
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        val appBackgroundTime = System.currentTimeMillis() - backgroundTime
-        Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
-        if(appBackgroundTime > 30000)
-            showAdIfAvailable()
+        if (appCount > 0 && !currentActivity.toString().contains("CallerIdActivity")) {
+            val appBackgroundTime = System.currentTimeMillis() - backgroundTime
+            if (BuildConfig.DEBUG) {
+                backgroundThreshold = 1000
+            }
+            Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
+            if (appBackgroundTime > backgroundThreshold)
+                showAdIfAvailable()
+        }
+        appCount++
     }
 
     /**
@@ -167,18 +174,83 @@ class AppOpenManager(
         backgroundTime = System.currentTimeMillis()
     }
 
+
+    private var appOpenAd: AppOpenAd? = null
+
     companion object {
         private const val LOG_TAG = "AdSdk:AppOpenManager"
         private var isShowingAd = false
+        private var splashAppOpenAd: AppOpenAd? = null
+        private var reason: String? = null
+
+        interface appOpenCallBack {
+            fun adDismissed()
+            fun adError(message: String?)
+            fun adShown()
+            fun adClicked()
+            fun adLoaded(appOpenAd: AppOpenAd)
+            fun adNotLoadedYet(reason: String?)
+        }
+
+        fun loadSplashAppOpenAd(application: Application, adUnit: String) {
+            val build = AdRequest.Builder().build()
+            val adLoadCallBack = object : AppOpenAdLoadCallback() {
+                override fun onAdLoaded(p0: AppOpenAd) {
+                    super.onAdLoaded(p0)
+                    splashAppOpenAd = p0
+                    reason = null
+                }
+
+                override fun onAdFailedToLoad(p0: LoadAdError) {
+                    super.onAdFailedToLoad(p0)
+                    splashAppOpenAd = null
+                    reason = p0.message
+                }
+            }
+            val applicationContext = application.applicationContext
+            AppOpenAd.load(
+                applicationContext, adUnit, build,
+                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, adLoadCallBack
+            )
+        }
+
+        fun showAdIfAvailable(activity: Activity, appOpenCallBack: appOpenCallBack) {
+            if (splashAppOpenAd != null) {
+                splashAppOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
+                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                        super.onAdFailedToShowFullScreenContent(p0)
+                        appOpenCallBack.adError(p0.message)
+                    }
+
+                    override fun onAdShowedFullScreenContent() {
+                        super.onAdShowedFullScreenContent()
+                        appOpenCallBack.adShown()
+                    }
+
+                    override fun onAdDismissedFullScreenContent() {
+                        super.onAdDismissedFullScreenContent()
+                        appOpenCallBack.adDismissed()
+                    }
+
+                    override fun onAdClicked() {
+                        super.onAdClicked()
+                        appOpenCallBack.adClicked()
+                    }
+                }
+                appOpenCallBack.adLoaded(splashAppOpenAd!!)
+//                splashAppOpenAd!!.show(activity)
+            } else {
+                appOpenCallBack.adNotLoadedYet(reason)
+            }
+        }
     }
 
     /**
      * Constructor
      */
     init {
-        if (!isShownOnlyOnce) {
-            myApplication.registerActivityLifecycleCallbacks(this)
-        }
+        this.appCount = 0
+        myApplication.registerActivityLifecycleCallbacks(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 }

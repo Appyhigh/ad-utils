@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View.GONE
@@ -19,7 +20,7 @@ class MainActivity : AppCompatActivity() {
     private var rewardedAd: RewardedAd? = null
 
     override fun onBackPressed() {
-//        super.onBackPressed()
+//      super.onBackPressed()
         if (binding.exitAd.visibility == VISIBLE) {
             binding.exitAd.visibility = GONE
         } else {
@@ -27,11 +28,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        AdSdk.preloadAds(layoutInflater, applicationContext)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        AdSdk.loadNPAForm("https://www.google.com", this, "pub-3940256099942544")
         binding.btnBannerAd.setOnClickListener {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
@@ -47,17 +53,25 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, NativeAdActivity::class.java))
         }
 
-        loadInterstitialAd()
-        loadRewardedAd()
+        if (BuildConfig.DEBUG) {
+//            binding.btnNativeAd.performClick()
+        }
+        loadInterstitialAd(this)
+        loadRewardedAd(this)
         val height: Int = resources.displayMetrics.heightPixels
         val maxHeight = height * 60 / 100
+/*
         AdSdk.loadNativeAd(
+            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.adFrameLayout,
             null,
             AdSdk.ADType.MEDIUM, null, null, null, maxHeight = maxHeight
         )
+*/
+
+
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {
@@ -69,12 +83,18 @@ class MainActivity : AppCompatActivity() {
             interstitialAd = ad
         }
 
+        override fun onAdImpression() {
+            super.onAdImpression()
+            if (BuildConfig.DEBUG) {
+            }
+        }
+
         override fun onAdDismissedFullScreenContent() {
             /**
              * Comment this if you want the ad to load just once
              * Uncomment this to load ad again once shown
              */
-            loadInterstitialAd()
+            loadInterstitialAd(this@MainActivity)
         }
 
         override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
@@ -98,7 +118,7 @@ class MainActivity : AppCompatActivity() {
              * Comment this if you want the ad to load just once
              * Uncomment this to load ad again once shown
              */
-            loadRewardedAd()
+            loadRewardedAd(this@MainActivity)
         }
 
         override fun onAdFailedToShowFullScreenContent(adError: AdError?) {}
@@ -109,15 +129,17 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun loadInterstitialAd() {
+    private fun loadInterstitialAd(activity: Activity) {
         AdSdk.loadInterstitialAd(
+            activity,
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback
         )
     }
 
-    private fun loadRewardedAd() {
+    private fun loadRewardedAd(activity: Activity) {
         AdSdk.loadRewardedAd(
+            activity,
             "ca-app-pub-3940256099942544/5224354917",
             mRewardedAdUtilCallback
         )
