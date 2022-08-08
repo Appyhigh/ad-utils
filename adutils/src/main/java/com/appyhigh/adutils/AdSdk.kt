@@ -45,17 +45,23 @@ import kotlin.concurrent.fixedRateTimer
 
 object AdSdk {
 
+    enum class REFRESH_STATE {
+        REFRESH_ON, REFRESH_OFF
+    }
+
     private var application: Application? = null
     private var TAG = "AdSdk"
     private var bannerAdRefreshTimer = 45000L
     private var nativeAdRefreshTimer = 45000L
+    private var nativeRefresh = REFRESH_STATE.REFRESH_ON
+    private var bannerRefresh = REFRESH_STATE.REFRESH_ON
 
     private var lastBGColor: Any? = null
     private var lastTColor1: Int? = null
     private var lastTColor2: Int? = null
     private var lastHeight: Int = 300
 
-    lateinit var form: com.google.ads.consent.ConsentForm
+    lateinit var form: ConsentForm
 
     fun loadNPAForm(
         privacyPolicyLink: String,
@@ -80,7 +86,7 @@ object AdSdk {
                         e.printStackTrace()
                     }
 
-                    form = com.google.ads.consent.ConsentForm.Builder(activity, privacyUrl)
+                    form = ConsentForm.Builder(activity, privacyUrl)
                         .withListener(object : ConsentFormListener() {
                             override fun onConsentFormLoaded() {
                                 // Consent form loaded successfully.
@@ -164,18 +170,20 @@ object AdSdk {
                 }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
-                        for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
-                            if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                                Handler(Looper.getMainLooper()).post {
-                                    loadBannerAd(
-                                        item.value.activity,
-                                        item.value.id,
-                                        item.value.lifecycle,
-                                        item.value.viewGroup,
-                                        item.value.adUnit,
-                                        item.value.adSize,
-                                        item.value.bannerAdLoadCallback
-                                    )
+                        if (bannerRefresh == REFRESH_STATE.REFRESH_ON) {
+                            for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
+                                if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                                    Handler(Looper.getMainLooper()).post {
+                                        loadBannerAd(
+                                            item.value.activity,
+                                            item.value.id,
+                                            item.value.lifecycle,
+                                            item.value.viewGroup,
+                                            item.value.adUnit,
+                                            item.value.adSize,
+                                            item.value.bannerAdLoadCallback
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -184,51 +192,57 @@ object AdSdk {
 
                 if (nativeAdRefreshTimer != 0L) {
                     fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
-                        for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                            val value = item.value
-                            if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                                Handler(Looper.getMainLooper()).post {
-                                    loadNativeAd(
-                                        value.activity,
-                                        value.id,
-                                        value.lifecycle,
-                                        value.adUnit,
-                                        value.viewGroup,
-                                        value.nativeAdLoadCallback,
-                                        value.layoutId,
-                                        value.populator,
-                                        background = value.background,
-                                        textColor1 = value.textColor1,
-                                        textColor2 = value.textColor2,
-                                        mediaMaxHeight = value.mediaMaxHeight,
-                                        loadingTextSize = value.textSize
-                                    )
+                        if (nativeRefresh == REFRESH_STATE.REFRESH_ON) {
+                            Log.d("aishik", "initialize: REFRESHED")
+                            for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
+                                val value = item.value
+                                if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                                    Handler(Looper.getMainLooper()).post {
+                                        loadNativeAd(
+                                            value.activity,
+                                            value.id,
+                                            value.lifecycle,
+                                            value.adUnit,
+                                            value.viewGroup,
+                                            value.nativeAdLoadCallback,
+                                            value.layoutId,
+                                            value.populator,
+                                            background = value.background,
+                                            textColor1 = value.textColor1,
+                                            textColor2 = value.textColor2,
+                                            mediaMaxHeight = value.mediaMaxHeight,
+                                            loadingTextSize = value.textSize
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
-                            val value = item.value
-                            if (value.autoRefresh) {
-                                Handler(Looper.getMainLooper()).post {
-                                    loadNativeAdFromService(
-                                        value.layoutInflater,
-                                        value.context,
-                                        value.adUnit,
-                                        value.viewGroup,
-                                        value.nativeAdLoadCallback,
-                                        background = value.background,
-                                        textColor1 = value.textColor1,
-                                        textColor2 = value.textColor2,
-                                        mediaMaxHeight = value.mediaMaxHeight,
-                                        loadingTextSize = value.textSize,
-                                        id = value.id,
-                                        populator = value.populator,
-                                        adType = value.viewId,
-                                        preloadAds = value.preloadAds,
-                                        autoRefresh = value.preloadAds
-                                    )
+
+                            for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
+                                val value = item.value
+                                if (value.autoRefresh) {
+                                    Handler(Looper.getMainLooper()).post {
+                                        loadNativeAdFromService(
+                                            value.layoutInflater,
+                                            value.context,
+                                            value.adUnit,
+                                            value.viewGroup,
+                                            value.nativeAdLoadCallback,
+                                            background = value.background,
+                                            textColor1 = value.textColor1,
+                                            textColor2 = value.textColor2,
+                                            mediaMaxHeight = value.mediaMaxHeight,
+                                            loadingTextSize = value.textSize,
+                                            id = value.id,
+                                            populator = value.populator,
+                                            adType = value.viewId,
+                                            preloadAds = value.preloadAds,
+                                            autoRefresh = value.preloadAds
+                                        )
+                                    }
                                 }
                             }
+                        } else {
+                            Log.d("aishik", "initialize: NOT REFRESHED")
                         }
                     }
                 }
@@ -257,17 +271,16 @@ object AdSdk {
     }
 
     private fun isGooglePlayServicesAvailable(application: Application): Boolean {
-        val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
-        val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(application)
-        if (status != ConnectionResult.SUCCESS) {
-            Toast.makeText(
-                application,
-                "Some Features might misbehave as Google Play Services are not available!",
-                Toast.LENGTH_SHORT
-            ).show()
+        try {
+            val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
+            val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(application)
+            if (status != ConnectionResult.SUCCESS) {
+                return false
+            }
+            return true
+        } catch (e: Exception) {
             return false
         }
-        return true
     }
 
     /**
@@ -425,7 +438,7 @@ object AdSdk {
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
                 .build()
             val mAdView = AdView(viewGroup.context)
-            mAdView.adSize = adSize
+            mAdView.setAdSize(adSize)
             mAdView.adUnitId = adUnit
             mAdView.loadAd(adRequest)
             viewGroup.removeAllViews()
@@ -505,7 +518,8 @@ object AdSdk {
                                     interstitialAdUtilLoadCallback?.onAdDismissedFullScreenContent()
                                 }
 
-                                override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
+                                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                                    super.onAdFailedToShowFullScreenContent(adError)
                                     interstitialAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
                                         adError,
                                     )
@@ -614,7 +628,7 @@ object AdSdk {
                                     rewardedAdUtilLoadCallback?.onAdDismissedFullScreenContent()
                                 }
 
-                                override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
+                                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
                                     rewardedAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
                                         adError,
                                     )
@@ -901,6 +915,23 @@ object AdSdk {
                     .build()
             )
         }
+    }
+
+
+    fun disableBannerRefresh() {
+        bannerRefresh = REFRESH_STATE.REFRESH_OFF
+    }
+
+    fun enableBannerRefresh() {
+        bannerRefresh = REFRESH_STATE.REFRESH_ON
+    }
+
+    fun disableNativeRefresh() {
+        nativeRefresh = REFRESH_STATE.REFRESH_OFF
+    }
+
+    fun enableNativeRefresh() {
+        nativeRefresh = REFRESH_STATE.REFRESH_ON
     }
 
     fun removeNativeAdFromService(
@@ -1207,19 +1238,21 @@ object AdSdk {
         var icon = nativeAd.icon
         adView.iconView = iconView
         val iconView1 = adView.iconView
-        if (icon == null) {
-            if (adType == ADType.DEFAULT_NATIVE_SMALL) {
-                val iconHeight = mediaMaxHeight
-                iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
+        if (iconView1 != null) {
+            if (icon == null) {
+                if (adType == ADType.DEFAULT_NATIVE_SMALL) {
+                    val iconHeight = mediaMaxHeight
+                    iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
+                }
+                iconView1?.visibility = View.INVISIBLE
+            } else {
+                if (adType == ADType.DEFAULT_NATIVE_SMALL) {
+                    val iconHeight = mediaMaxHeight
+                    iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
+                }
+                (iconView1 as ImageView).setImageDrawable(icon.drawable)
+                iconView1?.visibility = VISIBLE
             }
-            iconView1?.visibility = View.INVISIBLE
-        } else {
-            if (adType == ADType.DEFAULT_NATIVE_SMALL) {
-                val iconHeight = mediaMaxHeight
-                iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
-            }
-            (iconView1 as ImageView).setImageDrawable(icon.drawable)
-            iconView1?.visibility = VISIBLE
         }
 
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
@@ -1227,7 +1260,7 @@ object AdSdk {
         mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
-                val scale: Float = adView.mediaView.context.resources.displayMetrics.density
+//                val scale: Float = adView.mediaView.context.resources.displayMetrics.density
                 val maxHeightPixels = mediaMaxHeight
 //                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
                 if (child is ImageView) { //Images
@@ -1300,8 +1333,12 @@ object AdSdk {
         adView.setNativeAd(nativeAd)
 
         if (nativeAd.adChoicesInfo != null && adView.adChoicesView != null) {
-            val choicesView = AdChoicesView(adView.adChoicesView.context)
-            adView.adChoicesView = choicesView
+            try {
+                val choicesView = AdChoicesView(adView.adChoicesView!!.context)
+                adView.adChoicesView = choicesView
+            } catch (e: Exception) {
+
+            }
         }
 
 
