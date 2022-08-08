@@ -67,21 +67,45 @@ class NativeAdActivity : AppCompatActivity() {
             AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, maxHeight = 150
         )*/
 
+/*
+        AdSdk.loadNativeAd(
+            activity = this,
+            lifecycle = lifecycle,
+            adUnit = "ca-app-pub-3940256099942544/2247696110",
+            viewGroup = binding.llRoot4,
+            mediaMaxHeight = 150,
+            loadingTextSize = 24,
+            adType = AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+            background = null,
+            callback = null,
+            textColor1 = null,
+            textColor2 = null
+        )
+*/
         AdSdk.loadNativeAdFromService(
             layoutInflater,
             applicationContext,
-            "ca-app-pub-3940256099942544/2247696110",
-            binding.llRoot4,
-            nativeAdCallBack,
-            AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+            adUnit = "ca-app-pub-3940256099942544/2247696110",
+            viewGroup = binding.llRoot4,
             mediaMaxHeight = 150,
             loadingTextSize = 24,
-            null, null, null,
-            preloadAds = true
+            adType = AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+            background = null,
+            nativeAdLoadCallback = null,
+            textColor1 = null,
+            textColor2 = null,
+            autoRefresh = true
         )
 
         binding.removeAds.setOnClickListener {
+//            AdSdk.disableRefresh()
             AdSdk.removeNativeAdFromService(binding.llRoot4)
+        }
+        binding.disableRefresh.setOnClickListener {
+            AdSdk.disableNativeRefresh()
+        }
+        binding.enableRefresh.setOnClickListener {
+            AdSdk.enableNativeRefresh()
         }
 
         /*AdSdk.loadNativeAd(
