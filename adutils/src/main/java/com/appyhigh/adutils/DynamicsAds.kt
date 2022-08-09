@@ -64,79 +64,88 @@ class DynamicsAds {
         fun getDynamicAds(
             applicationContext: Context,
             currentAppVersion: Int,
-            appPackageName: String
+            appPackageName: String,
+            dynamicAdsFetchThresholdInSecs: Int
         ) {
             try {
-                if (isNetworkConnected(applicationContext)) {
-                    val fetchToken = fetchToken(applicationContext)
-                    val client = OkHttpClient().newBuilder()
-                        .connectTimeout(5, TimeUnit.SECONDS)
-                        .writeTimeout(5, TimeUnit.SECONDS)
-                        .readTimeout(15, TimeUnit.SECONDS)
-                        .build()
-                    val mediaType: MediaType? = ("text/plain").toMediaTypeOrNull()
-                    if (mediaType != null) {
-                        val mediaType = "text/plain".toMediaTypeOrNull()
-                        val request: Request = Request.Builder()
-                            .url("https://admob-automation.apyhi.com/api/app")
-                            .method("GET", null)
-                            .addHeader(
-                                "Authorization",
-                                "Bearer $fetchToken"
-                            ).addHeader("Content-Type", "application/json")
+                val lastTime = ADMODELPREF.getLong("lastFetched", 0)
+                val l = (System.currentTimeMillis() - lastTime) / 1000
+                if (l > dynamicAdsFetchThresholdInSecs) {
+                    if (isNetworkConnected(applicationContext)) {
+                        val fetchToken = fetchToken(applicationContext)
+                        val client = OkHttpClient().newBuilder()
+                            .connectTimeout(5, TimeUnit.SECONDS)
+                            .writeTimeout(5, TimeUnit.SECONDS)
+                            .readTimeout(15, TimeUnit.SECONDS)
                             .build()
-                        Thread {
-                            try {
-                                val response: Response = client.newCall(request).execute()
-                                if (response.isSuccessful) {
-                                    try {
-                                        val string = response.body?.string()
-                                        if (string != null) {
-                                            val jsonObject = JSONObject(string.toString())
-                                            val apps = JSONArray(jsonObject.getString("apps"))
-                                            var added = 0
-                                            for (i in 0 until apps.length()) {
-                                                val appList = JSONObject(apps[i].toString())
-                                                //TODO : Get the List of Apps and only select teh app for the selected packageid
-                                                if (appList.getString("packageId")
-                                                        .equals(appPackageName)
-                                                ) {
-                                                    added++
-                                                    val adMob =
-                                                        appList.get("adMob").toString()
-                                                    updateJSON.put(
-                                                        "package_name",
-                                                        applicationContext.packageName
-                                                    )
-                                                    updateJSON.put(
-                                                        "critical_version",
-                                                        appList.getString("criticalVersion")
-                                                    )
-                                                    updateJSON.put(
-                                                        "current_version",
-                                                        appList.getString("latestVersion")
-                                                    )
-                                                    adMobNew = JSONObject(adMob)
-                                                    //TODO : Store it in Shared Pref for future uses
-                                                    ADMODELPREF.edit()
-                                                        .putString("ads", adMobNew.toString())
-                                                        .apply()
-                                                    break
+                        val mediaType: MediaType? = ("text/plain").toMediaTypeOrNull()
+                        if (mediaType != null) {
+                            val mediaType = "text/plain".toMediaTypeOrNull()
+                            val request: Request = Request.Builder()
+                                .url("https://admob-automation.apyhi.com/api/app")
+                                .method("GET", null)
+                                .addHeader(
+                                    "Authorization",
+                                    "Bearer $fetchToken"
+                                ).addHeader("Content-Type", "application/json")
+                                .build()
+                            Thread {
+                                try {
+                                    val response: Response = client.newCall(request).execute()
+                                    if (response.isSuccessful) {
+                                        try {
+                                            val string = response.body?.string()
+                                            if (string != null) {
+                                                val jsonObject = JSONObject(string.toString())
+                                                val apps = JSONArray(jsonObject.getString("apps"))
+                                                var added = 0
+                                                for (i in 0 until apps.length()) {
+                                                    val appList = JSONObject(apps[i].toString())
+                                                    //TODO : Get the List of Apps and only select teh app for the selected packageid
+                                                    if (appList.getString("packageId")
+                                                            .equals(appPackageName)
+                                                    ) {
+                                                        added++
+                                                        val adMob =
+                                                            appList.get("adMob").toString()
+                                                        updateJSON.put(
+                                                            "package_name",
+                                                            applicationContext.packageName
+                                                        )
+                                                        updateJSON.put(
+                                                            "critical_version",
+                                                            appList.getString("criticalVersion")
+                                                        )
+                                                        updateJSON.put(
+                                                            "current_version",
+                                                            appList.getString("latestVersion")
+                                                        )
+                                                        adMobNew = JSONObject(adMob)
+                                                        //TODO : Store it in Shared Pref for future uses
+                                                        ADMODELPREF.edit()
+                                                            .putString("ads", adMobNew.toString())
+                                                            .apply()
+                                                        ADMODELPREF.edit().putLong(
+                                                            "lastFetched",
+                                                            System.currentTimeMillis()
+                                                        ).apply()
+                                                        break
+                                                    }
+                                                }
+                                                if (added == 0) {
+                                                    //TODO : Clear Shared Pref if no ads are found
+                                                    ADMODELPREF.edit().remove("ads").apply()
                                                 }
                                             }
-                                            if (added == 0) {
-                                                //TODO : Clear Shared Pref if no ads are found
-                                                ADMODELPREF.edit().remove("ads").apply()
-                                            }
+                                        } catch (e: Exception) {
+
                                         }
-                                    } catch (e: Exception) {
-
                                     }
-                                }
-                            } catch (e: Exception) {
+                                } catch (e: Exception) {
 
-                            }
-                        }.start()
+                                }
+                            }.start()
+                        }
                     }
                 }
             } catch (e: Exception) {

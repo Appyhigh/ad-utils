@@ -147,7 +147,8 @@ object AdSdk {
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
         layoutInflater: LayoutInflater? = null,
-        packageName: String = app.packageName
+        packageName: String = app.packageName,
+        dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
     ) {
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
@@ -171,7 +172,12 @@ object AdSdk {
             if (preloadNativeAdList != null && layoutInflater != null && context != null) {
                 preloadAds(layoutInflater, context)
                 //TODO : Start  the Process of getting the dynamic Ads
-                DynamicsAds.getDynamicAds(context, currentAppVersion, packageName)
+                DynamicsAds.getDynamicAds(
+                    context,
+                    currentAppVersion,
+                    packageName,
+                    dynamicAdsFetchThresholdInSecs
+                )
             }
         }
         if (isGooglePlayServicesAvailable(app)) {
