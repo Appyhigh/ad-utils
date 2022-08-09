@@ -60,7 +60,7 @@ object AdSdk {
     private var lastTColor2: Int? = null
     private var lastHeight: Int = 300
 
-    lateinit var form: ConsentForm
+    var consentInformation: ConsentInformation? = null
 
     fun loadNPAForm(
         privacyPolicyLink: String,
@@ -68,12 +68,12 @@ object AdSdk {
         pubValue: String,
         testDevice: String = "E35970227779CE2270F80558896619BC"
     ) {
-        val consentInformation: ConsentInformation = ConsentInformation
-            .getInstance(activity)
-        consentInformation.addTestDevice(testDevice)
-        consentInformation.debugGeography = DebugGeography.DEBUG_GEOGRAPHY_EEA
+        var form: ConsentForm? = null
+        consentInformation = ConsentInformation.getInstance(activity)
+        consentInformation?.addTestDevice(testDevice)
+        consentInformation?.debugGeography = DebugGeography.DEBUG_GEOGRAPHY_EEA
         val publisherIds = arrayOf(pubValue)
-        consentInformation.requestConsentInfoUpdate(
+        consentInformation?.requestConsentInfoUpdate(
             publisherIds,
             object : ConsentInfoUpdateListener {
                 override fun onConsentInfoUpdated(consentStatus: ConsentStatus) {
@@ -92,7 +92,7 @@ object AdSdk {
                                 activity.runOnUiThread {
                                     try {
                                         if (!activity.isFinishing) {
-                                            form.show()
+                                            form?.show()
                                         }
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -116,8 +116,8 @@ object AdSdk {
                         .withPersonalizedAdsOption()
                         .withNonPersonalizedAdsOption()
                         .build()
-                    if (consentInformation.consentStatus == ConsentStatus.UNKNOWN) {
-                        form.load()
+                    if (consentInformation?.consentStatus == ConsentStatus.UNKNOWN) {
+                        form?.load()
                     }
                 }
 
@@ -149,6 +149,12 @@ object AdSdk {
         layoutInflater: LayoutInflater? = null,
         packageName: String = app.packageName
     ) {
+        if (consentInformation == null) {
+            consentInformation = ConsentInformation.getInstance(app)
+        }
+        if (consentInformation?.consentStatus == ConsentStatus.NON_PERSONALIZED) {
+            extras.putString("npa", "1")
+        }
         ADMODELPREF = app.getSharedPreferences("ADMODEL", 0)
         val string = ADMODELPREF.getString("ads", null)
         if (string != null) {
@@ -173,8 +179,8 @@ object AdSdk {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
                 if (BuildConfig.DEBUG) {
-                    bannerAdRefreshTimer = 5000L
-                    nativeAdRefreshTimer = 5000L
+                    bannerAdRefreshTimer = 500L
+                    nativeAdRefreshTimer = 500L
                 }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
@@ -248,8 +254,6 @@ object AdSdk {
                                     }
                                 }
                             }
-                        } else {
-                            Log.d("aishik", "initialize: NOT REFRESHED")
                         }
                     }
                 }
@@ -300,11 +304,18 @@ object AdSdk {
     fun attachAppOpenAdManager(
         appOpenAdUnit: String,
         appOpenAdCallback: AppOpenAdCallback? = null,
-        backgroundThreshold: Int = 30000
+        backgroundThreshold: Int = 30000,
+        isShownOnlyOnce: Boolean = false
     ) {
         if (application != null) {
             val appOpenManager =
-                AppOpenManager(application!!, appOpenAdUnit, backgroundThreshold, appOpenAdCallback)
+                AppOpenManager(
+                    application!!,
+                    appOpenAdUnit,
+                    isShownOnlyOnce,
+                    backgroundThreshold,
+                    appOpenAdCallback
+                )
             appOpenAdCallback?.onInitSuccess(appOpenManager)
         } else {
             throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
@@ -354,7 +365,7 @@ object AdSdk {
                 AdRequest.Builder()
                     .addNetworkExtrasBundle(
                         AdMobAdapter::class.java,
-                        getConsentEnabledBundle(activity)
+                        getConsentEnabledBundle()
                     )
                     .build(),
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
@@ -362,25 +373,29 @@ object AdSdk {
         }
     }
 
-    fun getConsentEnabledBundle(activity: Activity): Bundle {
-        val extras = Bundle()
-        val consentInformation: ConsentInformation = ConsentInformation
+    val extras = Bundle()
+    fun getConsentEnabledBundle(): Bundle {
+        /*val consentInformation: ConsentInformation = ConsentInformation
             .getInstance(activity)
         if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
             extras.putString("npa", "1")
-        }
+        }*/
         return extras
     }
 
-    fun getConsentEnabledBundle(context: Context): Bundle {
-        val extras = Bundle()
+/*
+    fun getConsentEnabledBundle(): Bundle {
+        */
+/*val extras = Bundle()
         val consentInformation: ConsentInformation = ConsentInformation
             .getInstance(context)
         if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
             extras.putString("npa", "1")
-        }
+        }*//*
+
         return extras
     }
+*/
 
 
     /**
@@ -442,7 +457,7 @@ object AdSdk {
                 }
             })
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             val mAdView = AdView(viewGroup.context)
             mAdView.setAdSize(adSize)
@@ -491,14 +506,13 @@ object AdSdk {
      * IMPORTANT: You wont be able to show ad if you pass a null callback
      */
     fun loadInterstitialAd(
-        activity: Activity,
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
     ) {
         if (application != null) {
             var mInterstitialAd: InterstitialAd?
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             InterstitialAd.load(
                 application!!,
@@ -564,7 +578,7 @@ object AdSdk {
                 }
             }.start()
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             InterstitialAd.load(
                 application!!,
@@ -613,7 +627,7 @@ object AdSdk {
         if (application != null) {
             var mRewardedAd: RewardedAd?
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             RewardedAd.load(
                 application!!,
@@ -805,7 +819,8 @@ object AdSdk {
         loadingTextSize: Int
     ) {
         viewGroup.visibility = VISIBLE
-        if (activity != null) {
+        if (activity != null && !activity.isFinishing) {
+            //Added activity.layoutInflater to prevent a crash which occurs on using (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
             val inflate = activity.layoutInflater.inflate(R.layout.ad_loading_layout, null)
             val id1 = inflate.findViewById<View>(R.id.rl)
             val tv = inflate.findViewById<TextView>(R.id.tv)
@@ -917,10 +932,12 @@ object AdSdk {
             adLoader?.loadAd(
                 AdRequest.Builder().addNetworkExtrasBundle(
                     AdMobAdapter::class.java,
-                    getConsentEnabledBundle(activity)
+                    getConsentEnabledBundle()
                 )
                     .build()
             )
+        } else {
+            AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
         }
     }
 
@@ -1227,7 +1244,7 @@ object AdSdk {
         adLoader?.loadAd(
             AdRequest.Builder().addNetworkExtrasBundle(
                 AdMobAdapter::class.java,
-                getConsentEnabledBundle(context)
+                getConsentEnabledBundle()
             ).build()
         )
     }

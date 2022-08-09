@@ -83,22 +83,14 @@ class NativeAdActivity : AppCompatActivity() {
         )
 */
 
-        DynamicsAds.listAllAds(applicationContext, "aishik")
-        Log.d(
-            "aishik",
-            "onCreate: " + DynamicsAds.getDynamicAdsId(
-                "ca-app-pub-3940256099942544/2247696110",
-                "Notification-Cleaner-Home-Native"
-            )
-        )
-        /*AdSdk.loadNativeAd(
+        AdSdk.loadNativeAd(
             this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot1,
             nativeAdCallBack,
             AdSdk.ADType.SMALLER, null, null, null
-        )*/
+        )
         AdSdk.loadNativeAdFromService(
             layoutInflater,
             applicationContext,

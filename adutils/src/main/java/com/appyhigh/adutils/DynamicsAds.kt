@@ -13,6 +13,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 
 class DynamicsAds {
@@ -65,69 +66,81 @@ class DynamicsAds {
             currentAppVersion: Int,
             appPackageName: String
         ) {
-            if (isNetworkConnected(applicationContext)) {
-                val fetchToken = fetchToken(applicationContext)
-                val client = OkHttpClient().newBuilder()
-                    .build()
-                val mediaType: MediaType? = ("text/plain").toMediaTypeOrNull()
-                if (mediaType != null) {
-                    val mediaType = "text/plain".toMediaTypeOrNull()
-                    val request: Request = Request.Builder()
-                        .url("https://admob-automation.apyhi.com/api/app")
-                        .method("GET", null)
-                        .addHeader(
-                            "Authorization",
-                            "Bearer $fetchToken"
-                        ).addHeader("Content-Type", "application/json")
+            try {
+                if (isNetworkConnected(applicationContext)) {
+                    val fetchToken = fetchToken(applicationContext)
+                    val client = OkHttpClient().newBuilder()
+                        .connectTimeout(5, TimeUnit.SECONDS)
+                        .writeTimeout(5, TimeUnit.SECONDS)
+                        .readTimeout(15, TimeUnit.SECONDS)
                         .build()
-                    Thread {
-                        val response: Response = client.newCall(request).execute()
-                        if (response.isSuccessful) {
+                    val mediaType: MediaType? = ("text/plain").toMediaTypeOrNull()
+                    if (mediaType != null) {
+                        val mediaType = "text/plain".toMediaTypeOrNull()
+                        val request: Request = Request.Builder()
+                            .url("https://admob-automation.apyhi.com/api/app")
+                            .method("GET", null)
+                            .addHeader(
+                                "Authorization",
+                                "Bearer $fetchToken"
+                            ).addHeader("Content-Type", "application/json")
+                            .build()
+                        Thread {
                             try {
-                                val string = response.body?.string()
-                                if (string != null) {
-                                    val jsonObject = JSONObject(string.toString())
-                                    val apps = JSONArray(jsonObject.getString("apps"))
-                                    var added = 0
-                                    for (i in 0 until apps.length()) {
-                                        val appList = JSONObject(apps[i].toString())
-                                        //TODO : Get the List of Apps and only select teh app for the selected packageid
-                                        if (appList.getString("packageId").equals(appPackageName)) {
-                                            added++
-                                            val adMob =
-                                                appList.get("adMob").toString()
-                                            updateJSON.put(
-                                                "package_name",
-                                                applicationContext.packageName
-                                            )
-                                            updateJSON.put(
-                                                "critical_version",
-                                                appList.getString("criticalVersion")
-                                            )
-                                            updateJSON.put(
-                                                "current_version",
-                                                appList.getString("latestVersion")
-                                            )
-                                            adMobNew = JSONObject(adMob)
-                                            //TODO : Store it in Shared Pref for future uses
-                                            ADMODELPREF.edit().putString("ads", adMobNew.toString())
-                                                .apply()
-                                            break
+                                val response: Response = client.newCall(request).execute()
+                                if (response.isSuccessful) {
+                                    try {
+                                        val string = response.body?.string()
+                                        if (string != null) {
+                                            val jsonObject = JSONObject(string.toString())
+                                            val apps = JSONArray(jsonObject.getString("apps"))
+                                            var added = 0
+                                            for (i in 0 until apps.length()) {
+                                                val appList = JSONObject(apps[i].toString())
+                                                //TODO : Get the List of Apps and only select teh app for the selected packageid
+                                                if (appList.getString("packageId")
+                                                        .equals(appPackageName)
+                                                ) {
+                                                    added++
+                                                    val adMob =
+                                                        appList.get("adMob").toString()
+                                                    updateJSON.put(
+                                                        "package_name",
+                                                        applicationContext.packageName
+                                                    )
+                                                    updateJSON.put(
+                                                        "critical_version",
+                                                        appList.getString("criticalVersion")
+                                                    )
+                                                    updateJSON.put(
+                                                        "current_version",
+                                                        appList.getString("latestVersion")
+                                                    )
+                                                    adMobNew = JSONObject(adMob)
+                                                    //TODO : Store it in Shared Pref for future uses
+                                                    ADMODELPREF.edit()
+                                                        .putString("ads", adMobNew.toString())
+                                                        .apply()
+                                                    break
+                                                }
+                                            }
+                                            if (added == 0) {
+                                                //TODO : Clear Shared Pref if no ads are found
+                                                ADMODELPREF.edit().remove("ads").apply()
+                                            }
                                         }
-                                        Log.d("aishik", "getDynamicAds: continue")
-                                    }
-                                    Log.d("aishik", "getDynamicAds: Added - " + added)
-                                    if (added == 0) {
-                                        //TODO : Clear Shared Pref if no ads are found
-                                        ADMODELPREF.edit().remove("ads").apply()
+                                    } catch (e: Exception) {
+
                                     }
                                 }
                             } catch (e: Exception) {
-                                Log.d("aishik", "getDynamicAds: " + e.localizedMessage)
+
                             }
-                        }
-                    }.start()
+                        }.start()
+                    }
                 }
+            } catch (e: Exception) {
+
             }
         }
 

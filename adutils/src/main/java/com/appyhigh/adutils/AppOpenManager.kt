@@ -25,6 +25,7 @@ import java.util.*
 class AppOpenManager(
     private val myApplication: Application,
     private val appOpenAdUnit: String,
+    private val isShownOnlyOnce: Boolean,
     private var backgroundThreshold: Int = 30000,
     private var appOpenAdCallback: AppOpenAdCallback?
 ) :
@@ -125,7 +126,12 @@ class AppOpenManager(
                     // Set the reference to null so isAdAvailable() returns false.
                     appOpenAd = null
                     isShowingAd = false
-                    fetchAd()
+                    if (isShownOnlyOnce) {
+                        ProcessLifecycleOwner.get().lifecycle.removeObserver(this@AppOpenManager)
+                        currentActivity = null
+                    } else {
+                        fetchAd()
+                    }
                     appOpenAdCallback?.onAdClosed()
                 }
 
@@ -250,7 +256,12 @@ class AppOpenManager(
      */
     init {
         this.appCount = 0
+/*
+        if (!isShownOnlyOnce) {
+        }
+*/
         myApplication.registerActivityLifecycleCallbacks(this)
+        fetchAd()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 }
