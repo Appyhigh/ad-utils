@@ -14,7 +14,6 @@
         android:layout_width="fill_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:paddingTop="5dp"
         android:paddingBottom="5dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -27,6 +26,7 @@
                 android:id="@+id/ad_notification_view"
                 android:layout_width="@dimen/gnt_ad_indicator_width"
                 android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:layout_margin="5dp"
                 android:layout_marginTop="@dimen/gnt_ad_indicator_top_margin"
                 android:background="@drawable/gnt_rounded_corners_shape"
                 android:gravity="center"

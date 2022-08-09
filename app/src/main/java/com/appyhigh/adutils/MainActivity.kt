@@ -37,7 +37,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        AdSdk.loadNPAForm("https://www.google.com", this, "pub-3940256099942544")
+        AdSdk.loadNPAForm(
+            "https://www.google.com",
+            this,
+            "pub-3940256099942544",
+            "182790353ADD7F5B71982136E0704453"
+        )
         binding.btnBannerAd.setOnClickListener {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
@@ -131,7 +136,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadInterstitialAd(activity: Activity) {
         AdSdk.loadInterstitialAd(
-            activity,
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback
         )

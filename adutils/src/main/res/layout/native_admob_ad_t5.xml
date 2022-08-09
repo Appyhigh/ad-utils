@@ -14,7 +14,6 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingTop="5dp"
         android:paddingBottom="5dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -30,6 +29,7 @@
                 android:background="@drawable/gnt_rounded_corners_shape"
                 android:gravity="center"
                 android:text="Ad"
+                android:layout_margin="5dp"
                 android:textColor="@color/gnt_ad_green"
                 android:textSize="@dimen/gnt_ad_indicator_text_size"
                 android:textStyle="bold"
