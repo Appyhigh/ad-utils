@@ -5,10 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.os.Bundle
-import android.os.CountDownTimer
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -21,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import com.appyhigh.adutils.AdUtilConstants.preloadNativeAdList
+import com.appyhigh.adutils.DynamicsAds.Companion.ADMODELPREF
 import com.appyhigh.adutils.callbacks.*
 import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
@@ -37,6 +35,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
 import java.util.*
@@ -142,12 +141,19 @@ object AdSdk {
 
     fun initialize(
         app: Application,
+        currentAppVersion: Int,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
-        layoutInflater: LayoutInflater? = null
+        layoutInflater: LayoutInflater? = null,
+        packageName: String = app.packageName
     ) {
+        ADMODELPREF = app.getSharedPreferences("ADMODEL", 0)
+        val string = ADMODELPREF.getString("ads", null)
+        if (string != null) {
+            DynamicsAds.adMobNew = JSONObject(string)
+        }
         if (testDevice != null) {
             val build = RequestConfiguration.Builder()
                 .setTestDeviceIds(listOf(testDevice)).build()
@@ -158,6 +164,8 @@ object AdSdk {
             val context = application?.applicationContext
             if (preloadNativeAdList != null && layoutInflater != null && context != null) {
                 preloadAds(layoutInflater, context)
+                //TODO : Start  the Process of getting the dynamic Ads
+                DynamicsAds.getDynamicAds(context, currentAppVersion, packageName)
             }
         }
         if (isGooglePlayServicesAvailable(app)) {
@@ -193,7 +201,6 @@ object AdSdk {
                 if (nativeAdRefreshTimer != 0L) {
                     fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
                         if (nativeRefresh == REFRESH_STATE.REFRESH_ON) {
-                            Log.d("aishik", "initialize: REFRESHED")
                             for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
                                 val value = item.value
                                 if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
@@ -1244,14 +1251,14 @@ object AdSdk {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
-                iconView1?.visibility = View.INVISIBLE
+                iconView1.visibility = View.INVISIBLE
             } else {
                 if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
                 }
                 (iconView1 as ImageView).setImageDrawable(icon.drawable)
-                iconView1?.visibility = VISIBLE
+                iconView1.visibility = VISIBLE
             }
         }
 

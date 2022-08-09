@@ -82,6 +82,23 @@ class NativeAdActivity : AppCompatActivity() {
             textColor2 = null
         )
 */
+
+        DynamicsAds.listAllAds(applicationContext, "aishik")
+        Log.d(
+            "aishik",
+            "onCreate: " + DynamicsAds.getDynamicAdsId(
+                "ca-app-pub-3940256099942544/2247696110",
+                "Notification-Cleaner-Home-Native"
+            )
+        )
+        /*AdSdk.loadNativeAd(
+            this,
+            lifecycle,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot1,
+            nativeAdCallBack,
+            AdSdk.ADType.SMALLER, null, null, null
+        )*/
         AdSdk.loadNativeAdFromService(
             layoutInflater,
             applicationContext,
@@ -89,7 +106,7 @@ class NativeAdActivity : AppCompatActivity() {
             viewGroup = binding.llRoot4,
             mediaMaxHeight = 150,
             loadingTextSize = 24,
-            adType = AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+            adType = AdSdk.ADType.SMALLER,
             background = null,
             nativeAdLoadCallback = null,
             textColor1 = null,
