@@ -45,19 +45,17 @@ class DynamicsAds {
         //TODO : we can pass the for logging the ad names
         fun listAllAds(applicationContext: Context, logTag: String) {
             //TODO : List all the ads along with key names for checking
-            if (BuildConfig.DEBUG) {
-                ADMODELPREF = applicationContext.getSharedPreferences("ADMODEL", 0)
-                val string = ADMODELPREF.getString("ads", null)
-                if (string != null) {
-                    adMobNew = JSONObject(string)
+            ADMODELPREF = applicationContext.getSharedPreferences("ADMODEL", 0)
+            val string = ADMODELPREF.getString("ads", null)
+            if (string != null) {
+                adMobNew = JSONObject(string)
+            }
+            if (adMobNew.length() > 0) {
+                adMobNew.keys().iterator().forEach {
+                    Log.d(logTag, "listAllAds: " + it + " -> " + adMobNew.get(it))
                 }
-                if (adMobNew.length() > 0) {
-                    adMobNew.keys().iterator().forEach {
-                        Log.d(logTag, "listAllAds: " + it + " -> " + adMobNew.get(it))
-                    }
-                } else {
-                    Log.d(logTag, "No Dynamic Ads Found")
-                }
+            } else {
+                Log.d(logTag, "No Dynamic Ads Found")
             }
         }
 
