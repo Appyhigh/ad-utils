@@ -169,8 +169,10 @@ object AdSdk {
         MobileAds.initialize(app) {
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
-            if (preloadNativeAdList != null && layoutInflater != null && context != null) {
-                preloadAds(layoutInflater, context)
+            if (context != null) {
+                if (preloadNativeAdList != null && layoutInflater != null) {
+                    preloadAds(layoutInflater, context)
+                }
                 //TODO : Start  the Process of getting the dynamic Ads
                 DynamicsAds.getDynamicAds(
                     context,
