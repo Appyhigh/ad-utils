@@ -84,7 +84,6 @@ class NativeAdActivity : AppCompatActivity() {
 */
 
         AdSdk.loadNativeAd(
-            this,
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot1,
