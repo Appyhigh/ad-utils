@@ -96,7 +96,7 @@ fallBackAdId: String -> This is the ad id which will be returned instead if the 
 adName: String -> This name will be used as a key from the ad list to fetch the ad id
 **/
 
-![chrome_zXtIBvGj33](https://user-images.githubusercontent.com/71721356/184829218-2ad642ec-56d4-47de-aa47-eac0009958fc.png)
+
 
 
 fun getDynamicAdsId(fallBackAdId: String?, adName: String)
@@ -116,7 +116,7 @@ AdSdk.loadNativeAd(
 ---  
 
 ## To show AppOpenAd when app comes from Background to Foreground
-
+![chrome_zXtIBvGj33](https://user-images.githubusercontent.com/71721356/184829218-2ad642ec-56d4-47de-aa47-eac0009958fc.png)
 ```kotlin  
 /**  
  * Call initialize with you Application class object * * @param appOpenAdUnit -> Pass an app open ad unit id if you wish to ad an app open ad * @param appOpenAdCallback -> This is the nullable listener for app open ad callbacks * @param backgroundThreshold -> Minimum time in millis that app should remain in background before showing AppOpenAd **/
