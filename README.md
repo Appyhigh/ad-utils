@@ -96,6 +96,9 @@ fallBackAdId: String -> This is the ad id which will be returned instead if the 
 adName: String -> This name will be used as a key from the ad list to fetch the ad id
 **/
 
+![chrome_zXtIBvGj33](https://user-images.githubusercontent.com/71721356/184829218-2ad642ec-56d4-47de-aa47-eac0009958fc.png)
+
+
 fun getDynamicAdsId(fallBackAdId: String?, adName: String)
 //if the ad id is not found it will return the fallBackAdId
 
