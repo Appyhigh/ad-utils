@@ -23,7 +23,7 @@ class DynamicsAds {
         var adMobNew: JSONObject = JSONObject()
 
         //TODO : get the dynamic ads by sending in a fallBackAdId and the Name of the ad you need
-        fun getDynamicAdsId(fallBackAdId: String?, adName: String): String? {
+        fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
             return try {
                 val string = adMobNew.getString(adName)
                 string

@@ -1,4 +1,3 @@
-
 # ad-utils
 
 ## What
@@ -29,7 +28,22 @@ Add these configurations to you AndroidManifest.xml
 Initialize Sdk without App Open Ad
 
 ```kotlin  
-AdSdk.initialize(applicationContext as MyApp)  
+
+/**
+Parameters
+currentAppVersion -> This is the current App Version in Integer to match from server
+dynamicAdsFetchThresholdInSecs -> This is the amount of time to waut in Seconds before fetching new ad id values
+ */
+ 
+AdSdk.initialize(
+applicationContext as MyApp,
+currentAppVersion = BuildConfig.VERSION_CODE,
+dynamicAdsFetchThresholdInSecs = 10)
+
+```
+
+```kotlin  
+
   
 AdSdk.loadNPAForm([Privacy Policy URL], [activity], [Publisher_ID])  
   
@@ -61,7 +75,41 @@ layoutInflater: LayoutInflater? = null
 )
 ```  
 
-  
+## Dynamic Ads
+
+### List All Dynamic Ads from the Ads Dashboard For this App
+
+```kotlin
+/**Parameters
+applicationContext: Context -> Pass the Context
+logTag: String -> Pass the Tag for logging the list of availbale ad ids will be shown with this log tag
+ **/
+fun listAllAds(applicationContext: Context, logTag: String)
+
+```
+
+### Get the Dynamic Ad Id Via the AdName as Set in Dashboard
+
+``` kotlin
+/**Parameters
+fallBackAdId: String -> This is the ad id which will be returned instead if the expected ad id is not found
+adName: String -> This name will be used as a key from the ad list to fetch the ad id
+**/
+
+fun getDynamicAdsId(fallBackAdId: String?, adName: String)
+//if the ad id is not found it will return the fallBackAdId
+
+Example
+AdSdk.loadNativeAd(
+    lifecycle,
+    DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110","ADNAME"),
+    binding.llRoot4,
+    nativeAdCallBack,
+    AdSdk.ADType.SMALLEST, null, null, null, mediaMaxHeight = 100,
+)
+
+
+```
 ---  
 
 ## To show AppOpenAd when app comes from Background to Foreground

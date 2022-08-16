@@ -86,10 +86,40 @@ class NativeAdActivity : AppCompatActivity() {
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot,
+            nativeAdCallBack,
+            AdSdk.ADType.MEDIUM, null, null, null, mediaMaxHeight = 100,
+        )
+        AdSdk.loadNativeAd(
+            lifecycle,
+            "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot1,
             nativeAdCallBack,
-            AdSdk.ADType.SMALLER, null, null, null
+            AdSdk.ADType.BIG, null, null, null, mediaMaxHeight = 100
         )
+        AdSdk.loadNativeAd(
+            lifecycle,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot2,
+            nativeAdCallBack,
+            AdSdk.ADType.SEMIMEDIUM, null, null, null, mediaMaxHeight = 100,
+        )
+        AdSdk.loadNativeAd(
+            lifecycle,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot3,
+            nativeAdCallBack,
+            AdSdk.ADType.SMALLER, null, null, null, mediaMaxHeight = 100
+        )
+        AdSdk.loadNativeAd(
+            lifecycle,
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "ADNAME"),
+            binding.llRoot4,
+            nativeAdCallBack,
+            AdSdk.ADType.SMALLEST, null, null, null, mediaMaxHeight = 100,
+        )
+
+/*
         AdSdk.loadNativeAdFromService(
             layoutInflater,
             applicationContext,
@@ -97,13 +127,14 @@ class NativeAdActivity : AppCompatActivity() {
             viewGroup = binding.llRoot4,
             mediaMaxHeight = 150,
             loadingTextSize = 24,
-            adType = AdSdk.ADType.SMALLER,
+            adType = AdSdk.ADType.SEMIMEDIUM,
             background = null,
             nativeAdLoadCallback = null,
             textColor1 = null,
             textColor2 = null,
             autoRefresh = true
         )
+*/
 
         binding.removeAds.setOnClickListener {
 //            AdSdk.disableRefresh()
