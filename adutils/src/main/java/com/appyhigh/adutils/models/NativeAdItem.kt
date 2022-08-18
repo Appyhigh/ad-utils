@@ -1,6 +1,5 @@
 package com.appyhigh.adutils.models
 
-import android.app.Activity
 import android.graphics.Color
 import android.view.ViewGroup
 import androidx.lifecycle.Lifecycle
@@ -9,7 +8,6 @@ import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 
 data class NativeAdItem(
-    val activity: Activity,
     val id: Long,
     val lifecycle: Lifecycle,
     val adUnit: String,

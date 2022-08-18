@@ -14,7 +14,6 @@
         android:layout_width="fill_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:paddingTop="5dp"
         android:paddingBottom="5dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -27,6 +26,7 @@
                 android:id="@+id/ad_notification_view4"
                 android:layout_width="@dimen/gnt_ad_indicator_width"
                 android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:layout_margin="5dp"
                 android:background="@drawable/gnt_rounded_corners_shape"
                 android:gravity="center"
                 android:text="Ad"
@@ -36,35 +36,58 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"></TextView>
 
-            <ImageView
-                android:id="@+id/icon"
-                android:layout_width="50dip"
-                android:layout_height="50dip"
-                android:layout_margin="5dp"
-                android:adjustViewBounds="true"
-                android:foregroundGravity="center"
-                app:layout_constraintBottom_toTopOf="@+id/headline"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/constraintLayout2"
+                android:layout_width="0dp"
+                android:layout_height="150dp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view4" />
+                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view4">
+
+                <ImageView
+                    android:id="@+id/icon"
+                    android:layout_width="50dip"
+                    android:layout_height="50dip"
+                    android:layout_margin="5dp"
+                    android:adjustViewBounds="true"
+                    android:foregroundGravity="center"
+                    app:layout_constraintBottom_toBottomOf="@+id/ad_media"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <com.google.android.gms.ads.nativead.MediaView
+                    android:id="@+id/ad_media"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_margin="5dp"
+                    android:maxHeight="200dp"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:visibility="visible" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <TextView
                 android:id="@+id/headline"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="5dp"
+                android:layout_marginTop="10dp"
                 android:ellipsize="end"
                 android:foregroundGravity="center"
                 android:gravity="center"
                 android:maxLines="2"
                 android:textColor="@color/headLineColor"
                 android:textSize="16sp"
-                app:layout_constraintBottom_toTopOf="@+id/body"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/icon" />
+                app:layout_constraintTop_toBottomOf="@+id/constraintLayout2" />
 
             <TextView
                 android:id="@+id/body"
@@ -89,14 +112,14 @@
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="5dp"
+                android:layout_marginTop="5dp"
                 android:foregroundGravity="center"
                 android:gravity="center"
                 android:orientation="horizontal"
-                app:layout_constraintBottom_toTopOf="@+id/call_to_action"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.5"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/body">
+                app:layout_constraintTop_toBottomOf="@+id/headline">
 
                 <TextView
                     android:id="@+id/ad_advertiser"
@@ -141,6 +164,7 @@
                 android:id="@+id/call_to_action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_margin="5dp"
                 android:background="@drawable/ads_bg_lib_curver"
                 android:foregroundGravity="center"
                 android:gravity="center"
@@ -172,20 +196,6 @@
 
                 </LinearLayout>
             </LinearLayout>
-
-            <com.google.android.gms.ads.nativead.MediaView
-                android:id="@+id/ad_media"
-                android:layout_width="fill_parent"
-                android:layout_height="0dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="5dp"
-                android:layout_marginBottom="5dp"
-                android:maxHeight="200dp"
-                android:visibility="gone"
-                app:layout_constraintBottom_toTopOf="@+id/call_to_action"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/linearLayout" />
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,10 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.os.Bundle
-import android.os.CountDownTimer
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -21,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import com.appyhigh.adutils.AdUtilConstants.preloadNativeAdList
+import com.appyhigh.adutils.DynamicsAds.Companion.ADMODELPREF
 import com.appyhigh.adutils.callbacks.*
 import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
@@ -37,6 +35,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
 import java.util.*
@@ -61,7 +60,7 @@ object AdSdk {
     private var lastTColor2: Int? = null
     private var lastHeight: Int = 300
 
-    lateinit var form: ConsentForm
+    var consentInformation: ConsentInformation? = null
 
     fun loadNPAForm(
         privacyPolicyLink: String,
@@ -69,16 +68,15 @@ object AdSdk {
         pubValue: String,
         testDevice: String = "E35970227779CE2270F80558896619BC"
     ) {
-        val consentInformation: ConsentInformation = ConsentInformation
-            .getInstance(activity)
-        consentInformation.addTestDevice(testDevice)
-        consentInformation.debugGeography = DebugGeography.DEBUG_GEOGRAPHY_EEA
+        var form: ConsentForm? = null
+        consentInformation = ConsentInformation.getInstance(activity)
+        consentInformation?.addTestDevice(testDevice)
+        consentInformation?.debugGeography = DebugGeography.DEBUG_GEOGRAPHY_EEA
         val publisherIds = arrayOf(pubValue)
-        consentInformation.requestConsentInfoUpdate(
+        consentInformation?.requestConsentInfoUpdate(
             publisherIds,
             object : ConsentInfoUpdateListener {
                 override fun onConsentInfoUpdated(consentStatus: ConsentStatus) {
-                    // User's consent status successfully updated.
                     var privacyUrl: URL? = null
                     try {
                         privacyUrl = URL(privacyPolicyLink)
@@ -89,11 +87,10 @@ object AdSdk {
                     form = ConsentForm.Builder(activity, privacyUrl)
                         .withListener(object : ConsentFormListener() {
                             override fun onConsentFormLoaded() {
-                                // Consent form loaded successfully.
                                 activity.runOnUiThread {
                                     try {
                                         if (!activity.isFinishing) {
-                                            form.show()
+                                            form?.show()
                                         }
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -102,28 +99,28 @@ object AdSdk {
                             }
 
                             override fun onConsentFormOpened() {
-                                // Consent form was displayed.
                             }
 
                             override fun onConsentFormClosed(
                                 consentStatus: ConsentStatus, userPrefersAdFree: Boolean
                             ) {
+                                if (consentStatus == ConsentStatus.NON_PERSONALIZED) {
+                                    extras.putString("npa", "1")
+                                }
                             }
 
                             override fun onConsentFormError(errorDescription: String) {
-                                // Consent form error.
                             }
                         })
                         .withPersonalizedAdsOption()
                         .withNonPersonalizedAdsOption()
                         .build()
-                    if (consentInformation.consentStatus == ConsentStatus.UNKNOWN) {
-                        form.load()
+                    if (consentInformation?.consentStatus == ConsentStatus.UNKNOWN) {
+                        form?.load()
                     }
                 }
 
                 override fun onFailedToUpdateConsentInfo(errorDescription: String) {
-                    // User's consent status failed to update.
                 }
             })
 
@@ -142,12 +139,26 @@ object AdSdk {
 
     fun initialize(
         app: Application,
+        currentAppVersion: Int,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
-        layoutInflater: LayoutInflater? = null
+        layoutInflater: LayoutInflater? = null,
+        packageName: String = app.packageName,
+        dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
     ) {
+        if (consentInformation == null) {
+            consentInformation = ConsentInformation.getInstance(app)
+        }
+        if (consentInformation?.consentStatus == ConsentStatus.NON_PERSONALIZED) {
+            extras.putString("npa", "1")
+        }
+        ADMODELPREF = app.getSharedPreferences("ADMODEL", 0)
+        val string = ADMODELPREF.getString("ads", null)
+        if (string != null) {
+            DynamicsAds.adMobNew = JSONObject(string)
+        }
         if (testDevice != null) {
             val build = RequestConfiguration.Builder()
                 .setTestDeviceIds(listOf(testDevice)).build()
@@ -156,8 +167,17 @@ object AdSdk {
         MobileAds.initialize(app) {
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
-            if (preloadNativeAdList != null && layoutInflater != null && context != null) {
-                preloadAds(layoutInflater, context)
+            if (context != null) {
+                if (preloadNativeAdList != null && layoutInflater != null) {
+                    preloadAds(layoutInflater, context)
+                }
+                //TODO : Start  the Process of getting the dynamic Ads
+                DynamicsAds.getDynamicAds(
+                    context,
+                    currentAppVersion,
+                    packageName,
+                    dynamicAdsFetchThresholdInSecs
+                )
             }
         }
         if (isGooglePlayServicesAvailable(app)) {
@@ -165,8 +185,8 @@ object AdSdk {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
                 if (BuildConfig.DEBUG) {
-                    bannerAdRefreshTimer = 5000L
-                    nativeAdRefreshTimer = 5000L
+                    bannerAdRefreshTimer = 7500L
+                    nativeAdRefreshTimer = 7500L
                 }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
@@ -193,13 +213,11 @@ object AdSdk {
                 if (nativeAdRefreshTimer != 0L) {
                     fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
                         if (nativeRefresh == REFRESH_STATE.REFRESH_ON) {
-                            Log.d("aishik", "initialize: REFRESHED")
                             for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
                                 val value = item.value
                                 if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                                     Handler(Looper.getMainLooper()).post {
                                         loadNativeAd(
-                                            value.activity,
                                             value.id,
                                             value.lifecycle,
                                             value.adUnit,
@@ -241,8 +259,6 @@ object AdSdk {
                                     }
                                 }
                             }
-                        } else {
-                            Log.d("aishik", "initialize: NOT REFRESHED")
                         }
                     }
                 }
@@ -293,11 +309,18 @@ object AdSdk {
     fun attachAppOpenAdManager(
         appOpenAdUnit: String,
         appOpenAdCallback: AppOpenAdCallback? = null,
-        backgroundThreshold: Int = 30000
+        backgroundThreshold: Int = 30000,
+        isShownOnlyOnce: Boolean = false
     ) {
         if (application != null) {
             val appOpenManager =
-                AppOpenManager(application!!, appOpenAdUnit, backgroundThreshold, appOpenAdCallback)
+                AppOpenManager(
+                    application!!,
+                    appOpenAdUnit,
+                    isShownOnlyOnce,
+                    backgroundThreshold,
+                    appOpenAdCallback
+                )
             appOpenAdCallback?.onInitSuccess(appOpenManager)
         } else {
             throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
@@ -347,7 +370,7 @@ object AdSdk {
                 AdRequest.Builder()
                     .addNetworkExtrasBundle(
                         AdMobAdapter::class.java,
-                        getConsentEnabledBundle(activity)
+                        getConsentEnabledBundle()
                     )
                     .build(),
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
@@ -355,23 +378,8 @@ object AdSdk {
         }
     }
 
-    fun getConsentEnabledBundle(activity: Activity): Bundle {
-        val extras = Bundle()
-        val consentInformation: ConsentInformation = ConsentInformation
-            .getInstance(activity)
-        if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
-            extras.putString("npa", "1")
-        }
-        return extras
-    }
-
-    fun getConsentEnabledBundle(context: Context): Bundle {
-        val extras = Bundle()
-        val consentInformation: ConsentInformation = ConsentInformation
-            .getInstance(context)
-        if (consentInformation.consentStatus == ConsentStatus.NON_PERSONALIZED) {
-            extras.putString("npa", "1")
-        }
+    val extras = Bundle()
+    fun getConsentEnabledBundle(): Bundle {
         return extras
     }
 
@@ -435,7 +443,7 @@ object AdSdk {
                 }
             })
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             val mAdView = AdView(viewGroup.context)
             mAdView.setAdSize(adSize)
@@ -484,14 +492,13 @@ object AdSdk {
      * IMPORTANT: You wont be able to show ad if you pass a null callback
      */
     fun loadInterstitialAd(
-        activity: Activity,
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
     ) {
         if (application != null) {
             var mInterstitialAd: InterstitialAd?
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             InterstitialAd.load(
                 application!!,
@@ -557,7 +564,7 @@ object AdSdk {
                 }
             }.start()
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             InterstitialAd.load(
                 application!!,
@@ -606,7 +613,7 @@ object AdSdk {
         if (application != null) {
             var mRewardedAd: RewardedAd?
             val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle(activity))
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             RewardedAd.load(
                 application!!,
@@ -669,7 +676,6 @@ object AdSdk {
     }
 
     fun loadNativeAd(
-        activity: Activity?,
         lifecycle: Lifecycle,
         adUnit: String,
         viewGroup: ViewGroup,
@@ -691,7 +697,6 @@ object AdSdk {
             else -> R.layout.native_admob_ad_t1
         }
         loadNativeAd(
-            activity,
             lifecycle,
             adUnit,
             viewGroup,
@@ -740,7 +745,6 @@ object AdSdk {
      * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView?) as params
      */
     fun loadNativeAd(
-        activity: Activity?,
         lifecycle: Lifecycle,
         adUnit: String,
         viewGroup: ViewGroup,
@@ -755,7 +759,6 @@ object AdSdk {
         loadingTextSize: Int
     ) {
         loadNativeAd(
-            activity,
             System.currentTimeMillis(),
             lifecycle,
             adUnit,
@@ -782,7 +785,6 @@ object AdSdk {
      * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView) as params
      */
     private fun loadNativeAd(
-        activity: Activity?,
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adUnit: String,
@@ -798,8 +800,9 @@ object AdSdk {
         loadingTextSize: Int
     ) {
         viewGroup.visibility = VISIBLE
-        if (activity != null) {
-            val inflate = activity.layoutInflater.inflate(R.layout.ad_loading_layout, null)
+        if (application != null) {
+            //Added activity.layoutInflater to prevent a crash which occurs on using (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
+            val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
             val id1 = inflate.findViewById<View>(R.id.rl)
             val tv = inflate.findViewById<TextView>(R.id.tv)
             tv.textSize = loadingTextSize.toFloat()
@@ -822,7 +825,6 @@ object AdSdk {
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
-                    activity,
                     id,
                     lifecycle,
                     adUnit,
@@ -845,7 +847,7 @@ object AdSdk {
                 }
             })
             var nativeAd: NativeAd? = null
-            val adLoader: AdLoader? = AdLoader.Builder(activity, adUnit)
+            val adLoader: AdLoader? = AdLoader.Builder(application, adUnit)
                 .forNativeAd { ad: NativeAd ->
                     nativeAd = ad
                 }
@@ -858,16 +860,14 @@ object AdSdk {
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         nativeAdLoadCallback?.onAdFailed(adError)
-                        logAdUnit(adUnit, failedHmapHmap, "b failed ${adError.message}")
                     }
 
                     override fun onAdLoaded() {
                         super.onAdLoaded()
-                        logAdUnit(adUnit, loadedHmap, "loaded")
                         nativeAdLoadCallback?.onAdLoaded()
                         if (nativeAd != null) {
                             val adView =
-                                activity.layoutInflater.inflate(layoutId, null)
+                                View.inflate(application, layoutId, null)
                                         as NativeAdView
                             if (background != null) {
                                 when (background) {
@@ -906,14 +906,15 @@ object AdSdk {
                         .build()
                 )
                 .build()
-            logAdUnit(adUnit, reqHmapHmap, "req a")
             adLoader?.loadAd(
                 AdRequest.Builder().addNetworkExtrasBundle(
                     AdMobAdapter::class.java,
-                    getConsentEnabledBundle(activity)
+                    getConsentEnabledBundle()
                 )
                     .build()
             )
+        } else {
+            AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
         }
     }
 
@@ -1030,14 +1031,11 @@ object AdSdk {
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    logAdUnit(adUnit, failedHmapHmap, "c failed ${adError.message}")
                     nativeAdLoadCallback?.onAdFailed(adError)
                 }
 
                 override fun onAdLoaded() {
                     super.onAdLoaded()
-                    logAdUnit(adUnit, loadedHmap, "loaded")
-
                     nativeAdLoadCallback?.onAdLoaded()
                     if (nativeAd != null) {
                         val adView = layoutInflater.inflate(layoutId, null)
@@ -1102,9 +1100,6 @@ object AdSdk {
         }
     }
 
-    val loadedHmap: HashMap<String, Int?> = hashMapOf()
-    val reqHmapHmap: HashMap<String, Int?> = hashMapOf()
-    val failedHmapHmap: HashMap<String, Int?> = hashMapOf()
 
     private fun preLoadNativeAd(
         layoutInflater: LayoutInflater,
@@ -1155,12 +1150,10 @@ object AdSdk {
             .withAdListener(object : AdListener() {
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    logAdUnit(adUnit, failedHmapHmap, "a failed ${adError.message}")
                 }
 
                 override fun onAdLoaded() {
                     super.onAdLoaded()
-                    logAdUnit(adUnit, loadedHmap, "loaded")
                     if (nativeAd != null) {
                         val adView = layoutInflater.inflate(layoutId, null)
                                 as NativeAdView
@@ -1205,10 +1198,6 @@ object AdSdk {
         loadAd(adLoader, context, adUnit, "e")
     }
 
-    private fun logAdUnit(adUnit: String, loadedHmap: HashMap<String, Int?>, s: String) {
-        val i = loadedHmap[adUnit] ?: 0
-        loadedHmap[adUnit] = i + 1
-    }
 
     private fun loadAd(
         adLoader: AdLoader?,
@@ -1216,11 +1205,10 @@ object AdSdk {
         adUnit: String,
         s: String
     ) {
-        logAdUnit(adUnit, reqHmapHmap, "$s req")
         adLoader?.loadAd(
             AdRequest.Builder().addNetworkExtrasBundle(
                 AdMobAdapter::class.java,
-                getConsentEnabledBundle(context)
+                getConsentEnabledBundle()
             ).build()
         )
     }
@@ -1244,14 +1232,14 @@ object AdSdk {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
-                iconView1?.visibility = View.INVISIBLE
+                iconView1.visibility = View.INVISIBLE
             } else {
                 if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
                 }
                 (iconView1 as ImageView).setImageDrawable(icon.drawable)
-                iconView1?.visibility = VISIBLE
+                iconView1.visibility = VISIBLE
             }
         }
 

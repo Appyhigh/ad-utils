@@ -19,20 +19,22 @@ class SplashActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             PreloadNativeAds(
                 "ca-app-pub-3940256099942544/2247696110",
-                AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+                AdSdk.ADType.SMALLER,
                 mediaMaxHeight = 150,
                 loadingTextSize = 24
             )
         )
         AdSdk.initialize(
             applicationContext as MyApp,
-            testDevice = "037CDCC60DB2EB75232FCC1738C3917C",
+            testDevice = "182790353ADD7F5B71982136E0704453",
             bannerRefreshTimer = 5000L, nativeRefreshTimer = 5000L,
             preloadingNativeAdList = preloadingNativeAdList,
             layoutInflater = layoutInflater,
+            currentAppVersion = BuildConfig.VERSION_CODE,
+            packageName = "notification.status.saver.whatsapp.messenger"
         )
         if (BuildConfig.DEBUG) {
-            AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 1000)
+            AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null, 1000, true)
         } else {
             AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null)
         }
