@@ -35,6 +35,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.GoogleApiAvailability.GOOGLE_PLAY_SERVICES_VERSION_CODE
 import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
@@ -184,10 +185,10 @@ object AdSdk {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-                if (BuildConfig.DEBUG) {
-                    bannerAdRefreshTimer = 7500L
-                    nativeAdRefreshTimer = 7500L
-                }
+//                if (BuildConfig.DEBUG) {
+//                    bannerAdRefreshTimer = 7500L
+//                    nativeAdRefreshTimer = 7500L
+//                }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
                         if (bannerRefresh == REFRESH_STATE.REFRESH_ON) {
@@ -289,7 +290,10 @@ object AdSdk {
     private fun isGooglePlayServicesAvailable(application: Application): Boolean {
         try {
             val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
-            val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(application)
+            val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(
+                application,
+                GOOGLE_PLAY_SERVICES_VERSION_CODE
+            )
             if (status != ConnectionResult.SUCCESS) {
                 return false
             }
@@ -1232,7 +1236,7 @@ object AdSdk {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
-                iconView1.visibility = View.INVISIBLE
+                iconView1.visibility = View.GONE
             } else {
                 if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                     val iconHeight = mediaMaxHeight

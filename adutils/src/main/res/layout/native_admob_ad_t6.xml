@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_centerInParent="true"
+    android:layout_gravity="center"
     android:layout_margin="5dp"
     android:elevation="1dp">
 
@@ -25,6 +26,7 @@
         android:layout_height="match_parent"
         android:layout_centerInParent="true"
         android:background="@drawable/nad_bg"
+        android:gravity="center"
         android:orientation="vertical">
 
         <LinearLayout
@@ -162,7 +164,7 @@
                         android:layout_marginEnd="@dimen/gnt_no_margin"
                         android:layout_marginBottom="@dimen/gnt_no_margin"
                         android:background="@color/gnt_white"
-                        android:gravity="top"
+                        android:gravity="center_vertical"
                         android:lines="1"
                         android:textColor="@color/gnt_gray"
                         android:textSize="@dimen/gnt_text_size_small"
@@ -178,10 +180,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@color/gnt_blue"
+                    android:background="@drawable/ads_bg_lib"
+                    android:gravity="center_vertical"
                     android:lines="2"
                     android:minHeight="30dp"
+                    android:padding="3dp"
                     android:textColor="@color/gnt_white"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"

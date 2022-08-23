@@ -27,7 +27,6 @@ class SplashActivity : AppCompatActivity() {
         AdSdk.initialize(
             applicationContext as MyApp,
             testDevice = "182790353ADD7F5B71982136E0704453",
-            bannerRefreshTimer = 5000L, nativeRefreshTimer = 5000L,
             preloadingNativeAdList = preloadingNativeAdList,
             layoutInflater = layoutInflater,
             currentAppVersion = BuildConfig.VERSION_CODE,

@@ -83,7 +83,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 */
 
-        AdSdk.loadNativeAd(
+        /*AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot,
@@ -96,14 +96,15 @@ class NativeAdActivity : AppCompatActivity() {
             binding.llRoot1,
             nativeAdCallBack,
             AdSdk.ADType.BIG, null, null, null, mediaMaxHeight = 100
-        )
+        )*/
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot2,
             nativeAdCallBack,
-            AdSdk.ADType.SEMIMEDIUM, null, null, null, mediaMaxHeight = 100,
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null,
         )
+/*
         AdSdk.loadNativeAd(
             lifecycle,
             "ca-app-pub-3940256099942544/2247696110",
@@ -111,13 +112,14 @@ class NativeAdActivity : AppCompatActivity() {
             nativeAdCallBack,
             AdSdk.ADType.SMALLER, null, null, null, mediaMaxHeight = 100
         )
-        AdSdk.loadNativeAd(
+*/
+        /*AdSdk.loadNativeAd(
             lifecycle,
             DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "ADNAME"),
             binding.llRoot4,
             nativeAdCallBack,
             AdSdk.ADType.SMALLEST, null, null, null, mediaMaxHeight = 100,
-        )
+        )*/
 
 /*
         AdSdk.loadNativeAdFromService(
