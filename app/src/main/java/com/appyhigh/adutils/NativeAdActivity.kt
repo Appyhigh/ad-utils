@@ -102,7 +102,7 @@ class NativeAdActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             binding.llRoot2,
             nativeAdCallBack,
-            AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null,
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL, null, null, null, mediaMaxHeight = 75
         )
 /*
         AdSdk.loadNativeAd(

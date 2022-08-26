@@ -3,9 +3,11 @@ package com.appyhigh.adutils
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
+import com.appyhigh.adutils.callbacks.InterstitialCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.LoadAdError
 
 class SplashActivity : AppCompatActivity() {
     lateinit var binding: ActivitySplashBinding
@@ -40,11 +42,22 @@ class SplashActivity : AppCompatActivity() {
         AdSdk.loadSplashAd(
             "ca-app-pub-3940256099942544/1033173712",
             this,
-            object : SplashInterstitialCallback {
+            object : InterstitialCallback {
+                override fun moveNext(error: LoadAdError) {
+                    finish()
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                }
+
+                override fun moveNext(error: AdError) {
+                    finish()
+                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                }
+
                 override fun moveNext() {
                     finish()
                     startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                 }
+
             }, 1000
         )
         /*Handler(Looper.getMainLooper()).postDelayed({

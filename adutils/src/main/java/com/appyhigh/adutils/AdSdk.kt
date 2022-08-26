@@ -1,6 +1,7 @@
 package com.appyhigh.adutils
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
 import android.graphics.Color
@@ -33,6 +34,8 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.nativead.*
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.GoogleApiAvailability.GOOGLE_PLAY_SERVICES_VERSION_CODE
@@ -294,10 +297,13 @@ object AdSdk {
                 application,
                 GOOGLE_PLAY_SERVICES_VERSION_CODE
             )
+            Log.d("aishik", "isGooglePlayServicesAvailable: " + status)
             if (status != ConnectionResult.SUCCESS) {
                 return false
             }
             return true
+        } catch (e: NoSuchMethodError) {
+            return false
         } catch (e: Exception) {
             return false
         }
@@ -550,7 +556,7 @@ object AdSdk {
     fun loadSplashAd(
         adUnit: String,
         activity: Activity?,
-        callback: SplashInterstitialCallback,
+        callback: InterstitialCallback,
         timer: Long = 5000L
     ) {
         if (activity != null) {
@@ -1246,7 +1252,7 @@ object AdSdk {
                 iconView1.visibility = VISIBLE
             }
         }
-
+//        iconView1.visibility = GONE
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
         adView.mediaView = mediaView
         mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
@@ -1332,8 +1338,77 @@ object AdSdk {
 
             }
         }
+    }
 
+    var create: AlertDialog? = null
+    fun showRewardedIntersAd(
+        activity: Activity,
+        adId: String,
+        interstitialCallback: InterstitialCallback
+    ) {
+        var moved = false
+        val ctd = object : CountDownTimer(5000, 1000) {
+            override fun onTick(p0: Long) {
+                Log.d("aishik", "onTick: " + p0)
+            }
 
+            override fun onFinish() {
+                if (!moved) {
+                    create?.dismiss()
+                    interstitialCallback.moveNext()
+                    moved = true
+                }
+            }
+        }
+        ctd.start()
+        val builder = AlertDialog.Builder(activity, R.style.DialogTheme)
+        builder.setView(
+            LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
+        )
+        create = builder.create()
+        create?.show()
+        RewardedInterstitialAd.load(activity, adId,
+            AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                    ctd.cancel()
+                    Log.d(TAG, "Ad was loaded.")
+                    create?.dismiss()
+                    ad.show(activity) {
+
+                    }
+                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                        override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                            super.onAdFailedToShowFullScreenContent(p0)
+                            if (!moved) {
+                                ctd.cancel()
+                                interstitialCallback.moveNext(p0)
+                                moved = true
+                            }
+                            Log.d("aishik", "onAdFailedToShowFullScreenContent: " + p0.message)
+                        }
+
+                        override fun onAdDismissedFullScreenContent() {
+                            super.onAdDismissedFullScreenContent()
+                            if (!moved) {
+                                ctd.cancel()
+                                interstitialCallback.moveNext()
+                                moved = true
+                            }
+                            Log.d("aishik", "onAdDismissedFullScreenContent: ")
+                        }
+                    }
+                }
+
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    Log.d("aishik", "onAdFailedToLoad: " + adError.message)
+                    create?.dismiss()
+                    if (!moved) {
+                        ctd.cancel()
+                        interstitialCallback.moveNext(adError)
+                        moved = true
+                    }
+                }
+            })
     }
 
     interface BypassAppOpenAd

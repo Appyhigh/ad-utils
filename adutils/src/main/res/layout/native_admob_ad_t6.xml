@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.gms.ads.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/native_ad_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -49,14 +50,13 @@
 
             <ImageView
                 android:id="@+id/icon"
-                android:layout_width="70dp"
-                android:layout_height="70dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:layout_gravity="center_vertical"
                 android:layout_marginEnd="@dimen/gnt_no_margin"
-                android:layout_weight="0"
                 android:foregroundGravity="center_vertical"
+                android:maxWidth="50dp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintDimensionRatio="H,1:1"
                 app:layout_constraintEnd_toStartOf="@+id/content"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -64,7 +64,7 @@
             <LinearLayout
                 android:id="@+id/content"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/gnt_default_margin"
                 android:layout_marginTop="@dimen/gnt_default_margin"
                 android:layout_marginEnd="@dimen/gnt_default_margin"
@@ -78,8 +78,7 @@
                 <LinearLayout
                     android:id="@+id/headlineold"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
                     android:background="@color/gnt_test_background_color"
                     android:orientation="horizontal"
                     app:layout_constraintBottom_toTopOf="@+id/row_two"
@@ -90,7 +89,7 @@
                     <TextView
                         android:id="@+id/headline"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/gnt_no_margin"
                         android:layout_marginTop="@dimen/gnt_no_margin"
                         android:layout_marginEnd="@dimen/gnt_no_margin"
@@ -126,8 +125,7 @@
                 <LinearLayout
                     android:id="@+id/row_two"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_weight="2"
+                    android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     app:layout_constraintBottom_toTopOf="@+id/call_to_action"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -148,6 +146,7 @@
                         android:stepSize="0.1"
                         android:textColor="@color/gnt_gray"
                         android:textSize="@dimen/gnt_text_size_small"
+                        android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@id/ad_notification_view"
@@ -178,20 +177,18 @@
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/call_to_action"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
                     android:background="@drawable/ads_bg_lib"
-                    android:gravity="center_vertical"
-                    android:lines="2"
-                    android:minHeight="30dp"
-                    android:padding="3dp"
+                    android:gravity="center"
+                    android:lines="1"
                     android:textColor="@color/gnt_white"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/row_two" />
+                    app:layout_constraintTop_toBottomOf="@id/row_two"
+                    tools:text="@tools:sample/cities" />
 
 
             </LinearLayout>
