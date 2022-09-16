@@ -22,7 +22,6 @@ class DynamicsAds {
         lateinit var ADMODELPREF: SharedPreferences
         var adMobNew: JSONObject = JSONObject()
 
-        //TODO : get the dynamic ads by sending in a fallBackAdId and the Name of the ad you need
         fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
             return try {
                 val string = adMobNew.getString(adName)
@@ -30,15 +29,6 @@ class DynamicsAds {
             } catch (e: Exception) {
                 fallBackAdId
             }
-/*
-            return try {
-                if (notificationCleanerInstoryNative != null && notificationCleanerInstoryNative != "null") {
-                    notificationCleanerInstoryNative
-                } else defaultID
-            } catch (e: java.lang.Exception) {
-                defaultID
-            }
-*/
         }
 
 

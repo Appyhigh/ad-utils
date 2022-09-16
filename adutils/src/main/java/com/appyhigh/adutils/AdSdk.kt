@@ -187,10 +187,6 @@ object AdSdk {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-//                if (BuildConfig.DEBUG) {
-//                    bannerAdRefreshTimer = 7500L
-//                    nativeAdRefreshTimer = 7500L
-//                }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
                         if (bannerRefresh == REFRESH_STATE.REFRESH_ON) {
@@ -720,27 +716,6 @@ object AdSdk {
         )
 
     }
-
-    /**
-     * Call loadNativeAd with following params to load a Native Ad
-     *
-     *
-     * @param lifecycle -> Lifecycle of activity in which ad will be loaded
-     * @param adUnit -> Pass the adUnit id in this parameter
-     * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
-     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
-     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
-     */
-//    fun loadNativeAd(
-//        lifecycle: Lifecycle,
-//        adUnit: String,
-//        viewGroup: ViewGroup,
-//        @LayoutRes layoutId: Int = R.layout.ad_item,
-//        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
-//    ) {
-//        loadNativeAd(lifecycle, adUnit, viewGroup, null, layoutId, populator)
-//    }
-
     /**
      * Call loadNativeAd with following params to load a Native Ad
      *
@@ -809,7 +784,6 @@ object AdSdk {
     ) {
         viewGroup.visibility = VISIBLE
         if (application != null) {
-            //Added activity.layoutInflater to prevent a crash which occurs on using (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
             val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
             val id1 = inflate.findViewById<View>(R.id.rl)
             val tv = inflate.findViewById<TextView>(R.id.tv)
@@ -1256,9 +1230,7 @@ object AdSdk {
         mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
-//                val scale: Float = adView.mediaView.context.resources.displayMetrics.density
                 val maxHeightPixels = mediaMaxHeight
-//                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
                 if (child is ImageView) { //Images
                     child.adjustViewBounds = true
                     val layoutParams1 = child.layoutParams
