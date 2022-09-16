@@ -26,10 +26,10 @@
                 android:id="@+id/ad_notification_view5"
                 android:layout_width="@dimen/gnt_ad_indicator_width"
                 android:layout_height="@dimen/gnt_ad_indicator_height"
+                android:layout_margin="5dp"
                 android:background="@drawable/gnt_rounded_corners_shape"
                 android:gravity="center"
                 android:text="Ad"
-                android:layout_margin="5dp"
                 android:textColor="@color/gnt_ad_green"
                 android:textSize="@dimen/gnt_ad_indicator_text_size"
                 android:textStyle="bold"
@@ -135,7 +135,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/call_to_action"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
@@ -143,6 +143,8 @@
                     android:layout_margin="5dp"
                     android:background="@drawable/ads_bg_lib_curver"
                     android:gravity="center"
+                    android:minWidth="100dp"
+                    android:padding="6dp"
                     android:textColor="@color/color_white"
                     android:textSize="13sp"
                     android:textStyle="bold"

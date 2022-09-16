@@ -2,7 +2,6 @@ package com.appyhigh.adutils.utils
 
 import android.os.Build
 import android.util.Base64
-import android.util.Log
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import java.security.GeneralSecurityException
@@ -62,7 +61,7 @@ object RSAKeyGenerator {
             jws
         } else {
             prevJwt?.let {
-                Log.d(TAG, prevJwt)
+//                Log.d(TAG, prevJwt)
             }
             prevJwt
         }

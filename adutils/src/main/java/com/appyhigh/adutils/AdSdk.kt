@@ -35,6 +35,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.GoogleApiAvailability.GOOGLE_PLAY_SERVICES_VERSION_CODE
 import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
@@ -139,15 +140,14 @@ object AdSdk {
 
     fun initialize(
         app: Application,
-        currentAppVersion: Int,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
-        layoutInflater: LayoutInflater? = null,
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
     ) {
+        val laytInflater = LayoutInflater.from(app)
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
@@ -164,30 +164,29 @@ object AdSdk {
                 .setTestDeviceIds(listOf(testDevice)).build()
             MobileAds.setRequestConfiguration(build)
         }
+
         MobileAds.initialize(app) {
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
             if (context != null) {
-                if (preloadNativeAdList != null && layoutInflater != null) {
-                    preloadAds(layoutInflater, context)
+                if (preloadNativeAdList != null && laytInflater != null) {
+                    preloadAds(laytInflater, context)
                 }
+
                 //TODO : Start  the Process of getting the dynamic Ads
+
                 DynamicsAds.getDynamicAds(
                     context,
-                    currentAppVersion,
                     packageName,
                     dynamicAdsFetchThresholdInSecs
                 )
             }
         }
+
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-                if (BuildConfig.DEBUG) {
-                    bannerAdRefreshTimer = 7500L
-                    nativeAdRefreshTimer = 7500L
-                }
                 if (bannerAdRefreshTimer != 0L) {
                     fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
                         if (bannerRefresh == REFRESH_STATE.REFRESH_ON) {
@@ -289,7 +288,10 @@ object AdSdk {
     private fun isGooglePlayServicesAvailable(application: Application): Boolean {
         try {
             val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
-            val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(application)
+            val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(
+                application,
+                GOOGLE_PLAY_SERVICES_VERSION_CODE
+            )
             if (status != ConnectionResult.SUCCESS) {
                 return false
             }
@@ -313,15 +315,17 @@ object AdSdk {
         isShownOnlyOnce: Boolean = false
     ) {
         if (application != null) {
-            val appOpenManager =
-                AppOpenManager(
-                    application!!,
-                    appOpenAdUnit,
-                    isShownOnlyOnce,
-                    backgroundThreshold,
-                    appOpenAdCallback
-                )
-            appOpenAdCallback?.onInitSuccess(appOpenManager)
+            if (!AppOpenManager.initialized) {
+                val appOpenManager =
+                    AppOpenManager(
+                        application!!,
+                        appOpenAdUnit,
+                        isShownOnlyOnce,
+                        backgroundThreshold,
+                        appOpenAdCallback
+                    )
+                appOpenAdCallback?.onInitSuccess(appOpenManager)
+            }
         } else {
             throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
@@ -712,27 +716,6 @@ object AdSdk {
         )
 
     }
-
-    /**
-     * Call loadNativeAd with following params to load a Native Ad
-     *
-     *
-     * @param lifecycle -> Lifecycle of activity in which ad will be loaded
-     * @param adUnit -> Pass the adUnit id in this parameter
-     * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout
-     * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
-     * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView?) as params
-     */
-//    fun loadNativeAd(
-//        lifecycle: Lifecycle,
-//        adUnit: String,
-//        viewGroup: ViewGroup,
-//        @LayoutRes layoutId: Int = R.layout.ad_item,
-//        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null
-//    ) {
-//        loadNativeAd(lifecycle, adUnit, viewGroup, null, layoutId, populator)
-//    }
-
     /**
      * Call loadNativeAd with following params to load a Native Ad
      *
@@ -801,7 +784,6 @@ object AdSdk {
     ) {
         viewGroup.visibility = VISIBLE
         if (application != null) {
-            //Added activity.layoutInflater to prevent a crash which occurs on using (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
             val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
             val id1 = inflate.findViewById<View>(R.id.rl)
             val tv = inflate.findViewById<TextView>(R.id.tv)
@@ -847,7 +829,7 @@ object AdSdk {
                 }
             })
             var nativeAd: NativeAd? = null
-            val adLoader: AdLoader? = AdLoader.Builder(application, adUnit)
+            val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
                 .forNativeAd { ad: NativeAd ->
                     nativeAd = ad
                 }
@@ -1223,7 +1205,7 @@ object AdSdk {
     ) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
-        var icon = nativeAd.icon
+        val icon = nativeAd.icon
         adView.iconView = iconView
         val iconView1 = adView.iconView
         if (iconView1 != null) {
@@ -1232,7 +1214,7 @@ object AdSdk {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
-                iconView1.visibility = View.INVISIBLE
+                iconView1.visibility = View.GONE
             } else {
                 if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                     val iconHeight = mediaMaxHeight
@@ -1248,9 +1230,7 @@ object AdSdk {
         mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
-//                val scale: Float = adView.mediaView.context.resources.displayMetrics.density
                 val maxHeightPixels = mediaMaxHeight
-//                val maxHeightDp = (maxHeightPixels * scale + 0.5f).toInt()
                 if (child is ImageView) { //Images
                     child.adjustViewBounds = true
                     val layoutParams1 = child.layoutParams
