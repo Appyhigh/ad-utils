@@ -188,6 +188,7 @@ class AppOpenManager(
         private var isShowingAd = false
         private var splashAppOpenAd: AppOpenAd? = null
         private var reason: String? = null
+        var initialized: Boolean = false
 
         interface appOpenCallBack {
             fun adDismissed()
@@ -260,6 +261,7 @@ class AppOpenManager(
         if (!isShownOnlyOnce) {
         }
 */
+        initialized = true
         myApplication.registerActivityLifecycleCallbacks(this)
         fetchAd()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)

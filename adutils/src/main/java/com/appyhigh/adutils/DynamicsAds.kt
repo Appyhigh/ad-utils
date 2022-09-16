@@ -61,7 +61,6 @@ class DynamicsAds {
 
         fun getDynamicAds(
             applicationContext: Context,
-            currentAppVersion: Int,
             appPackageName: String,
             dynamicAdsFetchThresholdInSecs: Int
         ) {

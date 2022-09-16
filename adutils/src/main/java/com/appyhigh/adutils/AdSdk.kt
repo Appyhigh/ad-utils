@@ -140,15 +140,14 @@ object AdSdk {
 
     fun initialize(
         app: Application,
-        currentAppVersion: Int,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
-        layoutInflater: LayoutInflater? = null,
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
     ) {
+        val laytInflater = LayoutInflater.from(app)
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
@@ -165,22 +164,25 @@ object AdSdk {
                 .setTestDeviceIds(listOf(testDevice)).build()
             MobileAds.setRequestConfiguration(build)
         }
+
         MobileAds.initialize(app) {
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
             if (context != null) {
-                if (preloadNativeAdList != null && layoutInflater != null) {
-                    preloadAds(layoutInflater, context)
+                if (preloadNativeAdList != null && laytInflater != null) {
+                    preloadAds(laytInflater, context)
                 }
+
                 //TODO : Start  the Process of getting the dynamic Ads
+
                 DynamicsAds.getDynamicAds(
                     context,
-                    currentAppVersion,
                     packageName,
                     dynamicAdsFetchThresholdInSecs
                 )
             }
         }
+
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
@@ -317,15 +319,17 @@ object AdSdk {
         isShownOnlyOnce: Boolean = false
     ) {
         if (application != null) {
-            val appOpenManager =
-                AppOpenManager(
-                    application!!,
-                    appOpenAdUnit,
-                    isShownOnlyOnce,
-                    backgroundThreshold,
-                    appOpenAdCallback
-                )
-            appOpenAdCallback?.onInitSuccess(appOpenManager)
+            if (!AppOpenManager.initialized) {
+                val appOpenManager =
+                    AppOpenManager(
+                        application!!,
+                        appOpenAdUnit,
+                        isShownOnlyOnce,
+                        backgroundThreshold,
+                        appOpenAdCallback
+                    )
+                appOpenAdCallback?.onInitSuccess(appOpenManager)
+            }
         } else {
             throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
         }
@@ -1227,7 +1231,7 @@ object AdSdk {
     ) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
-        var icon = nativeAd.icon
+        val icon = nativeAd.icon
         adView.iconView = iconView
         val iconView1 = adView.iconView
         if (iconView1 != null) {

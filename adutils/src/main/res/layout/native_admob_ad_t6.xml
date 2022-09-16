@@ -181,7 +181,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="@drawable/ads_bg_lib"
-                    android:gravity="center_vertical"
+                    android:gravity="center"
                     android:lines="2"
                     android:minHeight="30dp"
                     android:padding="3dp"

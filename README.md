@@ -20,10 +20,23 @@ dependencies {
 Add these configurations to you AndroidManifest.xml
 
 ```xml  
-  
 <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"  
  android:value="ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX" />   
 ```  
+
+Ad Initialize Optimisations Use Google Mobile Ads SDK version 21.0.0 or higher.
+
+https://developers.google.com/admob/android/optimize-initialization#update_your_manifest_file
+
+```xml
+
+<manifest>
+    <application>
+        <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+            android:value="true" />
+    </application>
+</manifest>
+```
 
 Initialize Sdk without App Open Ad
 
@@ -31,13 +44,11 @@ Initialize Sdk without App Open Ad
 
 /**
 Parameters
-currentAppVersion -> This is the current App Version in Integer to match from server
 dynamicAdsFetchThresholdInSecs -> This is the amount of time to waut in Seconds before fetching new ad id values
  */
  
 AdSdk.initialize(
 applicationContext as MyApp,
-currentAppVersion = BuildConfig.VERSION_CODE,
 dynamicAdsFetchThresholdInSecs = 10)
 
 ```
@@ -299,8 +310,7 @@ preloadingNativeAdList.put(
 AdSdk.initialize(
   applicationContext as MyApp,  
   bannerRefreshTimer = 5000L, nativeRefreshTimer = 5000L,  
-  preloadingNativeAdList = preloadingNativeAdList, /*This*/ 
-  layoutInflater = layoutInflater/* And This*/
+  preloadingNativeAdList = preloadingNativeAdList, /*This*/
 )
 ```
 
@@ -363,17 +373,26 @@ if you want to set layout via remote config
 /**  
  *Go to the Firebase of your Project and set this variable in Remore Config * native_ad_layout_type - Type String - Value - 1 to 5, no need for quotes */  
 RemoteConfigUtils.init()  
+
   
-  
-AdSdk.loadNativeAd(  
- lifecycle, "ca-app-pub-3940256099942544/2247696110", binding.llRoot, nativeAdCallBack, RemoteConfigUtils.getNativeAdTypeId())  
+AdSdk.loadNativeAd(
+lifecycle,
+"ca-app-pub-3940256099942544/2247696110",
+ binding.llRoot,
+  nativeAdCallBack,
+   RemoteConfigUtils.getNativeAdTypeId())  
   
   
 /**  
  * Call loadNativeAd with following params to load a Native Ad * * * @param lifecycle -> Lifecycle of activity in which ad will be loaded * @param adUnit -> Pass the adUnit id in this parameter * @param viewGroup -> Pass the parent ViewGroup to add a native ad in that layout * @param nativeAdLoadCallback -> nullable callback to register native ad load events * @param adType -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView) as params * @param background -> nullable It is the Background Color or a Drawable you can put either, if it matches nothing then it'll choose default * @param textColor1 -> nullable It is the primary color in Int that is Color Resource * @param textColor1 -> nullable It is the Secondary color in Int that is Color Resource * @param mediaMaxHeight -> nullable It is the height of the ad Media in Int * @param loadingTextSize: Int -> nullable It is the textSize of the loading text default is 48 * * * The adType can be either string size from "1" to "5" * or one of these below * * class ADType { * companion object { * val SMALLEST = "3" * val SMALLER = "4" * val SEMIMEDIUM = "2" * val MEDIUM = "1" * val BIG = "5" * } * } * *e.g. AdType.SMALL * * */  
   
 AdSdk.loadNativeAd(  
- lifecycle, "ca-app-pub-3940256099942544/2247696110", binding.llRoot, nativeAdCallBack, R.layout.ad_item, this::populateNativeAdView)  
+ lifecycle,
+  "ca-app-pub-3940256099942544/2247696110",
+   binding.llRoot,
+    nativeAdCallBack,
+     R.layout.ad_item,
+      this::populateNativeAdView)  
   
 private val nativeAdCallBack = object : NativeAdLoadCallback {  
  override fun onAdLoaded() { Log.d("NativeAdLoadCallback", "onAdLoaded") }  
