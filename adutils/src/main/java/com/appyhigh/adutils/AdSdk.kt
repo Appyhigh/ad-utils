@@ -855,7 +855,7 @@ object AdSdk {
                 }
             })
             var nativeAd: NativeAd? = null
-            val adLoader: AdLoader? = AdLoader.Builder(application, adUnit)
+            val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
                 .forNativeAd { ad: NativeAd ->
                     nativeAd = ad
                 }
