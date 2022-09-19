@@ -1,6 +1,7 @@
 package com.appyhigh.adutils
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
 import android.graphics.Color
@@ -33,6 +34,8 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.nativead.*
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.GoogleApiAvailability.GOOGLE_PLAY_SERVICES_VERSION_CODE
@@ -228,7 +231,9 @@ object AdSdk {
                                             textColor1 = value.textColor1,
                                             textColor2 = value.textColor2,
                                             mediaMaxHeight = value.mediaMaxHeight,
-                                            loadingTextSize = value.textSize
+                                            loadingTextSize = value.textSize,
+                                            contentURL = value.contentURL,
+                                            neighbourContentURL = value.neighbourContentURL
                                         )
                                     }
                                 }
@@ -327,7 +332,7 @@ object AdSdk {
                 appOpenAdCallback?.onInitSuccess(appOpenManager)
             }
         } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize!!!")
+            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize?!")
         }
     }
 
@@ -689,7 +694,9 @@ object AdSdk {
         textColor1: Int?,
         textColor2: Int?,
         mediaMaxHeight: Int = 300,
-        loadingTextSize: Int = 48
+        loadingTextSize: Int = 48,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -712,10 +719,11 @@ object AdSdk {
             textColor1,
             textColor2,
             mediaMaxHeight,
-            loadingTextSize
+            loadingTextSize, contentURL, neighbourContentURL
         )
 
     }
+
     /**
      * Call loadNativeAd with following params to load a Native Ad
      *
@@ -739,7 +747,9 @@ object AdSdk {
         textColor1: Int?,
         textColor2: Int?,
         mediaMaxHeight: Int = 300,
-        loadingTextSize: Int
+        loadingTextSize: Int,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
@@ -754,7 +764,8 @@ object AdSdk {
             textColor1,
             textColor2,
             mediaMaxHeight,
-            loadingTextSize
+            loadingTextSize,
+            contentURL, neighbourContentURL
         )
     }
 
@@ -780,7 +791,9 @@ object AdSdk {
         textColor1: Int?,
         textColor2: Int?,
         mediaMaxHeight: Int = 300,
-        loadingTextSize: Int
+        loadingTextSize: Int,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         viewGroup.visibility = VISIBLE
         if (application != null) {
@@ -819,7 +832,8 @@ object AdSdk {
                     textColor1,
                     textColor2,
                     mediaMaxHeight,
-                    loadingTextSize
+                    loadingTextSize,
+                    contentURL = contentURL, neighbourContentURL = neighbourContentURL
                 )
             }
             lifecycle.addObserver(object : LifecycleObserver {
@@ -888,12 +902,14 @@ object AdSdk {
                         .build()
                 )
                 .build()
-            adLoader?.loadAd(
-                AdRequest.Builder().addNetworkExtrasBundle(
-                    AdMobAdapter::class.java,
-                    getConsentEnabledBundle()
-                )
-                    .build()
+            val builder = AdRequest.Builder().addNetworkExtrasBundle(
+                AdMobAdapter::class.java,
+                getConsentEnabledBundle()
+            )
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            adLoader.loadAd(
+                builder.build()
             )
         } else {
             AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
@@ -1214,7 +1230,7 @@ object AdSdk {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
-                iconView1.visibility = View.GONE
+//                iconView1.visibility = View.GONE
             } else {
                 if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                     val iconHeight = mediaMaxHeight
@@ -1311,6 +1327,78 @@ object AdSdk {
 
 
     }
+
+    var create: AlertDialog? = null
+    fun showRewardedIntersAd(
+        activity: Activity,
+        adId: String,
+        interstitialCallback: InterstitialCallback
+    ) {
+        var moved = false
+        val ctd = object : CountDownTimer(5000, 1000) {
+            override fun onTick(p0: Long) {
+                Log.d("aishik", "onTick: " + p0)
+            }
+
+            override fun onFinish() {
+                if (!moved) {
+                    create?.dismiss()
+                    interstitialCallback.moveNext()
+                    moved = true
+                }
+            }
+        }
+        ctd.start()
+        val builder = AlertDialog.Builder(activity, R.style.DialogTheme)
+        builder.setView(
+            LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
+        )
+        create = builder.create()
+        create?.show()
+        RewardedInterstitialAd.load(activity, adId,
+            AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                    ctd.cancel()
+                    Log.d(TAG, "Ad was loaded.")
+                    create?.dismiss()
+                    ad.show(activity) {
+
+                    }
+                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                        override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                            super.onAdFailedToShowFullScreenContent(p0)
+                            if (!moved) {
+                                ctd.cancel()
+                                interstitialCallback.moveNext(p0)
+                                moved = true
+                            }
+                            Log.d("aishik", "onAdFailedToShowFullScreenContent: " + p0.message)
+                        }
+
+                        override fun onAdDismissedFullScreenContent() {
+                            super.onAdDismissedFullScreenContent()
+                            if (!moved) {
+                                ctd.cancel()
+                                interstitialCallback.moveNext()
+                                moved = true
+                            }
+                            Log.d("aishik", "onAdDismissedFullScreenContent: ")
+                        }
+                    }
+                }
+
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    Log.d("aishik", "onAdFailedToLoad: " + adError.message)
+                    create?.dismiss()
+                    if (!moved) {
+                        ctd.cancel()
+                        interstitialCallback.moveNext(adError)
+                        moved = true
+                    }
+                }
+            })
+    }
+
 
     interface BypassAppOpenAd
 

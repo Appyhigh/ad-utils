@@ -21,5 +21,9 @@ data class NativeAdItem(
     var textColor2: Int? = null,
     var mediaMaxHeight: Int = 300,
     var textSize: Int = 48,
-    var buttonColor: Int = Color.parseColor("#000000")
+    var buttonColor: Int = Color.parseColor("#000000"),
+    var contentURL: String? = null,
+    var neighbourContentURL: List<String>? = null
+
+
 )
