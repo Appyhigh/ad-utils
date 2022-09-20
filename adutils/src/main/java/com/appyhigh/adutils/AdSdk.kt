@@ -1359,30 +1359,32 @@ object AdSdk {
             AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
                     ctd.cancel()
-                    Log.d(TAG, "Ad was loaded.")
-                    create?.dismiss()
-                    ad.show(activity) {
+                    if (!moved) {
+                        Log.d(TAG, "Ad was loaded.")
+                        create?.dismiss()
+                        ad.show(activity) {
 
-                    }
-                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                        override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                            super.onAdFailedToShowFullScreenContent(p0)
-                            if (!moved) {
-                                ctd.cancel()
-                                interstitialCallback.moveNext(p0)
-                                moved = true
-                            }
-                            Log.d("aishik", "onAdFailedToShowFullScreenContent: " + p0.message)
                         }
-
-                        override fun onAdDismissedFullScreenContent() {
-                            super.onAdDismissedFullScreenContent()
-                            if (!moved) {
-                                ctd.cancel()
-                                interstitialCallback.moveNext()
-                                moved = true
+                        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                            override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                super.onAdFailedToShowFullScreenContent(p0)
+                                if (!moved) {
+                                    ctd.cancel()
+                                    interstitialCallback.moveNext(p0)
+                                    moved = true
+                                }
+                                Log.d("aishik", "onAdFailedToShowFullScreenContent: " + p0.message)
                             }
-                            Log.d("aishik", "onAdDismissedFullScreenContent: ")
+
+                            override fun onAdDismissedFullScreenContent() {
+                                super.onAdDismissedFullScreenContent()
+                                if (!moved) {
+                                    ctd.cancel()
+                                    interstitialCallback.moveNext()
+                                    moved = true
+                                }
+                                Log.d("aishik", "onAdDismissedFullScreenContent: ")
+                            }
                         }
                     }
                 }
