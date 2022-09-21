@@ -151,7 +151,7 @@ object AdSdk {
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
     ) {
         application = app
-        val laytInflater = LayoutInflater.from(app)
+        val inflater = LayoutInflater.from(app)
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
@@ -172,8 +172,8 @@ object AdSdk {
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
             if (context != null) {
-                if (preloadNativeAdList != null && laytInflater != null) {
-                    preloadAds(laytInflater, context)
+                if (preloadNativeAdList != null && inflater != null) {
+                    preloadAds(inflater, context)
                 }
 
                 DynamicsAds.getDynamicAds(

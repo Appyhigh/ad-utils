@@ -27,21 +27,19 @@ class SplashActivity : AppCompatActivity() {
         AdSdk.initialize(
             applicationContext as MyApp,
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
-            preloadingNativeAdList = preloadingNativeAdList,
-            dynamicAdsFetchThresholdInSecs = 1
+            preloadingNativeAdList = preloadingNativeAdList
         )
         if (BuildConfig.DEBUG) {
-/*
             AdSdk.attachAppOpenAdManager(
                 "ca-app-pub-3940256099942544/3419835294",
                 null,
                 1000,
                 false
             )
-*/
         } else {
             AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null)
         }
+
         AdSdk.loadSplashAd(
             "ca-app-pub-3940256099942544/1033173712",
             this,
