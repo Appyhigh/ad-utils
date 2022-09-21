@@ -150,7 +150,8 @@ object AdSdk {
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
     ) {
-        val laytInflater = LayoutInflater.from(app)
+        application = app
+        val inflater = LayoutInflater.from(app)
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
@@ -167,16 +168,13 @@ object AdSdk {
                 .setTestDeviceIds(listOf(testDevice)).build()
             MobileAds.setRequestConfiguration(build)
         }
-
         MobileAds.initialize(app) {
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
             if (context != null) {
-                if (preloadNativeAdList != null && laytInflater != null) {
-                    preloadAds(laytInflater, context)
+                if (preloadNativeAdList != null && inflater != null) {
+                    preloadAds(inflater, context)
                 }
-
-                //TODO : Start  the Process of getting the dynamic Ads
 
                 DynamicsAds.getDynamicAds(
                     context,
@@ -269,7 +267,6 @@ object AdSdk {
                     }
                 }
             }
-            application = app
         }
     }
 
@@ -587,31 +584,33 @@ object AdSdk {
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
-            InterstitialAd.load(
-                application!!,
-                adUnit,
-                adRequest, object : InterstitialAdLoadCallback() {
-                    override fun onAdLoaded(splashInters: InterstitialAd) {
-                        super.onAdLoaded(splashInters)
-                        splash = splashInters
-                        splash?.fullScreenContentCallback =
-                            object : FullScreenContentCallback() {
-                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                                    callback.moveNext()
-                                }
+            application?.let {
+                InterstitialAd.load(
+                    it,
+                    adUnit,
+                    adRequest, object : InterstitialAdLoadCallback() {
+                        override fun onAdLoaded(splashInters: InterstitialAd) {
+                            super.onAdLoaded(splashInters)
+                            splash = splashInters
+                            splash?.fullScreenContentCallback =
+                                object : FullScreenContentCallback() {
+                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                        callback.moveNext()
+                                    }
 
-                                override fun onAdDismissedFullScreenContent() {
-                                    callback.moveNext()
+                                    override fun onAdDismissedFullScreenContent() {
+                                        callback.moveNext()
+                                    }
                                 }
-                            }
-                    }
+                        }
 
-                    override fun onAdFailedToLoad(p0: LoadAdError) {
-                        super.onAdFailedToLoad(p0)
-                        callback.moveNext()
+                        override fun onAdFailedToLoad(p0: LoadAdError) {
+                            super.onAdFailedToLoad(p0)
+                            callback.moveNext()
+                        }
                     }
-                }
-            )
+                )
+            }
         } else {
             callback.moveNext()
         }

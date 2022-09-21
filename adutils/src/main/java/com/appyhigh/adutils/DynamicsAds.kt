@@ -61,9 +61,9 @@ class DynamicsAds {
                     if (isNetworkConnected(applicationContext)) {
                         val fetchToken = fetchToken(applicationContext)
                         val client = OkHttpClient().newBuilder()
-                            .connectTimeout(5, TimeUnit.SECONDS)
-                            .writeTimeout(5, TimeUnit.SECONDS)
-                            .readTimeout(15, TimeUnit.SECONDS)
+                            .readTimeout(2, TimeUnit.MINUTES)
+                            .connectTimeout(2, TimeUnit.MINUTES)
+                            .writeTimeout(2, TimeUnit.MINUTES)
                             .build()
                         val mediaType: MediaType? = ("text/plain").toMediaTypeOrNull()
                         if (mediaType != null) {
