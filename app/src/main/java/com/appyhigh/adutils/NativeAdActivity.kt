@@ -43,6 +43,18 @@ class NativeAdActivity : AppCompatActivity() {
             },
             background = null, textColor1 = null, textColor2 = null,
         )
+
+        AdSdk.loadNativeAdFromService(
+            layoutInflater,
+            applicationContext,
+            "ca-app-pub-3940256099942544/2247696110",
+            binding.llRoot1,
+            nativeAdLoadCallback = null,
+            AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+            background = null, textColor1 = null, textColor2 = null,
+            loadingTextSize = 48,
+            mediaMaxHeight = 150
+        )
         binding.removeAds.setOnClickListener {
             AdSdk.removeNativeAdFromService(binding.llRoot4)
         }

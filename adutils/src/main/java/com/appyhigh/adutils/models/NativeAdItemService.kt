@@ -24,6 +24,8 @@ data class NativeAdItemService(
     var textSize: Int = 48,
     var preloadAds: Boolean = false,
     var autoRefresh: Boolean = true,
+    var contentURL: String?,
+    var neighbourContentURL: List<String>?,
     var buttonColor: Int = Color.parseColor("#000000")
 ) {
 }

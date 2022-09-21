@@ -258,7 +258,9 @@ object AdSdk {
                                             populator = value.populator,
                                             adType = value.viewId,
                                             preloadAds = value.preloadAds,
-                                            autoRefresh = value.preloadAds
+                                            autoRefresh = value.preloadAds,
+                                            contentURL = value.contentURL,
+                                            neighbourContentURL = value.neighbourContentURL
                                         )
                                     }
                                 }
@@ -409,7 +411,9 @@ object AdSdk {
         viewGroup: ViewGroup,
         adUnit: String,
         adSize: AdSize,
-        bannerAdLoadCallback: BannerAdLoadCallback?
+        bannerAdLoadCallback: BannerAdLoadCallback?,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         loadBannerAd(
             activity,
@@ -418,7 +422,9 @@ object AdSdk {
             viewGroup,
             adUnit,
             adSize,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            contentURL,
+            neighbourContentURL
         )
     }
 
@@ -429,7 +435,9 @@ object AdSdk {
         viewGroup: ViewGroup,
         adUnit: String,
         adSize: AdSize,
-        bannerAdLoadCallback: BannerAdLoadCallback?
+        bannerAdLoadCallback: BannerAdLoadCallback?,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         if (application != null) {
             if (adUnit.isBlank()) return
@@ -442,7 +450,8 @@ object AdSdk {
                         viewGroup,
                         adUnit,
                         adSize,
-                        bannerAdLoadCallback
+                        bannerAdLoadCallback,
+                        contentURL, neighbourContentURL
                     )
             }
             lifecycle.addObserver(object : LifecycleObserver {
@@ -451,8 +460,11 @@ object AdSdk {
                     AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
                 }
             })
-            val adRequest = AdRequest.Builder()
+            val builder = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            val adRequest = builder
                 .build()
             val mAdView = AdView(viewGroup.context)
             mAdView.setAdSize(adSize)
@@ -957,7 +969,7 @@ object AdSdk {
         nativeAdLoadCallback: NativeAdLoadCallback?,
         adType: String = "1",
         mediaMaxHeight: Int = 300,
-        loadingTextSize: Int,
+        loadingTextSize: Int = 24,
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
@@ -965,6 +977,8 @@ object AdSdk {
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
         preloadAds: Boolean = false,
         autoRefresh: Boolean = false,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -1013,11 +1027,13 @@ object AdSdk {
                 mediaMaxHeight,
                 loadingTextSize,
                 preloadAds,
-                autoRefresh
+                autoRefresh,
+                contentURL,
+                neighbourContentURL
             )
         }
         var nativeAd: NativeAd? = null
-        val adLoader: AdLoader? = AdLoader.Builder(context, adUnit)
+        val adLoader: AdLoader = AdLoader.Builder(context, adUnit)
             .forNativeAd { ad: NativeAd ->
                 nativeAd = ad
             }
@@ -1088,13 +1104,20 @@ object AdSdk {
                 if (preloadAds) {
                     preloadAds(layoutInflater, context)
                 }
-                loadAd(adLoader, context, adUnit, "c")/*The Extra Parameters are just for logging*/
+                loadAd(
+                    adLoader,
+                    context,
+                    adUnit,
+                    "c",
+                    contentURL,
+                    neighbourContentURL
+                )/*The Extra Parameters are just for logging*/
             }
         } else {
             if (preloadAds) {
                 preloadAds(layoutInflater, context)
             }
-            loadAd(adLoader, context, adUnit, "d")
+            loadAd(adLoader, context, adUnit, "d", contentURL, neighbourContentURL)
         }
     }
 
@@ -1110,6 +1133,8 @@ object AdSdk {
         textColor1: Int?,
         textColor2: Int?,
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null
     ) {
         @LayoutRes val layoutId = when (adType) {
             "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -1193,7 +1218,7 @@ object AdSdk {
                     .build()
             )
             .build()
-        loadAd(adLoader, context, adUnit, "e")
+        loadAd(adLoader, context, adUnit, "e", contentURL, neighbourContentURL)
     }
 
 
@@ -1201,13 +1226,18 @@ object AdSdk {
         adLoader: AdLoader?,
         context: Context,
         adUnit: String,
-        s: String
+        s: String,
+        contentURL: String?,
+        neighbourContentURL: List<String>?
     ) {
+        val builder = AdRequest.Builder().addNetworkExtrasBundle(
+            AdMobAdapter::class.java,
+            getConsentEnabledBundle()
+        )
+        contentURL?.let { builder.setContentUrl(it) }
+        neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
         adLoader?.loadAd(
-            AdRequest.Builder().addNetworkExtrasBundle(
-                AdMobAdapter::class.java,
-                getConsentEnabledBundle()
-            ).build()
+            builder.build()
         )
     }
 

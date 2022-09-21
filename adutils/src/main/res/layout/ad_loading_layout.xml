@@ -6,13 +6,18 @@
     android:background="@android:color/white"
     android:gravity="center">
 
-    <TextView
-        android:id="@+id/tv"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:gravity="center"
-        android:text="Loading"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="@android:color/black"
-        android:textSize="48sp" />
+        android:layout_height="100dp">
+
+        <TextView
+            android:id="@+id/tv"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:gravity="center"
+            android:text="Loading"
+            android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+            android:textColor="@android:color/black"
+            android:textSize="48sp" />
+    </androidx.cardview.widget.CardView>
 </RelativeLayout>
