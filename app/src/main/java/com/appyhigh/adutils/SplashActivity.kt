@@ -28,15 +28,17 @@ class SplashActivity : AppCompatActivity() {
             applicationContext as MyApp,
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
             preloadingNativeAdList = preloadingNativeAdList,
-            packageName = "notification.status.saver.whatsapp.messenger"
+            dynamicAdsFetchThresholdInSecs = 1
         )
         if (BuildConfig.DEBUG) {
+/*
             AdSdk.attachAppOpenAdManager(
                 "ca-app-pub-3940256099942544/3419835294",
                 null,
                 1000,
                 false
             )
+*/
         } else {
             AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294", null)
         }
