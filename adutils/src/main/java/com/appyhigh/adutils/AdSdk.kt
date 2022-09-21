@@ -1367,7 +1367,6 @@ object AdSdk {
         var moved = false
         val ctd = object : CountDownTimer(5000, 1000) {
             override fun onTick(p0: Long) {
-                Log.d("aishik", "onTick: " + p0)
             }
 
             override fun onFinish() {
@@ -1403,7 +1402,6 @@ object AdSdk {
                                     interstitialCallback.moveNext(p0)
                                     moved = true
                                 }
-                                Log.d("aishik", "onAdFailedToShowFullScreenContent: " + p0.message)
                             }
 
                             override fun onAdDismissedFullScreenContent() {
@@ -1413,14 +1411,12 @@ object AdSdk {
                                     interstitialCallback.moveNext()
                                     moved = true
                                 }
-                                Log.d("aishik", "onAdDismissedFullScreenContent: ")
                             }
                         }
                     }
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    Log.d("aishik", "onAdFailedToLoad: " + adError.message)
                     create?.dismiss()
                     if (!moved) {
                         ctd.cancel()
