@@ -1106,9 +1106,6 @@ object AdSdk {
                 }
                 loadAd(
                     adLoader,
-                    context,
-                    adUnit,
-                    "c",
                     contentURL,
                     neighbourContentURL
                 )/*The Extra Parameters are just for logging*/
@@ -1117,7 +1114,7 @@ object AdSdk {
             if (preloadAds) {
                 preloadAds(layoutInflater, context)
             }
-            loadAd(adLoader, context, adUnit, "d", contentURL, neighbourContentURL)
+            loadAd(adLoader, contentURL, neighbourContentURL)
         }
     }
 
@@ -1218,15 +1215,12 @@ object AdSdk {
                     .build()
             )
             .build()
-        loadAd(adLoader, context, adUnit, "e", contentURL, neighbourContentURL)
+        loadAd(adLoader, contentURL, neighbourContentURL)
     }
 
 
     private fun loadAd(
         adLoader: AdLoader?,
-        context: Context,
-        adUnit: String,
-        s: String,
         contentURL: String?,
         neighbourContentURL: List<String>?
     ) {
@@ -1260,7 +1254,6 @@ object AdSdk {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
-//                iconView1.visibility = View.GONE
             } else {
                 if (adType == ADType.DEFAULT_NATIVE_SMALL) {
                     val iconHeight = mediaMaxHeight
@@ -1371,7 +1364,7 @@ object AdSdk {
 
             override fun onFinish() {
                 if (!moved) {
-                    create?.dismiss()
+                    dismissAdLoaderLayout(activity)
                     interstitialCallback.moveNext()
                     moved = true
                 }
@@ -1383,17 +1376,19 @@ object AdSdk {
             LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
         )
         create = builder.create()
-        create?.show()
+        if (!activity.isFinishing) {
+            create?.show()
+        }
         RewardedInterstitialAd.load(activity, adId,
             AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
                     ctd.cancel()
                     if (!moved) {
-                        Log.d(TAG, "Ad was loaded.")
-                        create?.dismiss()
                         ad.show(activity) {
 
                         }
+                        Log.d(TAG, "Ad was loaded.")
+                        dismissAdLoaderLayout(activity)
                         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                             override fun onAdFailedToShowFullScreenContent(p0: AdError) {
                                 super.onAdFailedToShowFullScreenContent(p0)
@@ -1417,7 +1412,7 @@ object AdSdk {
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    create?.dismiss()
+                    dismissAdLoaderLayout(activity)
                     if (!moved) {
                         ctd.cancel()
                         interstitialCallback.moveNext(adError)
@@ -1425,6 +1420,12 @@ object AdSdk {
                     }
                 }
             })
+    }
+
+    private fun dismissAdLoaderLayout(activity: Activity) {
+        if (!activity.isFinishing) {
+            create?.dismiss()
+        }
     }
 
 
