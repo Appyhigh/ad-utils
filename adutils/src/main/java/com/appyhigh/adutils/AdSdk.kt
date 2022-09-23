@@ -52,6 +52,7 @@ object AdSdk {
         REFRESH_ON, REFRESH_OFF
     }
 
+    private var isInitialized: Boolean = false
     private var application: Application? = null
     private var TAG = "AdSdk"
     private var bannerAdRefreshTimer = 45000L
@@ -140,6 +141,7 @@ object AdSdk {
      * @param nativeRefreshTimer -> Pass 0L to stop refresh or pass your required refresh interval in milliseconds. (Default Value is 45 seconds)
      */
 
+    fun isInitialised(): Boolean = isInitialized
 
     fun initialize(
         app: Application,
@@ -169,6 +171,7 @@ object AdSdk {
             MobileAds.setRequestConfiguration(build)
         }
         MobileAds.initialize(app) {
+            isInitialized = true
             preloadNativeAdList = preloadingNativeAdList
             val context = application?.applicationContext
             if (context != null) {
@@ -331,7 +334,8 @@ object AdSdk {
                 appOpenAdCallback?.onInitSuccess(appOpenManager)
             }
         } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize?!")
+            Log.d(TAG, "Please Initialse AdSDK First")
+            println("Please Initialse AdSDK First")
         }
     }
 
@@ -686,12 +690,12 @@ object AdSdk {
 
     class ADType {
         companion object {
+            val DEFAULT_AD = "6"
             val SMALL = "3"
             val MEDIUM = "4"
             val BIGV1 = "1"
             val BIGV2 = "5"
             val BIGV3 = "2"
-            val DEFAULT_AD = "6"
         }
     }
 
