@@ -19,7 +19,7 @@ class SplashActivity : AppCompatActivity() {
             "ca-app-pub-3940256099942544/2247696110",
             PreloadNativeAds(
                 "ca-app-pub-3940256099942544/2247696110",
-                AdSdk.ADType.SMALLER,
+                AdSdk.ADType.MEDIUM,
                 mediaMaxHeight = 150,
                 loadingTextSize = 24
             )
