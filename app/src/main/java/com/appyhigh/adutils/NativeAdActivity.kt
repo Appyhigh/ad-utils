@@ -47,7 +47,7 @@ class NativeAdActivity : AppCompatActivity() {
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot1,
-            adType = AdSdk.ADType.SMALL,
+            adType = AdSdk.ADType.BIGV3,
             callback = object : NativeAdLoadCallback() {
                 override fun onAdLoaded() {
                 }
@@ -60,9 +60,9 @@ class NativeAdActivity : AppCompatActivity() {
                     super.onAdClicked()
                 }
             },
-            background = null, textColor1 = null, textColor2 = null,
+            background = null, textColor1 = null, textColor2 = null
         )
-        AdSdk.loadNativeAd(
+        /*AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot2,
@@ -138,7 +138,7 @@ class NativeAdActivity : AppCompatActivity() {
                 }
             },
             background = null, textColor1 = null, textColor2 = null,
-        )
+        )*/
 
 /*
         AdSdk.loadNativeAdFromService(
