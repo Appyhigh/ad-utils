@@ -334,8 +334,7 @@ object AdSdk {
                 appOpenAdCallback?.onInitSuccess(appOpenManager)
             }
         } else {
-            Log.d(TAG, "Please Initialse AdSDK First")
-            println("Please Initialse AdSDK First")
+            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize?!")
         }
     }
 
