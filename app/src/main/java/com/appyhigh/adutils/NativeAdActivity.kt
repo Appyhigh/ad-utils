@@ -47,7 +47,7 @@ class NativeAdActivity : AppCompatActivity() {
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot1,
-            adType = AdSdk.ADType.BIGV3,
+            adType = AdSdk.ADType.SMALL,
             callback = object : NativeAdLoadCallback() {
                 override fun onAdLoaded() {
                 }
@@ -62,7 +62,7 @@ class NativeAdActivity : AppCompatActivity() {
             },
             background = null, textColor1 = null, textColor2 = null
         )
-        /*AdSdk.loadNativeAd(
+        AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot2,
@@ -85,7 +85,7 @@ class NativeAdActivity : AppCompatActivity() {
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot3,
-            adType = AdSdk.ADType.BIGV3,
+            adType = AdSdk.ADType.BIGV1,
             callback = object : NativeAdLoadCallback() {
                 override fun onAdLoaded() {
                 }
@@ -104,7 +104,7 @@ class NativeAdActivity : AppCompatActivity() {
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot4,
-            adType = AdSdk.ADType.BIGV1,
+            adType = AdSdk.ADType.BIGV2,
             callback = object : NativeAdLoadCallback() {
                 override fun onAdLoaded() {
                 }
@@ -124,7 +124,7 @@ class NativeAdActivity : AppCompatActivity() {
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot5,
-            adType = AdSdk.ADType.BIGV2,
+            adType = AdSdk.ADType.BIGV3,
             callback = object : NativeAdLoadCallback() {
                 override fun onAdLoaded() {
                 }
@@ -138,21 +138,8 @@ class NativeAdActivity : AppCompatActivity() {
                 }
             },
             background = null, textColor1 = null, textColor2 = null,
-        )*/
-
-/*
-        AdSdk.loadNativeAdFromService(
-            layoutInflater,
-            applicationContext,
-            "ca-app-pub-3940256099942544/2247696110",
-            binding.llRoot1,
-            nativeAdLoadCallback = null,
-            AdSdk.ADType.DEFAULT_NATIVE_SMALL,
-            background = null, textColor1 = null, textColor2 = null,
-            loadingTextSize = 48,
-            mediaMaxHeight = 150
         )
-*/
+
         binding.removeAds.setOnClickListener {
             AdSdk.removeNativeAdFromService(binding.llRoot4)
         }
