@@ -63,7 +63,6 @@ class MainActivity : AppCompatActivity() {
         }
         loadInterstitialAd(this)
         loadRewardedAd(this)
-        DynamicsAds.listAllAds(applicationContext, "aishik")
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {

@@ -5,7 +5,7 @@ import com.google.android.gms.ads.nativead.NativeAdView
 
 data class PreloadNativeAds(
     val adId: String,
-    val adSize: String = AdSdk.ADType.DEFAULT_NATIVE_SMALL,
+    val adSize: String = AdSdk.ADType.DEFAULT_AD,
     var ad: NativeAdView? = null,
     val mediaMaxHeight: Int,
     val loadingTextSize: Int

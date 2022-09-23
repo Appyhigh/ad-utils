@@ -686,12 +686,12 @@ object AdSdk {
 
     class ADType {
         companion object {
-            val SMALLEST = "3"
-            val SMALLER = "4"
-            val SEMIMEDIUM = "2"
-            val MEDIUM = "1"
-            val BIG = "5"
-            val DEFAULT_NATIVE_SMALL = "6"
+            val SMALL = "3"
+            val MEDIUM = "4"
+            val BIGV1 = "1"
+            val BIGV2 = "5"
+            val BIGV3 = "2"
+            val DEFAULT_AD = "6"
         }
     }
 
@@ -700,7 +700,7 @@ object AdSdk {
         adUnit: String,
         viewGroup: ViewGroup,
         callback: NativeAdLoadCallback?,
-        adType: String,
+        adType: String = ADType.DEFAULT_AD,
         background: Any?,
         textColor1: Int?,
         textColor2: Int?,
@@ -709,13 +709,17 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null
     ) {
+        var mediaMaxHeight1 = mediaMaxHeight
         @LayoutRes val layoutId = when (adType) {
-            "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
-            "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
-            "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
-            "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
-            "5" -> R.layout.native_admob_ad_t5/*BIG*/
-            "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
+            "6" -> {
+                mediaMaxHeight1 = 200
+                R.layout.native_admob_ad_t6
+            }/*DEFAULT_AD*/
+            "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+            "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+            "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+            "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+            "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
             else -> R.layout.native_admob_ad_t1
         }
         loadNativeAd(
@@ -729,7 +733,7 @@ object AdSdk {
             background = background,
             textColor1,
             textColor2,
-            mediaMaxHeight,
+            mediaMaxHeight1,
             loadingTextSize, contentURL, neighbourContentURL
         )
 
@@ -890,16 +894,20 @@ object AdSdk {
                                 }
                             }
                             if (populator != null) {
-                                populator.invoke(nativeAd!!, adView)
+                                nativeAd?.let {
+                                    populator.invoke(it, adView)
+                                }
                             } else {
-                                populateUnifiedNativeAdView(
-                                    nativeAd!!,
-                                    adView,
-                                    adType,
-                                    textColor1,
-                                    textColor2,
-                                    mediaMaxHeight
-                                )
+                                nativeAd?.let {
+                                    populateUnifiedNativeAdView(
+                                        it,
+                                        adView,
+                                        adType,
+                                        textColor1,
+                                        textColor2,
+                                        mediaMaxHeight
+                                    )
+                                }
                             }
                             viewGroup.removeAllViews()
                             viewGroup.addView(adView)
@@ -1249,12 +1257,12 @@ object AdSdk {
         val iconView1 = adView.iconView
         if (iconView1 != null) {
             if (icon == null) {
-                if (adType == ADType.DEFAULT_NATIVE_SMALL) {
+                if (adType == ADType.DEFAULT_AD) {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(1, iconHeight)
                 }
             } else {
-                if (adType == ADType.DEFAULT_NATIVE_SMALL) {
+                if (adType == ADType.DEFAULT_AD) {
                     val iconHeight = mediaMaxHeight
                     iconView1.layoutParams = LinearLayout.LayoutParams(iconHeight, iconHeight)
                 }
@@ -1337,7 +1345,6 @@ object AdSdk {
         adView.callToActionView?.visibility = VISIBLE
         (adView.callToActionView as Button).text = nativeAd.callToAction
         adView.setNativeAd(nativeAd)
-
         if (nativeAd.adChoicesInfo != null && adView.adChoicesView != null) {
             try {
                 val choicesView = AdChoicesView(adView.adChoicesView!!.context)
