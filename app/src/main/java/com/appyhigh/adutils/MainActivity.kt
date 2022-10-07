@@ -8,6 +8,7 @@ import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.callbacks.InterstitialAdUtilLoadCallback
 import com.appyhigh.adutils.callbacks.RewardedAdUtilLoadCallback
+import com.appyhigh.adutils.callbacks.RewardedCallback
 import com.appyhigh.adutils.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
@@ -51,7 +52,27 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRewardedAd.setOnClickListener {
-            rewardedAd?.show(this) {}
+            AdSdk.showRewardedAdsAfterWait(
+                this,
+                3500,
+                "ca-app-pub-3940256099942544/5224354917",
+                object : RewardedCallback {
+                    override fun moveNext() {
+
+                    }
+
+                    override fun moveNext(error: LoadAdError) {
+                    }
+
+                    override fun moveNext(error: AdError) {
+                    }
+
+                    override fun adNotLoaded() {
+
+                    }
+                }
+            ) { }
+
         }
 
         binding.btnNativeAd.setOnClickListener {
@@ -63,6 +84,7 @@ class MainActivity : AppCompatActivity() {
         }
         loadInterstitialAd(this)
         loadRewardedAd(this)
+        AdSdk.preLoadRewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {

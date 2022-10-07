@@ -629,17 +629,17 @@ object AdSdk {
      */
 
     fun loadRewardedAd(
-        activity: Activity,
+        activity: Activity?,
         adUnit: String,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
     ) {
-        if (application != null) {
+        if (activity != null) {
             var mRewardedAd: RewardedAd?
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             RewardedAd.load(
-                application!!,
+                activity,
                 adUnit,
                 adRequest,
                 object : RewardedAdLoadCallback() {
@@ -672,6 +672,86 @@ object AdSdk {
                     }
                 },
             )
+        }
+    }
+
+    val preloadedRewardedAdList: HashMap<String, RewardedAd?> = hashMapOf()
+
+    fun preLoadRewardedAd(
+        activity: Activity?,
+        adUnit: String
+    ) {
+        preloadedRewardedAdList[adUnit] = null
+        if (activity != null) {
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                .build()
+            RewardedAd.load(
+                activity,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        preloadedRewardedAdList[adUnit] = null
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        preloadedRewardedAdList[adUnit] = rewardedAd
+                    }
+                },
+            )
+        }
+    }
+
+    fun showRewardedAdsAfterWait(
+        activity: Activity?,
+        timeToWait: Long = 5000,
+        adId: String,
+        callback: RewardedCallback,
+        onUserEarnedRewardListener: OnUserEarnedRewardListener
+    ) {
+        if (activity != null) {
+            if (preloadedRewardedAdList.containsKey(adId)) {
+                var rewardedAd: RewardedAd? = null
+                var ctd: CountDownTimer? = null
+                ctd = object : CountDownTimer(timeToWait, 1000) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        rewardedAd = preloadedRewardedAdList[adId]
+                        if (rewardedAd != null) {
+                            ctd?.cancel()
+                            ctd = null
+                            rewardedAd?.fullScreenContentCallback =
+                                object : FullScreenContentCallback() {
+                                    override fun onAdDismissedFullScreenContent() {
+                                        super.onAdDismissedFullScreenContent()
+                                        callback.moveNext()
+                                    }
+
+                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                        super.onAdFailedToShowFullScreenContent(p0)
+                                        callback.moveNext(p0)
+                                    }
+                                }
+                            rewardedAd?.show(activity, onUserEarnedRewardListener)
+                        }
+                    }
+
+                    override fun onFinish() {
+                        callback.adNotLoaded()
+                    }
+                }
+                ctd?.start()
+            } else {
+                preLoadRewardedAd(activity, adId)
+                showRewardedAdsAfterWait(
+                    activity,
+                    timeToWait,
+                    adId,
+                    callback,
+                    onUserEarnedRewardListener
+                )
+            }
+
         }
     }
 
