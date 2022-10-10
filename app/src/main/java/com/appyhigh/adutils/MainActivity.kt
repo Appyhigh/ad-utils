@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnRewardedAd.setOnClickListener {
             AdSdk.showRewardedAdsAfterWait(
                 this,
-                3500,
+                4000,
                 "ca-app-pub-3940256099942544/5224354917",
                 object : RewardedCallback {
                     override fun moveNext() {
@@ -62,9 +62,11 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun moveNext(error: LoadAdError) {
+
                     }
 
                     override fun moveNext(error: AdError) {
+
                     }
 
                     override fun adNotLoaded() {
@@ -84,7 +86,7 @@ class MainActivity : AppCompatActivity() {
         }
         loadInterstitialAd(this)
         loadRewardedAd(this)
-        AdSdk.preLoadRewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
+//        AdSdk.preLoadRewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {

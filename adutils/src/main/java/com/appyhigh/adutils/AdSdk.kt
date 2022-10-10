@@ -675,85 +675,6 @@ object AdSdk {
         }
     }
 
-    val preloadedRewardedAdList: HashMap<String, RewardedAd?> = hashMapOf()
-
-    fun preLoadRewardedAd(
-        activity: Activity?,
-        adUnit: String
-    ) {
-        preloadedRewardedAdList[adUnit] = null
-        if (activity != null) {
-            val adRequest = AdRequest.Builder()
-                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
-                .build()
-            RewardedAd.load(
-                activity,
-                adUnit,
-                adRequest,
-                object : RewardedAdLoadCallback() {
-                    override fun onAdFailedToLoad(adError: LoadAdError) {
-                        preloadedRewardedAdList[adUnit] = null
-                    }
-
-                    override fun onAdLoaded(rewardedAd: RewardedAd) {
-                        preloadedRewardedAdList[adUnit] = rewardedAd
-                    }
-                },
-            )
-        }
-    }
-
-    fun showRewardedAdsAfterWait(
-        activity: Activity?,
-        timeToWait: Long = 5000,
-        adId: String,
-        callback: RewardedCallback,
-        onUserEarnedRewardListener: OnUserEarnedRewardListener
-    ) {
-        if (activity != null) {
-            if (preloadedRewardedAdList.containsKey(adId)) {
-                var rewardedAd: RewardedAd? = null
-                var ctd: CountDownTimer? = null
-                ctd = object : CountDownTimer(timeToWait, 1000) {
-                    override fun onTick(millisUntilFinished: Long) {
-                        rewardedAd = preloadedRewardedAdList[adId]
-                        if (rewardedAd != null) {
-                            ctd?.cancel()
-                            ctd = null
-                            rewardedAd?.fullScreenContentCallback =
-                                object : FullScreenContentCallback() {
-                                    override fun onAdDismissedFullScreenContent() {
-                                        super.onAdDismissedFullScreenContent()
-                                        callback.moveNext()
-                                    }
-
-                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                                        super.onAdFailedToShowFullScreenContent(p0)
-                                        callback.moveNext(p0)
-                                    }
-                                }
-                            rewardedAd?.show(activity, onUserEarnedRewardListener)
-                        }
-                    }
-
-                    override fun onFinish() {
-                        callback.adNotLoaded()
-                    }
-                }
-                ctd?.start()
-            } else {
-                preLoadRewardedAd(activity, adId)
-                showRewardedAdsAfterWait(
-                    activity,
-                    timeToWait,
-                    adId,
-                    callback,
-                    onUserEarnedRewardListener
-                )
-            }
-
-        }
-    }
 
     /**
      * Call loadNativeAd with following params to load a Native Ad
@@ -1441,6 +1362,7 @@ object AdSdk {
     }
 
     var create: AlertDialog? = null
+    var builder: AlertDialog.Builder? = null
     fun showRewardedIntersAd(
         activity: Activity,
         adId: String,
@@ -1460,14 +1382,7 @@ object AdSdk {
             }
         }
         ctd.start()
-        val builder = AlertDialog.Builder(activity, R.style.DialogTheme)
-        builder.setView(
-            LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
-        )
-        create = builder.create()
-        if (!activity.isFinishing) {
-            create?.show()
-        }
+        showAdLoaderLayout(activity)
         RewardedInterstitialAd.load(activity, adId,
             AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
@@ -1509,6 +1424,116 @@ object AdSdk {
                     }
                 }
             })
+    }
+
+    private fun showAdLoaderLayout(activity: Activity) {
+        dismissAdLoaderLayout(activity)//Added This So that The alertDialog Variable is never used twice which will lead to no closing of the dialog
+        builder = AlertDialog.Builder(activity, R.style.DialogTheme)
+        builder?.setView(
+            LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
+        )
+        create = builder?.create()
+        if (!activity.isFinishing) {
+            create?.show()
+        }
+    }
+
+
+    val preloadedRewardedAdList: HashMap<String, RewardedAd?> = hashMapOf()
+
+    fun preLoadRewardedAd(
+        activity: Activity?,
+        adUnit: String
+    ) {
+        preloadedRewardedAdList[adUnit] = null
+        if (activity != null) {
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                .build()
+            RewardedAd.load(
+                activity,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        preloadedRewardedAdList[adUnit] = null
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        preloadedRewardedAdList[adUnit] = rewardedAd
+                    }
+                },
+            )
+        }
+    }
+
+    fun showRewardedAdsAfterWait(
+        activity: Activity?,
+        timeToWait: Long = 5000,
+        adId: String,
+        callback: RewardedCallback,
+        onUserEarnedRewardListener: OnUserEarnedRewardListener
+    ) {
+        if (activity != null) {
+            showAdLoaderLayout(activity)
+            if (preloadedRewardedAdList.containsKey(adId)) {
+                var rewardedAd: RewardedAd? = null
+                var ctd: CountDownTimer? = null
+                ctd = object : CountDownTimer(timeToWait, 1000) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        rewardedAd = preloadedRewardedAdList[adId]
+                        if (rewardedAd != null) {
+                            ctd?.cancel()
+                            ctd = null
+                            rewardedAd?.fullScreenContentCallback =
+                                object : FullScreenContentCallback() {
+                                    override fun onAdDismissedFullScreenContent() {
+                                        super.onAdDismissedFullScreenContent()
+                                        callback.moveNext()
+                                        dismissAdLoaderLayout(activity)
+                                    }
+
+                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                        super.onAdFailedToShowFullScreenContent(p0)
+                                        callback.moveNext(p0)
+                                        dismissAdLoaderLayout(activity)
+                                    }
+
+                                    override fun onAdShowedFullScreenContent() {
+                                        super.onAdShowedFullScreenContent()
+                                        preloadedRewardedAdList.remove(adId)
+                                        dismissAdLoaderLayout(activity)
+                                    }
+                                }
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                rewardedAd?.show(
+                                    activity,
+                                    onUserEarnedRewardListener
+                                )
+                            }, 1500)
+                        }
+                    }
+
+                    override fun onFinish() {
+                        preloadedRewardedAdList[adId] = null
+                        preloadedRewardedAdList.remove(adId)
+                        dismissAdLoaderLayout(activity)
+                        callback.adNotLoaded()
+                    }
+                }
+                ctd?.start()
+            } else {
+                preLoadRewardedAd(activity, adId)
+                showRewardedAdsAfterWait(
+                    activity,
+                    timeToWait,
+                    adId,
+                    callback,
+                    onUserEarnedRewardListener
+                )
+            }
+
+        }
     }
 
     private fun dismissAdLoaderLayout(activity: Activity) {
