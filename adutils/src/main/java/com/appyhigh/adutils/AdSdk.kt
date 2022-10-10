@@ -1440,12 +1440,13 @@ object AdSdk {
 
 
     val preloadedRewardedAdList: HashMap<String, RewardedAd?> = hashMapOf()
+    val AdRewardedList: HashMap<String, Boolean> = hashMapOf()
 
     fun preLoadRewardedAd(
         activity: Activity?,
         adUnit: String
     ) {
-        preloadedRewardedAdList[adUnit] = null
+        EmptyAdList(adUnit)
         if (activity != null) {
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
@@ -1456,23 +1457,28 @@ object AdSdk {
                 adRequest,
                 object : RewardedAdLoadCallback() {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        preloadedRewardedAdList[adUnit] = null
+                        EmptyAdList(adUnit)
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
                         preloadedRewardedAdList[adUnit] = rewardedAd
+                        AdRewardedList[adUnit] = false
                     }
                 },
             )
         }
     }
 
+    private fun EmptyAdList(adUnit: String) {
+        preloadedRewardedAdList[adUnit] = null
+        AdRewardedList[adUnit] = false
+    }
+
     fun showRewardedAdsAfterWait(
         activity: Activity?,
         timeToWait: Long = 5000,
         adId: String,
-        callback: RewardedCallback,
-        onUserEarnedRewardListener: OnUserEarnedRewardListener
+        callback: RewardedCallback
     ) {
         if (activity != null) {
             showAdLoaderLayout(activity)
@@ -1489,7 +1495,7 @@ object AdSdk {
                                 object : FullScreenContentCallback() {
                                     override fun onAdDismissedFullScreenContent() {
                                         super.onAdDismissedFullScreenContent()
-                                        callback.moveNext()
+                                        callback.moveNext(AdRewardedList[adId] ?: false)
                                         dismissAdLoaderLayout(activity)
                                     }
 
@@ -1502,21 +1508,22 @@ object AdSdk {
                                     override fun onAdShowedFullScreenContent() {
                                         super.onAdShowedFullScreenContent()
                                         preloadedRewardedAdList.remove(adId)
+                                        AdRewardedList[adId] = false
                                         dismissAdLoaderLayout(activity)
                                     }
                                 }
                             Handler(Looper.getMainLooper()).postDelayed({
                                 rewardedAd?.show(
-                                    activity,
-                                    onUserEarnedRewardListener
-                                )
+                                    activity
+                                ) { AdRewardedList[adId] = true }
                             }, 1500)
                         }
                     }
 
                     override fun onFinish() {
-                        preloadedRewardedAdList[adId] = null
+                        EmptyAdList(adId)
                         preloadedRewardedAdList.remove(adId)
+                        AdRewardedList[adId] = false
                         dismissAdLoaderLayout(activity)
                         callback.adNotLoaded()
                     }
@@ -1528,8 +1535,7 @@ object AdSdk {
                     activity,
                     timeToWait,
                     adId,
-                    callback,
-                    onUserEarnedRewardListener
+                    callback
                 )
             }
 
