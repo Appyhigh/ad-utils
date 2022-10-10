@@ -17,7 +17,10 @@ allprojects {
 dependencies {
     implementation 'com.github.Appyhigh:ad-utils:x.x.x'
 } 
+
 ``` 
+
+### To Use ADSDK Version 2.2.0 or above you need to make sure target SDK is 31
 
 Add these configurations to you AndroidManifest.xml
 
