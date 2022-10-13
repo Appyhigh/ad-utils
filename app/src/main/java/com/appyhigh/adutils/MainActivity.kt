@@ -3,6 +3,7 @@ package com.appyhigh.adutils
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
@@ -57,8 +58,8 @@ class MainActivity : AppCompatActivity() {
                 4000,
                 "ca-app-pub-3940256099942544/5224354917",
                 object : RewardedCallback {
-                    override fun moveNext() {
-
+                    override fun moveNext(rewarded: Boolean) {
+                        Log.d("ADSDK", "moveNext: " + rewarded)
                     }
 
                     override fun moveNext(error: LoadAdError) {
@@ -73,7 +74,7 @@ class MainActivity : AppCompatActivity() {
 
                     }
                 }
-            ) { }
+            )
 
         }
 
