@@ -24,61 +24,29 @@ class NativeAdActivity : AppCompatActivity() {
         binding = ActivityNativeAdBinding.inflate(layoutInflater)
         setContentView(binding.root)
         Log.d("RemoteCoonfig", RemoteConfigUtils.getNativeAdTypeId())
-        AdSdk.loadNativeAd(
+        /*AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot,
             adType = AdSdk.ADType.DEFAULT_AD,
-            callback = object : NativeAdLoadCallback() {
-                override fun onAdLoaded() {
-                }
-
-                override fun onAdFailed(adError: LoadAdError) {
-                    super.onAdFailed(adError)
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                }
-            },
+            callback = nativeAdLoadCallback("1"),
             background = null, textColor1 = null, textColor2 = null,
-        )
+        )*/
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot1,
-            adType = AdSdk.ADType.SMALL,
-            callback = object : NativeAdLoadCallback() {
-                override fun onAdLoaded() {
-                }
-
-                override fun onAdFailed(adError: LoadAdError) {
-                    super.onAdFailed(adError)
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                }
-            },
-            background = null, textColor1 = null, textColor2 = null
+            adType = AdSdk.ADType.BIGV3,
+            callback = nativeAdLoadCallback("2"),
+            background = null, textColor1 = null, textColor2 = null,
+            showLoadingMessage = true
         )
-        AdSdk.loadNativeAd(
+        /*AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot2,
             adType = AdSdk.ADType.MEDIUM,
-            callback = object : NativeAdLoadCallback() {
-                override fun onAdLoaded() {
-                }
-
-                override fun onAdFailed(adError: LoadAdError) {
-                    super.onAdFailed(adError)
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                }
-            },
+            callback = nativeAdLoadCallback("3"),
             background = null, textColor1 = null, textColor2 = null,
         )
         AdSdk.loadNativeAd(
@@ -86,18 +54,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot3,
             adType = AdSdk.ADType.BIGV1,
-            callback = object : NativeAdLoadCallback() {
-                override fun onAdLoaded() {
-                }
-
-                override fun onAdFailed(adError: LoadAdError) {
-                    super.onAdFailed(adError)
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                }
-            },
+            callback = nativeAdLoadCallback("4"),
             background = null, textColor1 = null, textColor2 = null,
         )
         AdSdk.loadNativeAd(
@@ -105,18 +62,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot4,
             adType = AdSdk.ADType.BIGV2,
-            callback = object : NativeAdLoadCallback() {
-                override fun onAdLoaded() {
-                }
-
-                override fun onAdFailed(adError: LoadAdError) {
-                    super.onAdFailed(adError)
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                }
-            },
+            callback = nativeAdLoadCallback("5"),
             background = null, textColor1 = null, textColor2 = null,
         )
 
@@ -125,20 +71,9 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = "ca-app-pub-3940256099942544/2247696110",
             viewGroup = binding.llRoot5,
             adType = AdSdk.ADType.BIGV3,
-            callback = object : NativeAdLoadCallback() {
-                override fun onAdLoaded() {
-                }
-
-                override fun onAdFailed(adError: LoadAdError) {
-                    super.onAdFailed(adError)
-                }
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                }
-            },
+            callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
-        )
+        )*/
 
         binding.removeAds.setOnClickListener {
             AdSdk.removeNativeAdFromService(binding.llRoot4)
@@ -148,6 +83,22 @@ class NativeAdActivity : AppCompatActivity() {
         }
         binding.enableRefresh.setOnClickListener {
             AdSdk.enableNativeRefresh()
+        }
+    }
+
+    private fun nativeAdLoadCallback(s: String) = object : NativeAdLoadCallback() {
+        override fun onAdLoaded() {
+            Log.d("AdSdk", "onAdLoaded: $s ")
+        }
+
+        override fun onAdFailed(adError: LoadAdError) {
+            super.onAdFailed(adError)
+            Log.d("AdSdk", "onAdFailed: $s ${adError.message}")
+        }
+
+        override fun onAdClicked() {
+            super.onAdClicked()
+            Log.d("AdSdk", "onAdClicked: $s")
         }
     }
 
