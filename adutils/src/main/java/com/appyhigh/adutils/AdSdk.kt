@@ -234,6 +234,7 @@ object AdSdk {
                                             mediaMaxHeight = value.mediaMaxHeight,
                                             loadingTextSize = value.textSize,
                                             contentURL = value.contentURL,
+                                            showLoadingMessage = value.showLoadingMessage,
                                             neighbourContentURL = value.neighbourContentURL
                                         )
                                     }
@@ -711,7 +712,8 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int = 48,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
         @LayoutRes val layoutId = when (adType) {
@@ -738,7 +740,10 @@ object AdSdk {
             textColor1,
             textColor2,
             mediaMaxHeight1,
-            loadingTextSize, contentURL, neighbourContentURL
+            loadingTextSize,
+            contentURL,
+            neighbourContentURL,
+            showLoadingMessage = showLoadingMessage
         )
 
     }
@@ -768,7 +773,8 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
@@ -784,7 +790,9 @@ object AdSdk {
             textColor2,
             mediaMaxHeight,
             loadingTextSize,
-            contentURL, neighbourContentURL
+            contentURL,
+            neighbourContentURL,
+            showLoadingMessage
         )
     }
 
@@ -812,7 +820,8 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean
     ) {
         viewGroup.visibility = VISIBLE
         if (application != null) {
@@ -835,7 +844,9 @@ object AdSdk {
                 }
             }
             viewGroup.removeAllViews()
-            viewGroup.addView(inflate)
+            if (showLoadingMessage) {
+                viewGroup.addView(inflate)
+            }
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
@@ -852,7 +863,9 @@ object AdSdk {
                     textColor2,
                     mediaMaxHeight,
                     loadingTextSize,
-                    contentURL = contentURL, neighbourContentURL = neighbourContentURL
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage
                 )
             }
             lifecycle.addObserver(object : LifecycleObserver {

@@ -23,7 +23,8 @@ data class NativeAdItem(
     var textSize: Int = 48,
     var buttonColor: Int = Color.parseColor("#000000"),
     var contentURL: String? = null,
-    var neighbourContentURL: List<String>? = null
+    var neighbourContentURL: List<String>? = null,
+    var showLoadingMessage: Boolean
 
 
 )
