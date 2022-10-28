@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -21,7 +22,10 @@ class BannerAdActivity : AppCompatActivity() {
             binding.typeOne,
             bannerAdUnit,
             AdSize.BANNER,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            background = Color.DKGRAY,
+            textColor1 = Color.WHITE,
+            loadingTextSize = 32
         )
 
         AdSdk.loadBannerAd(
@@ -30,7 +34,10 @@ class BannerAdActivity : AppCompatActivity() {
             binding.typeTwo,
             bannerAdUnit,
             AdSize.LARGE_BANNER,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            background = Color.DKGRAY,
+            textColor1 = Color.WHITE,
+            loadingTextSize = 32
         )
 
         AdSdk.loadBannerAd(
@@ -39,7 +46,10 @@ class BannerAdActivity : AppCompatActivity() {
             binding.typeThree,
             bannerAdUnit,
             AdSize.MEDIUM_RECTANGLE,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            background = Color.DKGRAY,
+            textColor1 = Color.WHITE,
+            loadingTextSize = 32
         )
     }
 

@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.*
 import androidx.annotation.LayoutRes
+import androidx.cardview.widget.CardView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -414,7 +415,11 @@ object AdSdk {
         adSize: AdSize,
         bannerAdLoadCallback: BannerAdLoadCallback?,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        loadingTextSize: Int = 24,
+        textColor1: Int = Color.BLACK,
+        background: Int = Color.LTGRAY,
+        showLoadingMessage: Boolean = true
     ) {
         loadBannerAd(
             activity,
@@ -425,7 +430,11 @@ object AdSdk {
             adSize,
             bannerAdLoadCallback,
             contentURL,
-            neighbourContentURL
+            neighbourContentURL,
+            loadingTextSize,
+            textColor1,
+            background,
+            showLoadingMessage
         )
     }
 
@@ -438,11 +447,25 @@ object AdSdk {
         adSize: AdSize,
         bannerAdLoadCallback: BannerAdLoadCallback?,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        loadingTextSize: Int = 24,
+        textColor1: Int = Color.BLACK,
+        background: Int = Color.LTGRAY,
+        showLoadingMessage: Boolean = true
     ) {
         if (application != null) {
             if (adUnit.isBlank()) return
-            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+            val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
+            val cardView = inflate.findViewById<CardView>(R.id.cardView)
+            val tv = inflate.findViewById<TextView>(R.id.tv)
+            tv.textSize = loadingTextSize.toFloat()
+            tv.setTextColor(textColor1)
+            cardView.setCardBackgroundColor(background)
+            viewGroup.removeAllViews()
+            if (showLoadingMessage) {
+                viewGroup.addView(inflate)
+            }
+            if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.bannerAdLifeCycleHashMap[id] =
                     BannerAdItem(
                         activity,
@@ -471,12 +494,12 @@ object AdSdk {
             mAdView.setAdSize(adSize)
             mAdView.adUnitId = adUnit
             mAdView.loadAd(adRequest)
-            viewGroup.removeAllViews()
-            viewGroup.addView(mAdView)
 
             mAdView.adListener = object : AdListener() {
                 // Code to be executed when an ad finishes loading.
                 override fun onAdLoaded() {
+                    viewGroup.removeAllViews()
+                    viewGroup.addView(mAdView)
                     bannerAdLoadCallback?.onAdLoaded()
                 }
 
@@ -826,7 +849,7 @@ object AdSdk {
         viewGroup.visibility = VISIBLE
         if (application != null) {
             val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
-            val id1 = inflate.findViewById<View>(R.id.rl)
+            val id1 = inflate.findViewById<View>(R.id.cardView)
             val tv = inflate.findViewById<TextView>(R.id.tv)
             tv.textSize = loadingTextSize.toFloat()
             if (textColor1 != null) {
@@ -1015,7 +1038,7 @@ object AdSdk {
         }
         viewGroup.visibility = VISIBLE
         val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-        val id1 = inflate.findViewById<View>(R.id.rl)
+        val id1 = inflate.findViewById<View>(R.id.cardView)
         val tv = inflate.findViewById<TextView>(R.id.tv)
         tv.textSize = loadingTextSize.toFloat()
         if (textColor1 != null) {
@@ -1168,7 +1191,7 @@ object AdSdk {
         }
         val preloadNativeAds = preloadNativeAdList?.get(adUnit)
         val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-        val id1 = inflate.findViewById<View>(R.id.rl)
+        val id1 = inflate.findViewById<View>(R.id.cardView)
         val tv = inflate.findViewById<TextView>(R.id.tv)
         tv.textSize = loadingTextSize.toFloat()
         if (textColor1 != null) {
