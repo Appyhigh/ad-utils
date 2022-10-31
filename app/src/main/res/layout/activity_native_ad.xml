@@ -396,6 +396,12 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <Button
+            android:id="@+id/refresh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Button" />
+
+        <Button
             android:id="@+id/disable_refresh"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

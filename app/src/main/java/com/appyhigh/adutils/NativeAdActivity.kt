@@ -32,18 +32,24 @@ class NativeAdActivity : AppCompatActivity() {
             callback = nativeAdLoadCallback("1"),
             background = null, textColor1 = null, textColor2 = null,
         )*/
-        AdSdk.loadNativeAd(
-            lifecycle = lifecycle,
-            adUnit = "ca-app-pub-3940256099942544/2247696110",
+        val adUnit =
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "admob_banner")
+        val adUnit2 =
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "admob_native")
+        /*AdSdk.loadNativeAdFromService(
+            context = applicationContext,
+            layoutInflater = layoutInflater,
+            adUnit = adUnit,
             viewGroup = binding.llRoot1,
             adType = AdSdk.ADType.BIGV3,
-            callback = nativeAdLoadCallback("2"),
             background = null, textColor1 = null, textColor2 = null,
-            showLoadingMessage = true
-        )
-        /*AdSdk.loadNativeAd(
+            nativeAdLoadCallback = null,
+            preloadAds = true,
+            autoRefresh = true
+        )*/
+        AdSdk.loadNativeAd(
             lifecycle = lifecycle,
-            adUnit = "ca-app-pub-3940256099942544/2247696110",
+            adUnit = adUnit2,
             viewGroup = binding.llRoot2,
             adType = AdSdk.ADType.MEDIUM,
             callback = nativeAdLoadCallback("3"),
@@ -51,7 +57,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
-            adUnit = "ca-app-pub-3940256099942544/2247696110",
+            adUnit = adUnit,
             viewGroup = binding.llRoot3,
             adType = AdSdk.ADType.BIGV1,
             callback = nativeAdLoadCallback("4"),
@@ -59,7 +65,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
-            adUnit = "ca-app-pub-3940256099942544/2247696110",
+            adUnit = adUnit2,
             viewGroup = binding.llRoot4,
             adType = AdSdk.ADType.BIGV2,
             callback = nativeAdLoadCallback("5"),
@@ -68,12 +74,26 @@ class NativeAdActivity : AppCompatActivity() {
 
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
-            adUnit = "ca-app-pub-3940256099942544/2247696110",
+            adUnit = adUnit,
             viewGroup = binding.llRoot5,
             adType = AdSdk.ADType.BIGV3,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
-        )*/
+        )
+
+        binding.refresh.setOnClickListener {
+            AdSdk.loadNativeAdFromService(
+                context = applicationContext,
+                layoutInflater = layoutInflater,
+                adUnit = adUnit,
+                viewGroup = binding.llRoot1,
+                adType = AdSdk.ADType.BIGV3,
+                background = null, textColor1 = null, textColor2 = null,
+                nativeAdLoadCallback = null,
+                preloadAds = true,
+                autoRefresh = true
+            )
+        }
 
         binding.removeAds.setOnClickListener {
             AdSdk.removeNativeAdFromService(binding.llRoot4)

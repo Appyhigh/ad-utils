@@ -43,6 +43,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation 'com.google.android.gms:play-services-ads:21.0.0'
     implementation project(path: ':adutils')
+//    implementation 'com.github.Appyhigh:ad-utils:2.2.2-alpha01'
     implementation 'androidx.lifecycle:lifecycle-process:2.3.1'
     implementation 'com.google.android.gms:play-services-maps:18.0.1'
     testImplementation 'junit:junit:4.+'

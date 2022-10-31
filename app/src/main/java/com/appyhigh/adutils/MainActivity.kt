@@ -8,6 +8,7 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.callbacks.InterstitialAdUtilLoadCallback
+import com.appyhigh.adutils.callbacks.InterstitialCallback
 import com.appyhigh.adutils.callbacks.RewardedAdUtilLoadCallback
 import com.appyhigh.adutils.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdError
@@ -52,36 +53,50 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRewardedAd.setOnClickListener {
-            //Load Rewarded Ads and Use it whatever way....
-            AdSdk.loadRewardedAd(
-                this,
-                "ca-app-pub-3940256099942544/5224354917",
-                object : RewardedAdUtilLoadCallback {
-                    override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
-                        Log.d("AdSdk", "onAdFailedToLoad: " + adError?.message)
-                    }
-
-                    override fun onAdLoaded(ad: RewardedAd?) {
-                        Log.d("AdSdk", "onAdLoaded: ")
-                        ad?.show(this@MainActivity) {
-
-                        }
-                    }
-
-                    override fun onAdDismissedFullScreenContent() {
-                        Log.d("AdSdk", "onAdDismissedFullScreenContent: ")
-                    }
-
-                    override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
-                        Log.d("AdSdk", "onAdFailedToShowFullScreenContent: " + adError?.message)
-                    }
-
-                    override fun onAdShowedFullScreenContent() {
-                        Log.d("AdSdk", "onAdShowedFullScreenContent: ")
-                    }
+            AdSdk.showRewardedIntersAd(this, "STOP", object : InterstitialCallback {
+                override fun moveNext() {
+                    Log.d("AdSDK", "moveNext: ")
                 }
-            )
-/*
+
+                override fun moveNext(error: LoadAdError) {
+                    Log.d("AdSDK", "moveNext: 1 " + error.message)
+                }
+
+                override fun moveNext(error: AdError) {
+                    Log.d("AdSDK", "moveNext: 2 " + error.message)
+                }
+            })
+
+            /*   //Load Rewarded Ads and Use it whatever way....
+               AdSdk.loadRewardedAd(
+                   this,
+                   "ca-app-pub-3940256099942544/5224354917",
+                   object : RewardedAdUtilLoadCallback {
+                       override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
+                           Log.d("AdSdk", "onAdFailedToLoad: " + adError?.message)
+                       }
+
+                       override fun onAdLoaded(ad: RewardedAd?) {
+                           Log.d("AdSdk", "onAdLoaded: ")
+                           ad?.show(this@MainActivity) {
+
+                           }
+                       }
+
+                       override fun onAdDismissedFullScreenContent() {
+                           Log.d("AdSdk", "onAdDismissedFullScreenContent: ")
+                       }
+
+                       override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
+                           Log.d("AdSdk", "onAdFailedToShowFullScreenContent: " + adError?.message)
+                       }
+
+                       override fun onAdShowedFullScreenContent() {
+                           Log.d("AdSdk", "onAdShowedFullScreenContent: ")
+                       }
+                   }
+               )
+   *//*
             AdSdk.showRewardedAdsAfterWait(
                 this,
                 4000,
@@ -104,8 +119,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             )
+*//*
 */
-
         }
 
         binding.btnNativeAd.setOnClickListener {
@@ -115,6 +130,7 @@ class MainActivity : AppCompatActivity() {
         if (BuildConfig.DEBUG) {
 //            binding.btnNativeAd.performClick()
         }
+        DynamicsAds.listAllAds(this, "AdSdk")
         loadInterstitialAd(this)
         loadRewardedAd(this)
 //        AdSdk.preLoadRewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
