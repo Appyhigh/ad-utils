@@ -895,6 +895,19 @@ object AdSdk {
                                         adView.setBackgroundColor(background)
                                     }
                                 }
+                                if (layoutId == R.layout.native_admob_ad_t6){
+                                    when (background) {
+                                        is String -> {
+                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                        }
+                                        is Int -> {
+                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                        }
+                                    }
+                                }
                             }
                             if (populator != null) {
                                 nativeAd?.let {
