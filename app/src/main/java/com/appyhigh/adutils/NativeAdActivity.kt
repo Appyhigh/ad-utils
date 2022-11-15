@@ -33,9 +33,11 @@ class NativeAdActivity : AppCompatActivity() {
             background = null, textColor1 = null, textColor2 = null,
         )*/
         val adUnit =
-            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "admob_banner")
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "util_native_default")
         val adUnit2 =
-            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "admob_native")
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "util_native_small")
+        val adUnit3 =
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "util_native_medium")
         /*AdSdk.loadNativeAdFromService(
             context = applicationContext,
             layoutInflater = layoutInflater,
@@ -50,24 +52,27 @@ class NativeAdActivity : AppCompatActivity() {
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = adUnit2,
+            adName = "util_native_default",
             viewGroup = binding.llRoot2,
-            adType = AdSdk.ADType.MEDIUM,
+            adType = DynamicsAds.getDynamicAdsSize("util_native_default"),
             callback = nativeAdLoadCallback("3"),
             background = null, textColor1 = null, textColor2 = null,
         )
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = adUnit,
+            adName = "util_native_small",
             viewGroup = binding.llRoot3,
-            adType = AdSdk.ADType.BIGV1,
+            adType = DynamicsAds.getDynamicAdsSize("util_native_small"),
             callback = nativeAdLoadCallback("4"),
             background = null, textColor1 = null, textColor2 = null,
         )
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = adUnit2,
+            adName = "util_native_medium",
             viewGroup = binding.llRoot4,
-            adType = AdSdk.ADType.BIGV2,
+            adType = DynamicsAds.getDynamicAdsSize("util_native_medium"),
             callback = nativeAdLoadCallback("5"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -75,19 +80,41 @@ class NativeAdActivity : AppCompatActivity() {
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = adUnit,
+            adName = "util_native_bigv1",
             viewGroup = binding.llRoot5,
-            adType = AdSdk.ADType.BIGV3,
+            adType = DynamicsAds.getDynamicAdsSize("util_native_bigv1"),
+            callback = nativeAdLoadCallback("6"),
+            background = null, textColor1 = null, textColor2 = null,
+        )
+
+        AdSdk.loadNativeAd(
+            lifecycle = lifecycle,
+            adUnit = adUnit,
+            adName = "util_native_bigv2",
+            viewGroup = binding.llRoot6,
+            adType = DynamicsAds.getDynamicAdsSize("util_native_bigv2"),
+            callback = nativeAdLoadCallback("6"),
+            background = null, textColor1 = null, textColor2 = null,
+        )
+
+        AdSdk.loadNativeAd(
+            lifecycle = lifecycle,
+            adUnit = adUnit,
+            adName = "util_native_bigv3",
+            viewGroup = binding.llRoot7,
+            adType = DynamicsAds.getDynamicAdsSize("util_native_bigv3"),
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
         )
 
         binding.refresh.setOnClickListener {
-            AdSdk.loadNativeAdFromService(
+            AdSdk.loadNativeAdFromSrvs(
                 context = applicationContext,
                 layoutInflater = layoutInflater,
                 adUnit = adUnit,
+                adName = "util_native_default",
                 viewGroup = binding.llRoot1,
-                adType = AdSdk.ADType.BIGV3,
+                adType = DynamicsAds.getDynamicAdsSize("util_native_default"),
                 background = null, textColor1 = null, textColor2 = null,
                 nativeAdLoadCallback = null,
                 preloadAds = true,
@@ -111,9 +138,9 @@ class NativeAdActivity : AppCompatActivity() {
             Log.d("AdSdk", "onAdLoaded: $s ")
         }
 
-        override fun onAdFailed(adError: LoadAdError) {
+        override fun onAdFailed(adError: LoadAdError?) {
             super.onAdFailed(adError)
-            Log.d("AdSdk", "onAdFailed: $s ${adError.message}")
+//            Log.d("AdSdk", "onAdFailed: $s ${adError.message}")
         }
 
         override fun onAdClicked() {

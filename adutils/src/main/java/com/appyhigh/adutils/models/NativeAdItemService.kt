@@ -13,6 +13,7 @@ data class NativeAdItemService(
     val context: Context,
     val id: Long,
     val adUnit: String,
+    val adName: String,
     val viewGroup: ViewGroup,
     val nativeAdLoadCallback: NativeAdLoadCallback?,
     val populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,

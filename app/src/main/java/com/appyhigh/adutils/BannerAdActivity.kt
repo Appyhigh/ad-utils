@@ -20,7 +20,8 @@ class BannerAdActivity : AppCompatActivity() {
             this,
             lifecycle,
             binding.typeOne,
-            bannerAdUnit,
+            "ca-app-pub-3940256099942544/6300978111",
+            "util_banner",
             AdSize.BANNER,
             bannerAdLoadCallback,
             background = Color.DKGRAY,
@@ -32,7 +33,8 @@ class BannerAdActivity : AppCompatActivity() {
             this,
             lifecycle,
             binding.typeTwo,
-            bannerAdUnit,
+            "ca-app-pub-3940256099942544/6300978111",
+            "util_banner1",
             AdSize.LARGE_BANNER,
             bannerAdLoadCallback,
             background = Color.DKGRAY,
@@ -44,7 +46,8 @@ class BannerAdActivity : AppCompatActivity() {
             this,
             lifecycle,
             binding.typeThree,
-            bannerAdUnit,
+            "ca-app-pub-3940256099942544/6300978111",
+            "util_banner2",
             AdSize.MEDIUM_RECTANGLE,
             bannerAdLoadCallback,
             background = Color.DKGRAY,
@@ -58,7 +61,7 @@ class BannerAdActivity : AppCompatActivity() {
             Log.d("BannerAdLoadCallback", "onAdLoaded")
         }
 
-        override fun onAdFailedToLoad(adError: LoadAdError) {
+        override fun onAdFailedToLoad(adError: LoadAdError?) {
             Log.d("BannerAdLoadCallback", "onAdFailedToLoad")
         }
 

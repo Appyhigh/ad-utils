@@ -1,48 +1,57 @@
 package com.appyhigh.adutils
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.util.Log
+import com.appyhigh.adutils.api.AdmobInstance
+import com.appyhigh.adutils.models.apimodels.AdMod
+import com.appyhigh.adutils.models.apimodels.AppRequest
+import com.appyhigh.adutils.models.apimodels.AppsData
+import com.appyhigh.adutils.models.apimodels.SingleAppResponse
+import com.appyhigh.adutils.utils.AdMobUtil
 import com.appyhigh.adutils.utils.RSAKeyGenerator
-import okhttp3.MediaType
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import org.json.JSONArray
+import com.example.speakinenglish.container.AppPrefs
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 
 class DynamicsAds {
     companion object {
         val updateJSON = JSONObject()
-        lateinit var ADMODELPREF: SharedPreferences
-        var adMobNew: JSONObject = JSONObject()
+        var adMobNew: List<AdMod> = ArrayList()
 
         fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
             return try {
-                val string = adMobNew.getString(adName)
-                string
+                if (!AdMobUtil.fetchPrimaryById(adName).isEmpty()) {
+                    val string = AdMobUtil.fetchPrimaryById(adName)?.get(0)
+                    string
+                }
+                else{
+                    fallBackAdId
+                }
             } catch (e: Exception) {
                 fallBackAdId
             }
         }
 
+        fun getDynamicAdsSize(adName: String): String {
+            return AdMobUtil.fetchAdSize(adName)
+        }
 
         //TODO : we can pass the for logging the ad names
         fun listAllAds(applicationContext: Context, logTag: String) {
             //TODO : List all the ads along with key names for checking
-            ADMODELPREF = applicationContext.getSharedPreferences("ADMODEL", 0)
-            val string = ADMODELPREF.getString("ads", null)
+            val string = AppPrefs.ads.get()
             if (string != null) {
-                adMobNew = JSONObject(string)
+                adMobNew = AdMobUtil.fetchAllAds()!!
             }
-            if (adMobNew.length() > 0) {
-                adMobNew.keys().iterator().forEach {
-                    Log.d(logTag, "listAllAds: " + it + " -> " + adMobNew.get(it))
+            if (adMobNew.size > 0) {
+                adMobNew.forEach {
+                    Log.d(logTag, "listAllAds: " + it + " -> " + it.primary_ids)
                 }
             } else {
                 Log.d(logTag, "No Dynamic Ads Found")
@@ -52,90 +61,49 @@ class DynamicsAds {
         fun getDynamicAds(
             applicationContext: Context,
             appPackageName: String,
-            dynamicAdsFetchThresholdInSecs: Int
+            dynamicAdsFetchThresholdInSecs: Int,
+            fetchingCallback: AdSdk.FetchingCallback?
         ) {
             try {
-                val lastTime = ADMODELPREF.getLong("lastFetched", 0)
+                val lastTime = AppPrefs.lastFetched.get()
                 val l = (System.currentTimeMillis() - lastTime) / 1000
                 if (l > dynamicAdsFetchThresholdInSecs) {
                     if (isNetworkConnected(applicationContext)) {
-                        val fetchToken = fetchToken(applicationContext)
-                        val client = OkHttpClient().newBuilder()
-                            .readTimeout(2, TimeUnit.MINUTES)
-                            .connectTimeout(2, TimeUnit.MINUTES)
-                            .writeTimeout(2, TimeUnit.MINUTES)
-                            .build()
-                        val mediaType: MediaType? = ("text/plain").toMediaTypeOrNull()
-                        if (mediaType != null) {
-                            val mediaType = "text/plain".toMediaTypeOrNull()
-                            val request: Request = Request.Builder()
-                                .url("https://admob-automation.apyhi.com/api/app")
-                                .method("GET", null)
-                                .addHeader(
-                                    "Authorization",
-                                    "Bearer $fetchToken"
-                                ).addHeader("Content-Type", "application/json")
-                                .build()
-                            Thread {
-                                try {
-                                    val response: Response = client.newCall(request).execute()
-                                    if (response.isSuccessful) {
-                                        try {
-                                            val string = response.body?.string()
-                                            if (string != null) {
-                                                val jsonObject = JSONObject(string.toString())
-                                                val apps = JSONArray(jsonObject.getString("apps"))
-                                                var added = 0
-                                                for (i in 0 until apps.length()) {
-                                                    val appList = JSONObject(apps[i].toString())
-                                                    //TODO : Get the List of Apps and only select teh app for the selected packageid
-                                                    if (appList.getString("packageId")
-                                                            .equals(appPackageName)
-                                                    ) {
-                                                        added++
-                                                        val adMob =
-                                                            appList.get("adMob").toString()
-                                                        updateJSON.put(
-                                                            "package_name",
-                                                            applicationContext.packageName
-                                                        )
-                                                        updateJSON.put(
-                                                            "critical_version",
-                                                            appList.getString("criticalVersion")
-                                                        )
-                                                        updateJSON.put(
-                                                            "current_version",
-                                                            appList.getString("latestVersion")
-                                                        )
-                                                        adMobNew = JSONObject(adMob)
-                                                        //TODO : Store it in Shared Pref for future uses
-                                                        ADMODELPREF.edit()
-                                                            .putString("ads", adMobNew.toString())
-                                                            .apply()
-                                                        ADMODELPREF.edit().putLong(
-                                                            "lastFetched",
-                                                            System.currentTimeMillis()
-                                                        ).apply()
-                                                        break
-                                                    }
-                                                }
-                                                if (added == 0) {
-                                                    //TODO : Clear Shared Pref if no ads are found
-                                                    ADMODELPREF.edit().remove("ads").apply()
-                                                }
-                                            }
-                                        } catch (e: Exception) {
-
-                                        }
+                        val appRequest = AppRequest(appPackageName,"ANDROID")
+                        AdmobInstance.ApiBuilder(applicationContext)
+                            .getAppInfo(appRequest)
+                            ?.doOnSuccess { response ->
+                                if (response.status.equals("success")){
+                                    val item = response.app
+                                    var added = 0
+                                    if (item?.packageId.equals(appPackageName)){
+                                        added++
+                                        val alldata = Gson().toJson(item,object : TypeToken<AppsData>() {}.type)
+                                        AppPrefs.appdata.set(alldata)
+                                        AppPrefs.showAppAds.set(item?.showAppAds)
+                                        val string = Gson().toJson(item?.adMob,object : TypeToken<List<AdMod?>?>() {}.type)
+                                        AppPrefs.ads.set(string)
+                                        AppPrefs.commit(applicationContext)
+                                        Log.d("Dynamicads", "getDynamicAds: "+AdMobUtil.fetchAdById("util_interstitial"))
+                                        fetchingCallback?.OnSuccess()
                                     }
-                                } catch (e: Exception) {
-
+                                    if (added == 0) {
+                                        AppPrefs.ads.set("")
+                                        AppPrefs.commit(applicationContext)
+                                    }
                                 }
-                            }.start()
-                        }
+                            }
+                            ?.subscribeOn(Schedulers.io())
+                            ?.observeOn(AndroidSchedulers.mainThread())
+                            ?.subscribe({
+                            }, {
+                                fetchingCallback?.OnFailure()
+                                Log.d("DunamicAds", "getDynamicAds: "+it.localizedMessage)
+                            })
                     }
                 }
             } catch (e: Exception) {
+
 
             }
         }
@@ -166,7 +134,7 @@ class DynamicsAds {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            return token
+            return "Bearer "+token
         }
     }
 

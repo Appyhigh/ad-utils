@@ -11,6 +11,7 @@ data class NativeAdItem(
     val id: Long,
     val lifecycle: Lifecycle,
     val adUnit: String,
+    val adName:String,
     val viewGroup: ViewGroup,
     val nativeAdLoadCallback: NativeAdLoadCallback?,
     val layoutId: Int,

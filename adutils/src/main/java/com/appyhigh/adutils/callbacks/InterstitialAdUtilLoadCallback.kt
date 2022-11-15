@@ -5,7 +5,7 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 
 interface InterstitialAdUtilLoadCallback {
-    fun onAdFailedToLoad(adError: LoadAdError, ad: InterstitialAd?)
+    fun onAdFailedToLoad(adError: LoadAdError?, ad: InterstitialAd?)
     fun onAdLoaded(ad: InterstitialAd?)
     fun onAdImpression() {
 

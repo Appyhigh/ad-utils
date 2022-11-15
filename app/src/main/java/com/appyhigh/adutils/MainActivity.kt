@@ -13,7 +13,9 @@ import com.appyhigh.adutils.callbacks.RewardedAdUtilLoadCallback
 import com.appyhigh.adutils.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.OnUserEarnedRewardListener
 import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewarded.RewardedAd
 
 class MainActivity : AppCompatActivity() {
@@ -53,7 +55,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRewardedAd.setOnClickListener {
-            AdSdk.showRewardedIntersAd(this, "STOP", object : InterstitialCallback {
+//            rewardedAd?.show(this,object :OnUserEarnedRewardListener{
+//                override fun onUserEarnedReward(p0: RewardItem) {
+//                    TODO("Not yet implemented")
+//                }
+//            })
+            AdSdk.showRewardedIntersAd(this, "ca-app-pub-3940256099942544/5354046379","util_rewarded", object : InterstitialCallback {
                 override fun moveNext() {
                     Log.d("AdSDK", "moveNext: ")
                 }
@@ -137,7 +144,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {
-        override fun onAdFailedToLoad(adError: LoadAdError, ad: InterstitialAd?) {
+        override fun onAdFailedToLoad(adError: LoadAdError?, ad: InterstitialAd?) {
             interstitialAd = ad
         }
 
@@ -167,7 +174,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mRewardedAdUtilCallback = object : RewardedAdUtilLoadCallback {
-        override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
+        override fun onAdFailedToLoad(adError: LoadAdError?, ad: RewardedAd?) {
             rewardedAd = ad
         }
 
@@ -193,6 +200,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadInterstitialAd(activity: Activity) {
         AdSdk.loadInterstitialAd(
+            "util_interstitial",
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback
         )
@@ -202,6 +210,7 @@ class MainActivity : AppCompatActivity() {
         AdSdk.loadRewardedAd(
             activity,
             "ca-app-pub-3940256099942544/5224354917",
+            "util_rewarded",
             mRewardedAdUtilCallback
         )
     }
