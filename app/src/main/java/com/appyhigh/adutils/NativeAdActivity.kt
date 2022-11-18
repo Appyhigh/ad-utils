@@ -54,7 +54,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = adUnit2,
             adName = "util_native_default",
             viewGroup = binding.llRoot2,
-            adType = DynamicsAds.getDynamicAdsSize("util_native_default"),
+            adType = AdSdk.ADType.DEFAULT_AD,
             callback = nativeAdLoadCallback("3"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -63,7 +63,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = adUnit,
             adName = "util_native_small",
             viewGroup = binding.llRoot3,
-            adType = DynamicsAds.getDynamicAdsSize("util_native_small"),
+            adType = AdSdk.ADType.SMALL,
             callback = nativeAdLoadCallback("4"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -72,7 +72,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = adUnit2,
             adName = "util_native_medium",
             viewGroup = binding.llRoot4,
-            adType = DynamicsAds.getDynamicAdsSize("util_native_medium"),
+            adType = AdSdk.ADType.MEDIUM,
             callback = nativeAdLoadCallback("5"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -82,7 +82,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = adUnit,
             adName = "util_native_bigv1",
             viewGroup = binding.llRoot5,
-            adType = DynamicsAds.getDynamicAdsSize("util_native_bigv1"),
+            adType = AdSdk.ADType.BIGV1,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -92,7 +92,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = adUnit,
             adName = "util_native_bigv2",
             viewGroup = binding.llRoot6,
-            adType = DynamicsAds.getDynamicAdsSize("util_native_bigv2"),
+            adType = AdSdk.ADType.BIGV2,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -102,7 +102,7 @@ class NativeAdActivity : AppCompatActivity() {
             adUnit = adUnit,
             adName = "util_native_bigv3",
             viewGroup = binding.llRoot7,
-            adType = DynamicsAds.getDynamicAdsSize("util_native_bigv3"),
+            adType = AdSdk.ADType.BIGV3,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
         )
@@ -110,11 +110,12 @@ class NativeAdActivity : AppCompatActivity() {
         binding.refresh.setOnClickListener {
             AdSdk.loadNativeAdFromSrvs(
                 context = applicationContext,
+                lifecycle = lifecycle,
                 layoutInflater = layoutInflater,
                 adUnit = adUnit,
-                adName = "util_native_default",
+                adName = "util_native_preload",
                 viewGroup = binding.llRoot1,
-                adType = DynamicsAds.getDynamicAdsSize("util_native_default"),
+                adType = AdSdk.ADType.MEDIUM,
                 background = null, textColor1 = null, textColor2 = null,
                 nativeAdLoadCallback = null,
                 preloadAds = true,

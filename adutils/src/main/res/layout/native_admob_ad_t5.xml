@@ -135,7 +135,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <androidx.appcompat.widget.AppCompatButton
+                <TextView
                     android:id="@+id/call_to_action"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"

@@ -3,6 +3,7 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/AndroidProject/ad-utils/adutils/src/main/res/drawable/ads_bg_lib.xml" value="0.1745" />
         <entry key="..\:/AndroidProject/ad-utils/adutils/src/main/res/layout/ad_loading_layout.xml" value="0.36666666666666664" />
         <entry key="..\:/AndroidProject/ad-utils/adutils/src/main/res/layout/native_admob_ad_t1.xml" value="0.25" />
         <entry key="..\:/AndroidProject/ad-utils/adutils/src/main/res/layout/native_admob_ad_t2.xml" value="0.36666666666666664" />

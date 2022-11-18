@@ -8,6 +8,6 @@ data class PreloadNativeAds(
     val adName:String,
     val adSize: String = AdSdk.ADType.DEFAULT_AD,
     var ad: NativeAdView? = null,
-    val mediaMaxHeight: Int,
-    val loadingTextSize: Int
+    val mediaMaxHeight: Int = 300,
+    val loadingTextSize: Int = 24
 )

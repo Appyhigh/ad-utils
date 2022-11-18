@@ -6,6 +6,7 @@ import com.appyhigh.adutils.models.apimodels.AdMod
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.models.apimodels.SingleAppResponse
 import com.example.speakinenglish.container.AppPrefs
+import com.google.android.gms.ads.AdSize
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
@@ -67,10 +68,10 @@ object AdMobUtil {
                 return adsObj.filter { it -> it.ad_name.equals(key) }.get(0).color_hex
             }
             catch (e:Exception){
-                return "#000000"
+                return "#00B0B9"
             }
         }
-        return "#000000"
+        return "#00B0B9"
     }
 
     fun fetchRefreshTime(key: String):Long{
@@ -82,10 +83,10 @@ object AdMobUtil {
                 return adsObj.filter {it.ad_name.equals(key) }.get(0).refresh_rate_ms.toLong()
             }
             catch (e:Exception){
-                return 5000.toLong()
+                return 45000.toLong()
             }
         }
-        return 5000.toLong()
+        return 45000.toLong()
     }
 
     fun fetchAdById(key:String):AdMod?{
@@ -135,11 +136,14 @@ object AdMobUtil {
 
     fun fetchAdStatusFromAdId(id:String):Boolean{
         var ads = AppPrefs.ads.get()
-        if (!ads.equals("")){
+        if (!ads.equals("") || ads!=null){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
                 var adsObj:List<AdMod> = Gson().fromJson(ads,type)
                 return adsObj.filter { ad -> ad.ad_name.equals(id)}.get(0).isActive
+            }
+            catch (e:IndexOutOfBoundsException){
+                return false
             }
             catch (e:Exception){
                 return true
@@ -163,16 +167,31 @@ object AdMobUtil {
         return 0
     }
 
-    fun fetchAdSize(name:String):String{
+    fun fetchAdSize(name:String,adSize:String):String{
         val ad = fetchAdById(name)
-        return when{
-            ad?.size.equals("small") -> AdSdk.ADType.SMALL
-            ad?.size.equals("medium") -> AdSdk.ADType.MEDIUM
-            ad?.size.equals("bigv1") -> AdSdk.ADType.BIGV1
-            ad?.size.equals("bigv2") -> AdSdk.ADType.BIGV2
-            ad?.size.equals("bigv3") -> AdSdk.ADType.BIGV3
-            else -> AdSdk.ADType.DEFAULT_AD
-        }
+        if (ad != null)
+            return when{
+                ad?.size.trim().equals("small",ignoreCase = true) -> AdSdk.ADType.SMALL
+                ad?.size.trim().equals("medium",ignoreCase = true) -> AdSdk.ADType.MEDIUM
+                ad?.size.trim().equals("bigv1",ignoreCase = true) -> AdSdk.ADType.BIGV1
+                ad?.size.trim().equals("bigv2",ignoreCase = true) -> AdSdk.ADType.BIGV2
+                ad?.size.trim().equals("bigv3",ignoreCase = true) -> AdSdk.ADType.BIGV3
+                else -> AdSdk.ADType.DEFAULT_AD
+            }
+        else
+            return adSize
+    }
 
+    fun fetchBannerAdSize(name:String,adSize:AdSize):AdSize{
+        val ad = fetchAdById(name)
+        if (ad != null)
+            return when{
+                ad?.size.trim().equals("banner",ignoreCase = true) -> AdSize.BANNER
+                ad?.size.trim().equals("large_banner",ignoreCase = true) -> AdSize.MEDIUM_RECTANGLE
+                ad?.size.trim().equals("medium_rectangle",ignoreCase = true) -> AdSize.LARGE_BANNER
+                else -> adSize
+            }
+        else
+            return adSize
     }
 }

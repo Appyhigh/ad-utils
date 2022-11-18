@@ -54,13 +54,13 @@ class MainActivity : AppCompatActivity() {
             interstitialAd?.show(this)
         }
 
-        binding.btnRewardedAd.setOnClickListener {
+        binding.btnRewardedInterstitialAd.setOnClickListener {
 //            rewardedAd?.show(this,object :OnUserEarnedRewardListener{
 //                override fun onUserEarnedReward(p0: RewardItem) {
 //                    TODO("Not yet implemented")
 //                }
 //            })
-            AdSdk.showRewardedIntersAd(this, "ca-app-pub-3940256099942544/5354046379","util_rewarded", object : InterstitialCallback {
+            AdSdk.showRewardedIntersAd(this, "ca-app-pub-3940256099942544/5354046379","util_reward_interstitial", object : InterstitialCallback {
                 override fun moveNext() {
                     Log.d("AdSDK", "moveNext: ")
                 }
@@ -128,6 +128,14 @@ class MainActivity : AppCompatActivity() {
             )
 *//*
 */
+        }
+
+        binding.btnRewardedAd.setOnClickListener {
+            rewardedAd?.show(this,object :OnUserEarnedRewardListener{
+                override fun onUserEarnedReward(p0: RewardItem) {
+                    TODO("Not yet implemented")
+                }
+            })
         }
 
         binding.btnNativeAd.setOnClickListener {

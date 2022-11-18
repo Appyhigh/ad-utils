@@ -38,10 +38,6 @@ class DynamicsAds {
             }
         }
 
-        fun getDynamicAdsSize(adName: String): String {
-            return AdMobUtil.fetchAdSize(adName)
-        }
-
         //TODO : we can pass the for logging the ad names
         fun listAllAds(applicationContext: Context, logTag: String) {
             //TODO : List all the ads along with key names for checking
@@ -68,7 +64,7 @@ class DynamicsAds {
                 val lastTime = AppPrefs.lastFetched.get()
                 val l = (System.currentTimeMillis() - lastTime) / 1000
                 if (l > dynamicAdsFetchThresholdInSecs) {
-                    if (isNetworkConnected(applicationContext)) {
+//                    if (isNetworkConnected(applicationContext)) {
                         val appRequest = AppRequest(appPackageName,"ANDROID")
                         AdmobInstance.ApiBuilder(applicationContext)
                             .getAppInfo(appRequest)
@@ -100,7 +96,7 @@ class DynamicsAds {
                                 fetchingCallback?.OnFailure()
                                 Log.d("DunamicAds", "getDynamicAds: "+it.localizedMessage)
                             })
-                    }
+//                    }
                 }
             } catch (e: Exception) {
 

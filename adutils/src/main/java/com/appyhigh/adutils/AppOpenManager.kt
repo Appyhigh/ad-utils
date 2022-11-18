@@ -4,12 +4,15 @@ import android.app.Activity
 import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.appyhigh.adutils.callbacks.AppOpenAdCallback
+import com.appyhigh.adutils.interfaces.AppOpenInternalCallback
+import com.appyhigh.adutils.utils.AdMobUtil
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -17,6 +20,7 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.appopen.AppOpenAd.AppOpenAdLoadCallback
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 /**
@@ -25,6 +29,7 @@ import java.util.*
 class AppOpenManager(
     private val myApplication: Application,
     private val appOpenAdUnit: String,
+    private val adName: String,
     private val isShownOnlyOnce: Boolean,
     private var backgroundThreshold: Int = 30000,
     private var appOpenAdCallback: AppOpenAdCallback?
@@ -64,32 +69,171 @@ class AppOpenManager(
         if (isAdAvailable) {
             return
         }
-        loadCallback = object : AppOpenAdLoadCallback() {
-            override fun onAdLoaded(ad: AppOpenAd) {
-                super.onAdLoaded(ad)
-                appOpenAd = ad
-                loadTime = Date().time
-                appOpenAdCallback?.onAdLoaded(ad)
-            }
-
-            override fun onAdFailedToLoad(loadAdError: LoadAdError) {
-                super.onAdFailedToLoad(loadAdError)
-                Log.d(LOG_TAG, loadAdError.message)
-                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
-            }
-
+        var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+        if (fetchedTimer == 0){
+            fetchedTimer = 3500
         }
-        val request = adRequest
-        AppOpenAd.load(
-            myApplication, appOpenAdUnit, request,
-            AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback!!
-        )
+        var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+        var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+        Log.d("appopen","OnStart:" + System.currentTimeMillis()/1000)
+        if (primaryIds.size>0){
+            loadOpenAd(
+                fetchedTimer,
+                primaryIds,
+                object :AppOpenInternalCallback{
+                    override fun onSuccess(ad: AppOpenAd) {
+                        Log.d("appopen", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                        appOpenAdCallback?.onAdLoaded(ad)
+                    }
+
+                    override fun onFailed() {
+                        if (secondaryIds.size>0){
+                            loadOpenAd(
+                                fetchedTimer,
+                                secondaryIds,
+                                object :AppOpenInternalCallback{
+                                    override fun onSuccess(ad: AppOpenAd) {
+                                        Log.d("appopen", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                        appOpenAdCallback?.onAdLoaded(ad)
+                                    }
+
+                                    override fun onFailed() {
+                                        loadOpenAd(
+                                            fetchedTimer,
+                                            listOf(appOpenAdUnit),
+                                            object :AppOpenInternalCallback{
+                                                override fun onSuccess(ad: AppOpenAd) {
+                                                    Log.d("appopen", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    appOpenAdCallback?.onAdLoaded(ad)
+                                                }
+
+                                                override fun onFailed() {
+                                                    appOpenAdCallback?.onAdFailedToLoad()
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        else{
+                            loadOpenAd(
+                                fetchedTimer,
+                                listOf(appOpenAdUnit),
+                                object :AppOpenInternalCallback{
+                                    override fun onSuccess(ad: AppOpenAd) {
+                                        Log.d("appopen", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                        appOpenAdCallback?.onAdLoaded(ad)
+                                    }
+
+                                    override fun onFailed() {
+                                        appOpenAdCallback?.onAdFailedToLoad()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            )
+        }
+        else if (secondaryIds.size>0){
+            loadOpenAd(
+                fetchedTimer,
+                secondaryIds,
+                object :AppOpenInternalCallback{
+                    override fun onSuccess(ad: AppOpenAd) {
+                        Log.d("appopen", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                        appOpenAdCallback?.onAdLoaded(ad)
+                    }
+
+                    override fun onFailed() {
+                        loadOpenAd(
+                            fetchedTimer,
+                            listOf(appOpenAdUnit),
+                            object :AppOpenInternalCallback{
+                                override fun onSuccess(ad: AppOpenAd) {
+                                    Log.d("appopen", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    appOpenAdCallback?.onAdLoaded(ad)
+                                }
+
+                                override fun onFailed() {
+                                    appOpenAdCallback?.onAdFailedToLoad()
+                                }
+                            }
+                        )
+                    }
+                }
+            )
+        }
+        else{
+            loadOpenAd(
+                fetchedTimer,
+                listOf(appOpenAdUnit),
+                object :AppOpenInternalCallback{
+                    override fun onSuccess(ad: AppOpenAd) {
+                        Log.d("appopen", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                        appOpenAdCallback?.onAdLoaded(ad)
+                    }
+
+                    override fun onFailed() {
+                        appOpenAdCallback?.onAdFailedToLoad()
+                    }
+                }
+            )
+        }
+
+
+
     }
 
-    fun showIfAdLoaded(activity: Activity): Boolean {
-        currentActivity = activity
-        return showAdIfAvailable()
+    private fun loadOpenAd(fetchedTimer:Int, primartIds:List<String>,appOpenInternalCallback: AppOpenInternalCallback){
+        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (appOpenAd != null) {
+                    appOpenInternalCallback.onSuccess(appOpenAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (appOpenAd!= null) {
+                    appOpenInternalCallback.onSuccess(appOpenAd!!)
+                }
+                else
+                    appOpenInternalCallback.onFailed()
+            }
+        }.start()
+        for (appOpenAdUnit in primartIds){
+            loadCallback = object : AppOpenAdLoadCallback() {
+                override fun onAdLoaded(ad: AppOpenAd) {
+                    super.onAdLoaded(ad)
+                    if (appOpenAd == null){
+                        appOpenAd = ad
+                        loadTime = Date().time
+                    }
+                }
+
+                override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                    super.onAdFailedToLoad(loadAdError)
+                    Log.d(LOG_TAG, loadAdError.message)
+                }
+
+            }
+            val request = adRequest
+            AppOpenAd.load(
+                myApplication, appOpenAdUnit, request,
+                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback!!
+            )
+        }
+
     }
+
+//    fun showIfAdLoaded(activity: Activity): Boolean {
+//        currentActivity = activity
+//        return showAdIfAvailable()
+//    }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
     override fun onActivityStarted(activity: Activity) {
@@ -190,66 +334,66 @@ class AppOpenManager(
         private var reason: String? = null
         var initialized: Boolean = false
 
-        interface appOpenCallBack {
-            fun adDismissed()
-            fun adError(message: String?)
-            fun adShown()
-            fun adClicked()
-            fun adLoaded(appOpenAd: AppOpenAd)
-            fun adNotLoadedYet(reason: String?)
-        }
+//        interface appOpenCallBack {
+//            fun adDismissed()
+//            fun adError(message: String?)
+//            fun adShown()
+//            fun adClicked()
+//            fun adLoaded(appOpenAd: AppOpenAd)
+//            fun adNotLoadedYet(reason: String?)
+//        }
 
-        fun loadSplashAppOpenAd(application: Application, adUnit: String) {
-            val build = AdRequest.Builder().build()
-            val adLoadCallBack = object : AppOpenAdLoadCallback() {
-                override fun onAdLoaded(p0: AppOpenAd) {
-                    super.onAdLoaded(p0)
-                    splashAppOpenAd = p0
-                    reason = null
-                }
+//        fun loadSplashAppOpenAd(application: Application, adUnit: String) {
+//            val build = AdRequest.Builder().build()
+//            val adLoadCallBack = object : AppOpenAdLoadCallback() {
+//                override fun onAdLoaded(p0: AppOpenAd) {
+//                    super.onAdLoaded(p0)
+//                    splashAppOpenAd = p0
+//                    reason = null
+//                }
+//
+//                override fun onAdFailedToLoad(p0: LoadAdError) {
+//                    super.onAdFailedToLoad(p0)
+//                    splashAppOpenAd = null
+//                    reason = p0.message
+//                }
+//            }
+//            val applicationContext = application.applicationContext
+//            AppOpenAd.load(
+//                applicationContext, adUnit, build,
+//                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, adLoadCallBack
+//            )
+//        }
 
-                override fun onAdFailedToLoad(p0: LoadAdError) {
-                    super.onAdFailedToLoad(p0)
-                    splashAppOpenAd = null
-                    reason = p0.message
-                }
-            }
-            val applicationContext = application.applicationContext
-            AppOpenAd.load(
-                applicationContext, adUnit, build,
-                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, adLoadCallBack
-            )
-        }
-
-        fun showAdIfAvailable(activity: Activity, appOpenCallBack: appOpenCallBack) {
-            if (splashAppOpenAd != null) {
-                splashAppOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
-                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                        super.onAdFailedToShowFullScreenContent(p0)
-                        appOpenCallBack.adError(p0.message)
-                    }
-
-                    override fun onAdShowedFullScreenContent() {
-                        super.onAdShowedFullScreenContent()
-                        appOpenCallBack.adShown()
-                    }
-
-                    override fun onAdDismissedFullScreenContent() {
-                        super.onAdDismissedFullScreenContent()
-                        appOpenCallBack.adDismissed()
-                    }
-
-                    override fun onAdClicked() {
-                        super.onAdClicked()
-                        appOpenCallBack.adClicked()
-                    }
-                }
-                appOpenCallBack.adLoaded(splashAppOpenAd!!)
-//                splashAppOpenAd!!.show(activity)
-            } else {
-                appOpenCallBack.adNotLoadedYet(reason)
-            }
-        }
+//        fun showAdIfAvailable(activity: Activity, appOpenCallBack: appOpenCallBack) {
+//            if (splashAppOpenAd != null) {
+//                splashAppOpenAd!!.fullScreenContentCallback = object : FullScreenContentCallback() {
+//                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+//                        super.onAdFailedToShowFullScreenContent(p0)
+//                        appOpenCallBack.adError(p0.message)
+//                    }
+//
+//                    override fun onAdShowedFullScreenContent() {
+//                        super.onAdShowedFullScreenContent()
+//                        appOpenCallBack.adShown()
+//                    }
+//
+//                    override fun onAdDismissedFullScreenContent() {
+//                        super.onAdDismissedFullScreenContent()
+//                        appOpenCallBack.adDismissed()
+//                    }
+//
+//                    override fun onAdClicked() {
+//                        super.onAdClicked()
+//                        appOpenCallBack.adClicked()
+//                    }
+//                }
+//                appOpenCallBack.adLoaded(splashAppOpenAd!!)
+////                splashAppOpenAd!!.show(activity)
+//            } else {
+//                appOpenCallBack.adNotLoadedYet(reason)
+//            }
+//        }
     }
 
     /**

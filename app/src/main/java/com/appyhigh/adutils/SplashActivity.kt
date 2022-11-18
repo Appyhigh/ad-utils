@@ -17,19 +17,17 @@ class SplashActivity : AppCompatActivity() {
         setContentView(binding.root)
         val preloadingNativeAdList = hashMapOf<String, PreloadNativeAds>()
         preloadingNativeAdList.put(
-            "ca-app-pub-3940256099942544/2247696110",
+            "util_native_preload",
             PreloadNativeAds(
                 "ca-app-pub-3940256099942544/2247696110",
-                "util_native_default",
-                AdSdk.ADType.MEDIUM,
-                mediaMaxHeight = 150,
-                loadingTextSize = 24
+                "util_native_preload",
+                AdSdk.ADType.MEDIUM
             )
         )
         AdSdk.initialize(
             applicationContext as MyApp,
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
-            preloadingNativeAdList = preloadingNativeAdList,
+            preloadingNativeAdList = null,
             fetchingCallback = object : AdSdk.FetchingCallback {
                 override fun OnSuccess() {
                     runOnUiThread {
@@ -58,11 +56,40 @@ class SplashActivity : AppCompatActivity() {
                                 }
                             }, 3500
                         )
+                        AdSdk.preloadAds(
+                            applicationContext as MyApp,
+                            preloadingNativeAdList
+                        )
                     }
                 }
 
                 override fun OnFailure() {
                     Toast.makeText(applicationContext,"Restart App",Toast.LENGTH_SHORT).show()
+                    if (BuildConfig.DEBUG) {
+                        AdSdk.attachAppOpenAdManager(
+                            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                            "util_appopen",
+                            null,
+                            1000,
+                            false
+                        )
+                    } else {
+                        AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                            "util_appopen",
+                            null)
+                    }
+
+                    AdSdk.loadSplashAd(
+                        "ca-app-pub-3940256099942544/1033173712",
+                        "util_interstitial",
+                        this@SplashActivity,
+                        object : SplashInterstitialCallback {
+                            override fun moveNext() {
+                                finish()
+                                startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                            }
+                        }, 3500
+                    )
                 }
             }
         )

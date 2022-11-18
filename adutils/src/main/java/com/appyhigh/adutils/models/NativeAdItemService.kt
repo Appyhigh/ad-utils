@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.lifecycle.Lifecycle
 import com.appyhigh.adutils.callbacks.NativeAdLoadCallback
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
@@ -11,6 +12,7 @@ import com.google.android.gms.ads.nativead.NativeAdView
 data class NativeAdItemService(
     val layoutInflater: LayoutInflater,
     val context: Context,
+    val lifecycle: Lifecycle,
     val id: Long,
     val adUnit: String,
     val adName: String,
