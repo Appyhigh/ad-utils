@@ -1302,60 +1302,55 @@ object AdSdk {
         primaryIds: List<String>,
         interstitialInternalCallback: InterstitialInternalCallback) {
 
-        if (activity != null){
-            var splash: InterstitialAd? = null
-            object : CountDownTimer(fetchedTimer.toLong(), 1000) {
-                override fun onTick(millisUntilFinished: Long) {
-                    if (splash != null) {
-                        splash?.show(activity)
-                        interstitialInternalCallback.onSuccess(splash!!)
-                        this.cancel()
-                    }
-                }
-
-                override fun onFinish() {
-                    if (splash != null) {
-                        splash?.show(activity)
-                        interstitialInternalCallback.onSuccess(splash!!)
-                    }
-                    else
-                        interstitialInternalCallback.onFailed()
-                }
-            }.start()
-            for (adUnit in primaryIds){
-                val adRequest = AdRequest.Builder()
-                    .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
-                    .build()
-                application?.let {
-                    InterstitialAd.load(
-                        it,
-                        adUnit,
-                        adRequest, object : InterstitialAdLoadCallback() {
-                            override fun onAdLoaded(splashInters: InterstitialAd) {
-                                super.onAdLoaded(splashInters)
-                                splash = splashInters
-                                splash?.fullScreenContentCallback =
-                                    object : FullScreenContentCallback() {
-                                        override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                                            callback.moveNext()
-                                        }
-
-                                        override fun onAdDismissedFullScreenContent() {
-                                            callback.moveNext()
-                                        }
-                                    }
-                            }
-
-                            override fun onAdFailedToLoad(p0: LoadAdError) {
-                                super.onAdFailedToLoad(p0)
-                            }
-                        }
-                    )
+        var splash: InterstitialAd? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (splash != null) {
+                    splash?.show(activity)
+                    interstitialInternalCallback.onSuccess(splash!!)
+                    this.cancel()
                 }
             }
-        }
-        else{
-            callback.moveNext()
+
+            override fun onFinish() {
+                if (splash != null) {
+                    splash?.show(activity)
+                    interstitialInternalCallback.onSuccess(splash!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed()
+            }
+        }.start()
+        for (adUnit in primaryIds){
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                .build()
+            InterstitialAd.load(
+                activity,
+                adUnit,
+                adRequest, object : InterstitialAdLoadCallback() {
+                    override fun onAdLoaded(splashInters: InterstitialAd) {
+                        super.onAdLoaded(splashInters)
+                        if (splash == null){
+                            splash = splashInters
+                            splash?.fullScreenContentCallback =
+                                object : FullScreenContentCallback() {
+                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                        callback.moveNext()
+                                    }
+
+                                    override fun onAdDismissedFullScreenContent() {
+                                        callback.moveNext()
+                                    }
+                                }
+                        }
+                    }
+
+                    override fun onAdFailedToLoad(p0: LoadAdError) {
+                        super.onAdFailedToLoad(p0)
+                    }
+                }
+            )
         }
 
     }

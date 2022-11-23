@@ -54,7 +54,7 @@ class SplashActivity : AppCompatActivity() {
                                     finish()
                                     startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                                 }
-                            }, 3500
+                            }, 5000
                         )
                         AdSdk.preloadAds(
                             applicationContext as MyApp,
@@ -88,7 +88,7 @@ class SplashActivity : AppCompatActivity() {
                                 finish()
                                 startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                             }
-                        }, 3500
+                        }, 5000
                     )
                 }
             }
