@@ -323,8 +323,7 @@ object AdSdk {
     }
 
     interface FetchingCallback{
-        fun OnSuccess()
-        fun OnFailure()
+        fun OnComplete()
     }
 
     lateinit var listener: VersionCallback

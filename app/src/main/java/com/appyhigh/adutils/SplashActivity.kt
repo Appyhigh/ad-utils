@@ -29,7 +29,7 @@ class SplashActivity : AppCompatActivity() {
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
             preloadingNativeAdList = null,
             fetchingCallback = object : AdSdk.FetchingCallback {
-                override fun OnSuccess() {
+                override fun OnComplete() {
                     runOnUiThread {
                         if (BuildConfig.DEBUG) {
                             AdSdk.attachAppOpenAdManager(
@@ -61,35 +61,6 @@ class SplashActivity : AppCompatActivity() {
                             preloadingNativeAdList
                         )
                     }
-                }
-
-                override fun OnFailure() {
-                    Toast.makeText(applicationContext,"Restart App",Toast.LENGTH_SHORT).show()
-                    if (BuildConfig.DEBUG) {
-                        AdSdk.attachAppOpenAdManager(
-                            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-                            "util_appopen",
-                            null,
-                            1000,
-                            false
-                        )
-                    } else {
-                        AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-                            "util_appopen",
-                            null)
-                    }
-
-                    AdSdk.loadSplashAd(
-                        "ca-app-pub-3940256099942544/1033173712",
-                        "util_interstitial",
-                        this@SplashActivity,
-                        object : SplashInterstitialCallback {
-                            override fun moveNext() {
-                                finish()
-                                startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-                            }
-                        }, 5000
-                    )
                 }
             }
         )
