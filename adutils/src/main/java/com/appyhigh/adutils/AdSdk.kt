@@ -37,9 +37,13 @@ import com.example.speakinenglish.container.AppPrefs
 import com.google.ads.consent.*
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.*
+import com.google.android.gms.ads.admanager.AdManagerAdRequest
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAd
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAdLoadCallback
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.ads.mediation.customevent.CustomEventAdapter
 import com.google.android.gms.ads.nativead.*
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
@@ -237,7 +241,8 @@ object AdSdk {
                                     item.value.adUnit,
                                     item.value.adName,
                                     item.value.adSize,
-                                    item.value.bannerAdLoadCallback
+                                    item.value.bannerAdLoadCallback,
+                                    isAdmanager = item.value.isAdManager
                                 )
                                 Log.d(TAG, "refreshBanner: "+"${item.value.adName}:"+ System.currentTimeMillis()/1000)
                             }
@@ -404,7 +409,8 @@ object AdSdk {
         adName: String,
          appOpenAdCallback: AppOpenAdCallback? = null,
         backgroundThreshold: Int = 30000,
-        isShownOnlyOnce: Boolean = false
+        isShownOnlyOnce: Boolean = false,
+        isAdmanager:Boolean? = false
     ) {
         if (application != null && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (!AppOpenManager.initialized) {
@@ -502,7 +508,8 @@ object AdSdk {
         loadingTextSize: Int = 24,
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
-        showLoadingMessage: Boolean = true
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = true
     ) {
         if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             loadBannerAd(
@@ -519,7 +526,8 @@ object AdSdk {
                 loadingTextSize,
                 textColor1,
                 background,
-                showLoadingMessage
+                showLoadingMessage,
+                isAdmanager
             )
         }
 
@@ -539,7 +547,8 @@ object AdSdk {
         loadingTextSize: Int = 24,
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
-        showLoadingMessage: Boolean = true
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = true
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
@@ -565,81 +574,139 @@ object AdSdk {
                     viewGroup.addView(inflate)
                 }
 
-                Log.d("banner",adName+"OnStart:" + System.currentTimeMillis()/1000)
-                if (primaryIds.size > 0){
-                    loadBannerAd(
-                        activity,
-                        id,
-                        lifecycle,
-                        viewGroup,
-                        adName,
-                        adSize,
-                        bannerAdLoadCallback,
-                        contentURL,
-                        neighbourContentURL,
-                        primaryIds,
-                        fetchedTimer,
-                        object :BannerInternalCallback{
-                            override fun onSuccess() {
-                                refreshBanner(adName)
-                                Log.d("banner", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                if (!isAdmanager){
+                    Log.d("banner",adName+"OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadBannerAd(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            primaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
-                                bannerAdLoadCallback?.onAdLoaded()
-                            }
-
-                            override fun onFailed(msg: String?) {
-                                if(secondaryIds.size > 0){
-                                    loadBannerAd(
-                                        activity,
-                                        id,
-                                        lifecycle,
-                                        viewGroup,
-                                        adName,
-                                        adSize,
-                                        bannerAdLoadCallback,
-                                        contentURL,
-                                        neighbourContentURL,
-                                        secondaryIds,
-                                        fetchedTimer,
-                                        object :BannerInternalCallback{
-                                            override fun onSuccess() {
-                                                refreshBanner(adName)
-                                                Log.d("banner", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                                bannerAdLoadCallback?.onAdLoaded()
-                                            }
-
-                                            override fun onFailed(msg: String?) {
-                                                loadBannerAd(
-                                                    activity,
-                                                    id,
-                                                    lifecycle,
-                                                    viewGroup,
-                                                    adName,
-                                                    adSize,
-                                                    bannerAdLoadCallback,
-                                                    contentURL,
-                                                    neighbourContentURL,
-                                                    listOf(adUnit),
-                                                    fetchedTimer,
-                                                    object :BannerInternalCallback{
-                                                        override fun onSuccess() {
-                                                            refreshBanner(adName)
-                                                            Log.d("banner", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                            bannerAdLoadCallback?.onAdLoaded()
-                                                        }
-
-                                                        override fun onFailed(msg: String?) {
-                                                            bannerAdLoadCallback?.onAdFailedToLoad(null)
-                                                        }
-
-                                                    }
-                                                )
-                                            }
-
-                                        }
-                                    )
+                                    bannerAdLoadCallback?.onAdLoaded()
                                 }
-                                else {
+
+                                override fun onFailed(msg: String?) {
+                                    if(secondaryIds.size > 0){
+                                        loadBannerAd(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(msg: String?) {
+                                                    loadBannerAd(
+                                                        activity,
+                                                        id,
+                                                        lifecycle,
+                                                        viewGroup,
+                                                        adName,
+                                                        adSize,
+                                                        bannerAdLoadCallback,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        isAdmanager,
+                                                        object :BannerInternalCallback{
+                                                            override fun onSuccess() {
+                                                                refreshBanner(adName)
+                                                                Log.d("banner", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                bannerAdLoadCallback?.onAdLoaded()
+                                                            }
+
+                                                            override fun onFailed(msg: String?) {
+                                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                            }
+
+                                                        }
+                                                    )
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                    else {
+                                        loadBannerAd(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(msg: String?) {
+                                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                }
+
+                            }
+                        )
+                    }
+                    else if(secondaryIds.size > 0){
+                        loadBannerAd(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            secondaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(msg: String?) {
                                     loadBannerAd(
                                         activity,
                                         id,
@@ -652,10 +719,11 @@ object AdSdk {
                                         neighbourContentURL,
                                         listOf(adUnit),
                                         fetchedTimer,
+                                        isAdmanager,
                                         object :BannerInternalCallback{
                                             override fun onSuccess() {
                                                 refreshBanner(adName)
-                                                Log.d("banner", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                Log.d("banner", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                                 bannerAdLoadCallback?.onAdLoaded()
                                             }
 
@@ -666,90 +734,232 @@ object AdSdk {
                                         }
                                     )
                                 }
+
                             }
+                        )
+                    }
+                    else {
+                        loadBannerAd(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
 
-                        }
-                    )
-                }
-                else if(secondaryIds.size > 0){
-                    loadBannerAd(
-                        activity,
-                        id,
-                        lifecycle,
-                        viewGroup,
-                        adName,
-                        adSize,
-                        bannerAdLoadCallback,
-                        contentURL,
-                        neighbourContentURL,
-                        secondaryIds,
-                        fetchedTimer,
-                        object :BannerInternalCallback{
-                            override fun onSuccess() {
-                                refreshBanner(adName)
-                                Log.d("banner", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                                bannerAdLoadCallback?.onAdLoaded()
+                                override fun onFailed(msg: String?) {
+                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                }
+
                             }
-
-                            override fun onFailed(msg: String?) {
-                                loadBannerAd(
-                                    activity,
-                                    id,
-                                    lifecycle,
-                                    viewGroup,
-                                    adName,
-                                    adSize,
-                                    bannerAdLoadCallback,
-                                    contentURL,
-                                    neighbourContentURL,
-                                    listOf(adUnit),
-                                    fetchedTimer,
-                                    object :BannerInternalCallback{
-                                        override fun onSuccess() {
-                                            refreshBanner(adName)
-                                            Log.d("banner", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
-                                            bannerAdLoadCallback?.onAdLoaded()
-                                        }
-
-                                        override fun onFailed(msg: String?) {
-                                            bannerAdLoadCallback?.onAdFailedToLoad(null)
-                                        }
-
-                                    }
-                                )
-                            }
-
-                        }
-                    )
+                        )
+                    }
                 }
                 else {
-                    loadBannerAd(
-                        activity,
-                        id,
-                        lifecycle,
-                        viewGroup,
-                        adName,
-                        adSize,
-                        bannerAdLoadCallback,
-                        contentURL,
-                        neighbourContentURL,
-                        listOf(adUnit),
-                        fetchedTimer,
-                        object :BannerInternalCallback{
-                            override fun onSuccess() {
-                                refreshBanner(adName)
-                                Log.d("banner", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                                bannerAdLoadCallback?.onAdLoaded()
-                            }
+                    Log.d("banner_admanager",adName+"OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadBannerAdManager(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            primaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner_admanager", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
-                            override fun onFailed(msg: String?) {
-                                bannerAdLoadCallback?.onAdFailedToLoad(null)
-                            }
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
 
-                        }
-                    )
+                                override fun onFailed(msg: String?) {
+                                    if(secondaryIds.size > 0){
+                                        loadBannerAdManager(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner_admanager", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(msg: String?) {
+                                                    loadBannerAdManager(
+                                                        activity,
+                                                        id,
+                                                        lifecycle,
+                                                        viewGroup,
+                                                        adName,
+                                                        adSize,
+                                                        bannerAdLoadCallback,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        isAdmanager,
+                                                        object :BannerInternalCallback{
+                                                            override fun onSuccess() {
+                                                                refreshBanner(adName)
+                                                                Log.d("banner_admanager", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                bannerAdLoadCallback?.onAdLoaded()
+                                                            }
+
+                                                            override fun onFailed(msg: String?) {
+                                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                            }
+
+                                                        }
+                                                    )
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                    else {
+                                        loadBannerAdManager(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner_admanager", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(msg: String?) {
+                                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                }
+
+                            }
+                        )
+                    }
+                    else if(secondaryIds.size > 0){
+                        loadBannerAdManager(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            secondaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner_admanager", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(msg: String?) {
+                                    loadBannerAdManager(
+                                        activity,
+                                        id,
+                                        lifecycle,
+                                        viewGroup,
+                                        adName,
+                                        adSize,
+                                        bannerAdLoadCallback,
+                                        contentURL,
+                                        neighbourContentURL,
+                                        listOf(adUnit),
+                                        fetchedTimer,
+                                        isAdmanager,
+                                        object :BannerInternalCallback{
+                                            override fun onSuccess() {
+                                                refreshBanner(adName)
+                                                Log.d("banner_admanager", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                bannerAdLoadCallback?.onAdLoaded()
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                            }
+
+                                        }
+                                    )
+                                }
+
+                            }
+                        )
+                    }
+                    else {
+                        loadBannerAdManager(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner_admanager", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(msg: String?) {
+                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                }
+
+                            }
+                        )
+                    }
                 }
-
             }
         }
     }
@@ -766,6 +976,7 @@ object AdSdk {
         neighbourContentURL: List<String>?,
         primaryIds: List<String>,
         fetchedTimer: Int,
+        isAdmanager:Boolean,
         bannerInternalCallback: BannerInternalCallback
     ) {
 
@@ -822,7 +1033,110 @@ object AdSdk {
                                     adSize,
                                     adName,
                                     bannerAdLoadCallback,
-                                    contentURL, neighbourContentURL
+                                    contentURL, neighbourContentURL,
+                                    isAdmanager
+                                )
+                        }
+                        isShown = true
+                    }
+                }
+
+                // Code to be executed when an ad request fails.
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+
+                }
+
+                // Code to be executed when an ad opens an overlay that
+                // covers the screen.
+                override fun onAdOpened() {
+                    bannerAdLoadCallback?.onAdOpened()
+                }
+
+                // Code to be executed when the user clicks on an ad.
+                override fun onAdClicked() {
+                    bannerAdLoadCallback?.onAdClicked()
+                }
+
+                // Code to be executed when the user is about to return
+                // to the app after tapping on an ad.
+                override fun onAdClosed() {
+                    bannerAdLoadCallback?.onAdClosed()
+                }
+            }
+        }
+    }
+
+    private fun loadBannerAdManager(
+        activity: Activity,
+        id: Long,
+        lifecycle: Lifecycle,
+        viewGroup: ViewGroup,
+        adName: String,
+        adSize: AdSize,
+        bannerAdLoadCallback: BannerAdLoadCallback?,
+        contentURL: String?,
+        neighbourContentURL: List<String>?,
+        primaryIds: List<String>,
+        fetchedTimer: Int,
+        isAdmanager: Boolean,
+        bannerInternalCallback: BannerInternalCallback
+    ) {
+
+        var isShown = false
+        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (isShown) {
+                    bannerInternalCallback.onSuccess()
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (isShown) {
+                    bannerInternalCallback.onSuccess()
+                }
+                else
+                    bannerInternalCallback.onFailed()
+            }
+        }.start()
+        for (adUnit in primaryIds){
+
+            lifecycle.addObserver(object : LifecycleObserver {
+                @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                fun onDestroy() {
+                    AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
+                }
+            })
+            val builder = AdManagerAdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            val adRequest = builder
+                .build()
+            val mAdView = AdView(viewGroup.context)
+            mAdView.setAdSize(adSize)
+            mAdView.adUnitId = adUnit
+            mAdView.loadAd(adRequest)
+
+            mAdView.adListener = object : AdListener() {
+                // Code to be executed when an ad finishes loading.
+                override fun onAdLoaded() {
+                    if (!isShown){
+                        viewGroup.removeAllViews()
+                        viewGroup.addView(mAdView)
+                        if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
+                            AdUtilConstants.bannerAdLifeCycleHashMap[id] =
+                                BannerAdItem(
+                                    activity,
+                                    id,
+                                    lifecycle,
+                                    viewGroup,
+                                    mAdView.adUnitId,
+                                    adSize,
+                                    adName,
+                                    bannerAdLoadCallback,
+                                    contentURL, neighbourContentURL,
+                                    isAdmanager
                                 )
                         }
                         isShown = true
@@ -868,7 +1182,8 @@ object AdSdk {
         loadingTextSize: Int = 24,
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
-        showLoadingMessage: Boolean = true
+        showLoadingMessage: Boolean = true,
+        isAdmanager: Boolean
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
@@ -896,7 +1211,8 @@ object AdSdk {
                             adSize,
                             adName,
                             bannerAdLoadCallback,
-                            contentURL, neighbourContentURL
+                            contentURL, neighbourContentURL,
+                            isAdmanager
                         )
                 }
                 lifecycle.addObserver(object : LifecycleObserver {
@@ -905,16 +1221,30 @@ object AdSdk {
                         AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
                     }
                 })
-                val builder = AdRequest.Builder()
-                    .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
-                contentURL?.let { builder.setContentUrl(it) }
-                neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
-                val adRequest = builder
-                    .build()
+                var adRequest: AdRequest? = null
+                if (!isAdmanager){
+                    val builder = AdRequest.Builder()
+                        .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                    contentURL?.let { builder.setContentUrl(it) }
+                    neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                    adRequest = builder
+                        .build()
+                }
+                else {
+                    val builder = AdManagerAdRequest.Builder()
+                        .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                    contentURL?.let { builder.setContentUrl(it) }
+                    neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                    adRequest = builder
+                        .build()
+                }
+
                 val mAdView = AdView(viewGroup.context)
                 mAdView.setAdSize(adSize)
                 mAdView.adUnitId = adUnit
-                mAdView.loadAd(adRequest)
+                if (adRequest != null) {
+                    mAdView.loadAd(adRequest)
+                }
 
                 mAdView.adListener = object : AdListener() {
                     // Code to be executed when an ad finishes loading.
@@ -964,7 +1294,8 @@ object AdSdk {
     fun loadInterstitialAd(
         adName: String,
         adUnit: String,
-        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
+        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
+        isAdmanager:Boolean = true
     ) {
         if (application != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var mInterstitialAd: InterstitialAd? = null
@@ -975,59 +1306,92 @@ object AdSdk {
             var primaryIds = AdMobUtil.fetchPrimaryById(adName)
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
             Log.d("main_interstitial","OnStart:" + System.currentTimeMillis()/1000)
-            if (primaryIds.size > 0){
-                loadInterstitialAd(
-                    fetchedTimer.toLong(),
-                    primaryIds,
-                    interstitialAdUtilLoadCallback,
-                    object :InterstitialInternalCallback{
-                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                            Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+            if (!isAdmanager){
+                if (primaryIds.size > 0){
+                    loadInterstitialAd(
+                        fetchedTimer.toLong(),
+                        primaryIds,
+                        interstitialAdUtilLoadCallback,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
-                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
-                        }
-
-                        override fun onFailed(msg: String?) {
-                            if (secondaryIds.size > 0){
-                                loadInterstitialAd(
-                                    fetchedTimer.toLong(),
-                                    secondaryIds,
-                                    interstitialAdUtilLoadCallback,
-                                    object :InterstitialInternalCallback{
-                                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                                            Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
-                                        }
-
-                                        override fun onFailed(msg: String?) {
-                                            loadInterstitialAd(
-                                                fetchedTimer.toLong(),
-                                                listOf(adUnit),
-                                                interstitialAdUtilLoadCallback,
-                                                object :InterstitialInternalCallback{
-                                                    override fun onSuccess(interstitialAd: InterstitialAd) {
-                                                        Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                        interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
-                                                    }
-
-                                                    override fun onFailed(msg: String?) {
-                                                        interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
-                                )
+                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                             }
-                            else{
+
+                            override fun onFailed(msg: String?) {
+                                if (secondaryIds.size > 0){
+                                    loadInterstitialAd(
+                                        fetchedTimer.toLong(),
+                                        secondaryIds,
+                                        interstitialAdUtilLoadCallback,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                loadInterstitialAd(
+                                                    fetchedTimer.toLong(),
+                                                    listOf(adUnit),
+                                                    interstitialAdUtilLoadCallback,
+                                                    object :InterstitialInternalCallback{
+                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                            Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                        }
+
+                                                        override fun onFailed(msg: String?) {
+                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                                else{
+                                    loadInterstitialAd(
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        interstitialAdUtilLoadCallback,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+                else if (secondaryIds.size > 0){
+                    loadInterstitialAd(
+                        fetchedTimer.toLong(),
+                        secondaryIds,
+                        interstitialAdUtilLoadCallback,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                            }
+
+                            override fun onFailed(msg: String?) {
                                 loadInterstitialAd(
                                     fetchedTimer.toLong(),
                                     listOf(adUnit),
                                     interstitialAdUtilLoadCallback,
                                     object :InterstitialInternalCallback{
-                                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                                            Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
-                                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
+                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                            Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                         }
 
                                         override fun onFailed(msg: String?) {
@@ -1037,56 +1401,140 @@ object AdSdk {
                                 )
                             }
                         }
-                    }
-                )
-            }
-            else if (secondaryIds.size > 0){
-                loadInterstitialAd(
-                    fetchedTimer.toLong(),
-                    secondaryIds,
-                    interstitialAdUtilLoadCallback,
-                    object :InterstitialInternalCallback{
-                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                            Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
+                    )
+                }
+                else{
+                    loadInterstitialAd(
+                        fetchedTimer.toLong(),
+                        listOf(adUnit),
+                        interstitialAdUtilLoadCallback,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                            }
+
+                            override fun onFailed(msg: String?) {
+                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                            }
                         }
+                    )
+                }
+            }
+            else {
+                if (primaryIds.size > 0){
+                    loadInterstitialAdManager(
+                        fetchedTimer.toLong(),
+                        primaryIds,
+                        interstitialAdUtilLoadCallback,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
-                        override fun onFailed(msg: String?) {
-                            loadInterstitialAd(
-                                fetchedTimer.toLong(),
-                                listOf(adUnit),
-                                interstitialAdUtilLoadCallback,
-                                object :InterstitialInternalCallback{
-                                    override fun onSuccess(interstitialAd: InterstitialAd) {
-                                        Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
-                                        interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
-                                    }
+                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                            }
 
-                                    override fun onFailed(msg: String?) {
-                                        interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
-                                    }
+                            override fun onFailed(msg: String?) {
+                                if (secondaryIds.size > 0){
+                                    loadInterstitialAdManager(
+                                        fetchedTimer.toLong(),
+                                        secondaryIds,
+                                        interstitialAdUtilLoadCallback,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                loadInterstitialAdManager(
+                                                    fetchedTimer.toLong(),
+                                                    listOf(adUnit),
+                                                    interstitialAdUtilLoadCallback,
+                                                    object :InterstitialInternalCallback{
+                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                            Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                        }
+
+                                                        override fun onFailed(msg: String?) {
+                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
-                            )
-                        }
-                    }
-                )
-            }
-            else{
-                loadInterstitialAd(
-                    fetchedTimer.toLong(),
-                    listOf(adUnit),
-                    interstitialAdUtilLoadCallback,
-                    object :InterstitialInternalCallback{
-                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                            Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
-                        }
+                                else{
+                                    loadInterstitialAdManager(
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        interstitialAdUtilLoadCallback,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                            }
 
-                        override fun onFailed(msg: String?) {
-                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                            override fun onFailed(msg: String?) {
+                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
-                    }
-                )
+                    )
+                }
+                else if (secondaryIds.size > 0){
+                    loadInterstitialAdManager(
+                        fetchedTimer.toLong(),
+                        secondaryIds,
+                        interstitialAdUtilLoadCallback,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                            }
+
+                            override fun onFailed(msg: String?) {
+                                loadInterstitialAdManager(
+                                    fetchedTimer.toLong(),
+                                    listOf(adUnit),
+                                    interstitialAdUtilLoadCallback,
+                                    object :InterstitialInternalCallback{
+                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                            Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                            interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                        }
+
+                                        override fun onFailed(msg: String?) {
+                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+                else{
+                    loadInterstitialAdManager(
+                        fetchedTimer.toLong(),
+                        listOf(adUnit),
+                        interstitialAdUtilLoadCallback,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                            }
+
+                            override fun onFailed(msg: String?) {
+                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -1101,14 +1549,14 @@ object AdSdk {
         object : CountDownTimer(timer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mInterstitialAd != null) {
-                    interstitialInternalCallback.onSuccess(mInterstitialAd!!)
+                    interstitialInternalCallback.onSuccess(interstitialAd = mInterstitialAd!!)
                     this.cancel()
                 }
             }
 
             override fun onFinish() {
                 if (mInterstitialAd != null) {
-                    interstitialInternalCallback.onSuccess(mInterstitialAd!!)
+                    interstitialInternalCallback.onSuccess(interstitialAd = mInterstitialAd!!)
                 }
                 else
                     interstitialInternalCallback.onFailed()
@@ -1161,12 +1609,78 @@ object AdSdk {
 
     }
 
+    private fun loadInterstitialAdManager(
+        timer: Long = 5000L,
+        primaryIds: List<String>,
+        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
+        interstitialInternalCallback: InterstitialInternalCallback
+    ){
+        var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
+        object : CountDownTimer(timer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mAdManagerInterstitialAd != null) {
+                    interstitialInternalCallback.onSuccess(adManagerInterstitialAd = mAdManagerInterstitialAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mAdManagerInterstitialAd != null) {
+                    interstitialInternalCallback.onSuccess(adManagerInterstitialAd = mAdManagerInterstitialAd!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed()
+            }
+        }.start()
+        for (adUnit in primaryIds){
+            var adRequest = AdManagerAdRequest.Builder()
+                            .build()
+
+            AdManagerInterstitialAd.load(application!!.applicationContext,adUnit, adRequest, object : AdManagerInterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (mAdManagerInterstitialAd == null)
+                        mAdManagerInterstitialAd = null
+                }
+
+                override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
+                    if (mAdManagerInterstitialAd == null){
+                        mAdManagerInterstitialAd = interstitialAd
+                        mAdManagerInterstitialAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdImpression() {
+                                    super.onAdImpression()
+                                    interstitialAdUtilLoadCallback?.onAdImpression()
+                                }
+
+                                override fun onAdShowedFullScreenContent() {
+                                    mAdManagerInterstitialAd = null
+                                    interstitialAdUtilLoadCallback?.onAdShowedFullScreenContent()
+                                }
+
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    interstitialAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
+                                        p0,
+                                    )
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    interstitialAdUtilLoadCallback?.onAdDismissedFullScreenContent()
+                                }
+                            }
+                    }
+                }
+            })
+        }
+
+    }
+
     fun loadSplashAd(
         adUnit: String,
         adName: String,
         activity: Activity?,
         callback: SplashInterstitialCallback,
-        timer: Long = 5000L
+        timer: Long = 5000L,
+        isAdmanager:Boolean = true
     ) {
         if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
 
@@ -1177,59 +1691,92 @@ object AdSdk {
             var primaryIds = AdMobUtil.fetchPrimaryById(adName)
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
-            Log.d("interstitial","OnStart:" + System.currentTimeMillis()/1000)
-            if (primaryIds.size > 0){
-                loadSplashAd(
-                    activity,
-                    callback,
-                    fetchedTimer,
-                    primaryIds,
-                    object :InterstitialInternalCallback{
-                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                            Log.d("interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
+            if (!isAdmanager){
+                 Log.d("interstitial","OnStart:" + System.currentTimeMillis()/1000)
+                if (primaryIds.size > 0){
+                    loadSplashAd(
+                        activity,
+                        callback,
+                        fetchedTimer,
+                        primaryIds,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                            }
+
+                            override fun onFailed(msg: String?) {
+                                if (secondaryIds.size > 0)
+                                    loadSplashAd(
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        secondaryIds,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                loadSplashAd(
+                                                    activity,
+                                                    callback,
+                                                    fetchedTimer,
+                                                    listOf(adUnit),
+                                                    object :InterstitialInternalCallback{
+                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                            Log.d("interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                        }
+
+                                                        override fun onFailed(msg: String?) {
+                                                            callback.moveNext()
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                else
+                                    loadSplashAd(
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                callback.moveNext()
+                                            }
+                                        }
+                                    )
+                            }
                         }
+                    )
+                }
+                else if (secondaryIds.size > 0) {
+                    loadSplashAd(
+                        activity,
+                        callback,
+                        fetchedTimer,
+                        secondaryIds,
+                        object : InterstitialInternalCallback {
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                            }
 
-                        override fun onFailed(msg: String?) {
-                            if (secondaryIds.size > 0)
-                                loadSplashAd(
-                                    activity,
-                                    callback,
-                                    fetchedTimer,
-                                    secondaryIds,
-                                    object :InterstitialInternalCallback{
-                                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                                            Log.d("interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                        }
-
-                                        override fun onFailed(msg: String?) {
-                                            loadSplashAd(
-                                                activity,
-                                                callback,
-                                                fetchedTimer,
-                                                listOf(adUnit),
-                                                object :InterstitialInternalCallback{
-                                                    override fun onSuccess(interstitialAd: InterstitialAd) {
-                                                        Log.d("interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                    }
-
-                                                    override fun onFailed(msg: String?) {
-                                                        callback.moveNext()
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
-                                )
-                            else
+                            override fun onFailed(msg: String?) {
                                 loadSplashAd(
                                     activity,
                                     callback,
                                     fetchedTimer,
                                     listOf(adUnit),
-                                    object :InterstitialInternalCallback{
-                                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                                            Log.d("interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                    object : InterstitialInternalCallback {
+                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                            Log.d("interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                         }
 
                                         override fun onFailed(msg: String?) {
@@ -1237,58 +1784,143 @@ object AdSdk {
                                         }
                                     }
                                 )
+                            }
                         }
-                    }
-                )
-            }
-            else if (secondaryIds.size > 0) {
-                loadSplashAd(
-                    activity,
-                    callback,
-                    fetchedTimer,
-                    secondaryIds,
-                    object : InterstitialInternalCallback {
-                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                            Log.d("interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                        }
+                    )
+                }
+                else {
+                    loadSplashAd(
+                        activity,
+                        callback,
+                        fetchedTimer,
+                        listOf(adUnit),
+                        object : InterstitialInternalCallback {
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                            }
 
-                        override fun onFailed(msg: String?) {
-                            loadSplashAd(
-                                activity,
-                                callback,
-                                fetchedTimer,
-                                listOf(adUnit),
-                                object : InterstitialInternalCallback {
-                                    override fun onSuccess(interstitialAd: InterstitialAd) {
-                                        Log.d("interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                            override fun onFailed(msg: String?) {
+                                callback.moveNext()
+                            }
+                        }
+                    )
+                }
+            }
+            else{
+                 Log.d("interstitial-admanager","OnStart:" + System.currentTimeMillis()/1000)
+                if (primaryIds.size > 0){
+                    loadSplashAdManager(
+                        activity,
+                        callback,
+                        fetchedTimer,
+                        primaryIds,
+                        object :InterstitialInternalCallback{
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("interstitial-admanager", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                            }
+
+                            override fun onFailed(msg: String?) {
+                                if (secondaryIds.size > 0)
+                                    loadSplashAdManager(
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        secondaryIds,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial-admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                loadSplashAdManager(
+                                                    activity,
+                                                    callback,
+                                                    fetchedTimer,
+                                                    listOf(adUnit),
+                                                    object :InterstitialInternalCallback{
+                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                            Log.d("interstitial-admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                        }
+
+                                                        override fun onFailed(msg: String?) {
+                                                            callback.moveNext()
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                else
+                                    loadSplashAdManager(
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial-admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            }
+
+                                            override fun onFailed(msg: String?) {
+                                                callback.moveNext()
+                                            }
+                                        }
+                                    )
+                            }
+                        }
+                    )
+                }
+                else if (secondaryIds.size > 0) {
+                    loadSplashAdManager(
+                        activity,
+                        callback,
+                        fetchedTimer,
+                        secondaryIds,
+                        object : InterstitialInternalCallback {
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("interstitial-admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                            }
+
+                            override fun onFailed(msg: String?) {
+                                loadSplashAdManager(
+                                    activity,
+                                    callback,
+                                    fetchedTimer,
+                                    listOf(adUnit),
+                                    object : InterstitialInternalCallback {
+                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                            Log.d("interstitial-admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                        }
+
+                                        override fun onFailed(msg: String?) {
+                                            callback.moveNext()
+                                        }
                                     }
+                                )
+                            }
+                        }
+                    )
+                }
+                else {
+                    loadSplashAdManager(
+                        activity,
+                        callback,
+                        fetchedTimer,
+                        listOf(adUnit),
+                        object : InterstitialInternalCallback {
+                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                Log.d("interstitial-admanager", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                            }
 
-                                    override fun onFailed(msg: String?) {
-                                        callback.moveNext()
-                                    }
-                                }
-                            )
+                            override fun onFailed(msg: String?) {
+                                callback.moveNext()
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
-            else {
-                loadSplashAd(
-                    activity,
-                    callback,
-                    fetchedTimer,
-                    listOf(adUnit),
-                    object : InterstitialInternalCallback {
-                        override fun onSuccess(interstitialAd: InterstitialAd) {
-                            Log.d("interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                        }
 
-                        override fun onFailed(msg: String?) {
-                            callback.moveNext()
-                        }
-                    }
-                )
-            }
         } else {
             callback.moveNext()
         }
@@ -1354,6 +1986,62 @@ object AdSdk {
 
     }
 
+    private fun loadSplashAdManager(
+        activity: Activity,
+        callback: SplashInterstitialCallback,
+        fetchedTimer: Int,
+        primaryIds: List<String>,
+        interstitialInternalCallback: InterstitialInternalCallback
+    ) {
+
+        var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mAdManagerInterstitialAd != null) {
+                    mAdManagerInterstitialAd?.show(activity)
+                    interstitialInternalCallback.onSuccess(mAdManagerInterstitialAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mAdManagerInterstitialAd != null) {
+                    mAdManagerInterstitialAd?.show(activity)
+                    interstitialInternalCallback.onSuccess(mAdManagerInterstitialAd!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed()
+            }
+        }.start()
+        for (adUnit in primaryIds){
+
+            var adRequest = AdManagerAdRequest.Builder().build()
+
+            AdManagerInterstitialAd.load(activity.applicationContext,adUnit, adRequest, object : AdManagerInterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (mAdManagerInterstitialAd == null)
+                        mAdManagerInterstitialAd = null
+                }
+
+                override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
+                    if (mAdManagerInterstitialAd == null){
+                        mAdManagerInterstitialAd = interstitialAd
+                        mAdManagerInterstitialAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    callback.moveNext()
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    callback.moveNext()
+                                }
+                            }
+                    }
+                }
+            })
+        }
+
+    }
 
     /**
      * Call loadRewardedAd with following params to load an rewarded ad
@@ -1368,7 +2056,8 @@ object AdSdk {
         activity: Activity?,
         adUnit: String,
         adName: String,
-        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
+        isAdmanager:Boolean = true,
     ) {
         if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName))
         {
@@ -1380,28 +2069,111 @@ object AdSdk {
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
             Log.d("rewarded","OnStart:" + System.currentTimeMillis()/1000)
-            if (primaryIds.size > 0){
-                loadRewardedAd(
-                    activity,
-                    rewardedAdUtilLoadCallback,
-                    fetchedTimer.toLong(),
-                    primaryIds,
-                    object :RewardInternalCallback{
-                        override fun onSuccess(rewardAds: RewardedAd) {
-                            Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                        }
+            if (!isAdmanager){
+                if (primaryIds.size > 0){
+                    loadRewardedAd(
+                        activity,
+                        rewardedAdUtilLoadCallback,
+                        fetchedTimer.toLong(),
+                        primaryIds,
+                        object :RewardInternalCallback{
+                            override fun onSuccess(rewardAds: RewardedAd) {
+                                Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                            }
 
-                        override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
-                            if (secondaryIds.size > 0)
+                            override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
+                                if (secondaryIds.size > 0)
+                                    loadRewardedAd(
+                                        activity,
+                                        rewardedAdUtilLoadCallback,
+                                        fetchedTimer.toLong(),
+                                        secondaryIds,
+                                        object :RewardInternalCallback{
+                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                            }
+
+                                            override fun onFailed(
+                                                adError: LoadAdError?,
+                                                ad: RewardedAd?
+                                            ) {
+                                                loadRewardedAd(
+                                                    activity,
+                                                    rewardedAdUtilLoadCallback,
+                                                    fetchedTimer.toLong(),
+                                                    listOf(adUnit),
+                                                    object :RewardInternalCallback{
+                                                        override fun onSuccess(rewardAds: RewardedAd) {
+                                                            Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                        }
+
+                                                        override fun onFailed(
+                                                            adError: LoadAdError?,
+                                                            ad: RewardedAd?
+                                                        ) {
+                                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                else
+                                    loadRewardedAd(
+                                        activity,
+                                        rewardedAdUtilLoadCallback,
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        object :RewardInternalCallback{
+                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            }
+
+                                            override fun onFailed(
+                                                adError: LoadAdError?,
+                                                ad: RewardedAd?
+                                            ) {
+                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                            }
+                                        }
+                                    )
+                            }
+                        }
+                    )
+                }
+                else if (secondaryIds.size > 0) {
+                    loadRewardedAd(
+                        activity,
+                        rewardedAdUtilLoadCallback,
+                        fetchedTimer.toLong(),
+                        secondaryIds,
+                        object : RewardInternalCallback {
+                            override fun onSuccess(rewardAds: RewardedAd) {
+                                Log.d(
+                                    "rewarded",
+                                    "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                )
+                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                            }
+
+                            override fun onFailed(
+                                adError: LoadAdError?,
+                                ad: RewardedAd?
+                            ) {
                                 loadRewardedAd(
                                     activity,
                                     rewardedAdUtilLoadCallback,
                                     fetchedTimer.toLong(),
-                                    secondaryIds,
-                                    object :RewardInternalCallback{
+                                    listOf(adUnit),
+                                    object : RewardInternalCallback {
                                         override fun onSuccess(rewardAds: RewardedAd) {
-                                            Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                            Log.d(
+                                                "rewarded",
+                                                "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                            )
                                             rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                         }
 
@@ -1409,108 +2181,183 @@ object AdSdk {
                                             adError: LoadAdError?,
                                             ad: RewardedAd?
                                         ) {
-                                            loadRewardedAd(
-                                                activity,
-                                                rewardedAdUtilLoadCallback,
-                                                fetchedTimer.toLong(),
-                                                listOf(adUnit),
-                                                object :RewardInternalCallback{
-                                                    override fun onSuccess(rewardAds: RewardedAd) {
-                                                        Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                        rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                                    }
-
-                                                    override fun onFailed(
-                                                        adError: LoadAdError?,
-                                                        ad: RewardedAd?
-                                                    ) {
-                                                        rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
-                                                    }
-                                                }
-                                            )
+                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                                         }
                                     }
                                 )
-                            else
-                                loadRewardedAd(
+                            }
+                        }
+                    )
+                }
+                else {
+                    loadRewardedAd(
+                        activity,
+                        rewardedAdUtilLoadCallback,
+                        fetchedTimer.toLong(),
+                        listOf(adUnit),
+                        object : RewardInternalCallback {
+                            override fun onSuccess(rewardAds: RewardedAd) {
+                                Log.d(
+                                    "rewarded",
+                                    "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                )
+                            }
+
+                            override fun onFailed(
+                                adError: LoadAdError?,
+                                ad: RewardedAd?
+                            ) {
+                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                            }
+                        }
+                    )
+                }
+            }
+            else {
+                if (primaryIds.size > 0){
+                    loadRewardedAdManager(
+                        activity,
+                        rewardedAdUtilLoadCallback,
+                        fetchedTimer.toLong(),
+                        primaryIds,
+                        object :RewardInternalCallback{
+                            override fun onSuccess(rewardAds: RewardedAd) {
+                                Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                            }
+
+                            override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
+                                if (secondaryIds.size > 0)
+                                    loadRewardedAdManager(
+                                        activity,
+                                        rewardedAdUtilLoadCallback,
+                                        fetchedTimer.toLong(),
+                                        secondaryIds,
+                                        object :RewardInternalCallback{
+                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                            }
+
+                                            override fun onFailed(
+                                                adError: LoadAdError?,
+                                                ad: RewardedAd?
+                                            ) {
+                                                loadRewardedAdManager(
+                                                    activity,
+                                                    rewardedAdUtilLoadCallback,
+                                                    fetchedTimer.toLong(),
+                                                    listOf(adUnit),
+                                                    object :RewardInternalCallback{
+                                                        override fun onSuccess(rewardAds: RewardedAd) {
+                                                            Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                        }
+
+                                                        override fun onFailed(
+                                                            adError: LoadAdError?,
+                                                            ad: RewardedAd?
+                                                        ) {
+                                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                else
+                                    loadRewardedAdManager(
+                                        activity,
+                                        rewardedAdUtilLoadCallback,
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        object :RewardInternalCallback{
+                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            }
+
+                                            override fun onFailed(
+                                                adError: LoadAdError?,
+                                                ad: RewardedAd?
+                                            ) {
+                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                            }
+                                        }
+                                    )
+                            }
+                        }
+                    )
+                }
+                else if (secondaryIds.size > 0) {
+                    loadRewardedAdManager(
+                        activity,
+                        rewardedAdUtilLoadCallback,
+                        fetchedTimer.toLong(),
+                        secondaryIds,
+                        object : RewardInternalCallback {
+                            override fun onSuccess(rewardAds: RewardedAd) {
+                                Log.d(
+                                    "rewarded",
+                                    "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                )
+                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                            }
+
+                            override fun onFailed(
+                                adError: LoadAdError?,
+                                ad: RewardedAd?
+                            ) {
+                                loadRewardedAdManager(
                                     activity,
                                     rewardedAdUtilLoadCallback,
                                     fetchedTimer.toLong(),
                                     listOf(adUnit),
-                                    object :RewardInternalCallback{
+                                    object : RewardInternalCallback {
                                         override fun onSuccess(rewardAds: RewardedAd) {
-                                            Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            Log.d(
+                                                "rewarded",
+                                                "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                            )
+                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                         }
 
                                         override fun onFailed(
                                             adError: LoadAdError?,
                                             ad: RewardedAd?
                                         ) {
-                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                                         }
                                     }
                                 )
+                            }
                         }
-                    }
-                )
+                    )
+                }
+                else {
+                    loadRewardedAdManager(
+                        activity,
+                        rewardedAdUtilLoadCallback,
+                        fetchedTimer.toLong(),
+                        listOf(adUnit),
+                        object : RewardInternalCallback {
+                            override fun onSuccess(rewardAds: RewardedAd) {
+                                Log.d(
+                                    "rewarded",
+                                    "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                )
+                            }
+
+                            override fun onFailed(
+                                adError: LoadAdError?,
+                                ad: RewardedAd?
+                            ) {
+                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                            }
+                        }
+                    )
+                }
             }
-            else if (secondaryIds.size > 0)
-                loadRewardedAd(
-                    activity,
-                    rewardedAdUtilLoadCallback,
-                    fetchedTimer.toLong(),
-                    secondaryIds,
-                    object :RewardInternalCallback{
-                        override fun onSuccess(rewardAds: RewardedAd) {
-                            Log.d("rewarded", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
-                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                        }
 
-                        override fun onFailed(
-                            adError: LoadAdError?,
-                            ad: RewardedAd?
-                        ) {
-                            loadRewardedAd(
-                                activity,
-                                rewardedAdUtilLoadCallback,
-                                fetchedTimer.toLong(),
-                                listOf(adUnit),
-                                object :RewardInternalCallback{
-                                    override fun onSuccess(rewardAds: RewardedAd) {
-                                        Log.d("rewarded", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
-                                        rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                    }
-
-                                    override fun onFailed(
-                                        adError: LoadAdError?,
-                                        ad: RewardedAd?
-                                    ) {
-                                        rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
-                                    }
-                                }
-                            )
-                        }
-                    }
-                )
-            else
-                loadRewardedAd(
-                    activity,
-                    rewardedAdUtilLoadCallback,
-                    fetchedTimer.toLong(),
-                    listOf(adUnit),
-                    object :RewardInternalCallback{
-                        override fun onSuccess(rewardAds: RewardedAd) {
-                            Log.d("rewarded", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
-                        }
-
-                        override fun onFailed(
-                            adError: LoadAdError?,
-                            ad: RewardedAd?
-                        ) {
-                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
-                        }
-                    }
-                )
         }
     }
 
@@ -1542,6 +2389,68 @@ object AdSdk {
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
+            RewardedAd.load(
+                activity,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        if (mRewardedAd == null)
+                            mRewardedAd = null
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        mRewardedAd = rewardedAd
+
+                        mRewardedAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdDismissedFullScreenContent() {
+                                    rewardedAdUtilLoadCallback?.onAdDismissedFullScreenContent()
+                                }
+
+                                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                                    rewardedAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
+                                        adError,
+                                    )
+                                }
+
+                                override fun onAdShowedFullScreenContent() {
+                                    mRewardedAd = null
+                                    rewardedAdUtilLoadCallback?.onAdShowedFullScreenContent()
+                                }
+                            }
+                    }
+                },
+            )
+        }
+    }
+
+    private fun loadRewardedAdManager(
+        activity: Activity,
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
+        timer: Long = 5000L,
+        primaryIds: List<String>,
+        rewardInternalCallback: RewardInternalCallback
+    ){
+        var mRewardedAd: RewardedAd? = null
+        object : CountDownTimer(timer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mRewardedAd != null) {
+                    rewardInternalCallback.onSuccess(mRewardedAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mRewardedAd != null) {
+                    rewardInternalCallback.onSuccess(mRewardedAd!!)
+                }
+                else
+                    rewardInternalCallback.onFailed(null,mRewardedAd)
+            }
+        }.start()
+        for (adUnit in primaryIds){
+            var adRequest = AdManagerAdRequest.Builder().build()
             RewardedAd.load(
                 activity,
                 adUnit,

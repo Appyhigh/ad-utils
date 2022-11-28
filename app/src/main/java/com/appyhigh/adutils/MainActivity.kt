@@ -14,6 +14,7 @@ import com.appyhigh.adutils.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.OnUserEarnedRewardListener
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewarded.RewardedAd
@@ -21,6 +22,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var interstitialAd: InterstitialAd? = null
+    private var adManagerAd: AdManagerInterstitialAd? = null
     private var rewardedAd: RewardedAd? = null
 
     override fun onBackPressed() {
@@ -51,7 +53,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
         binding.btnInterstitialAd.setOnClickListener {
-            interstitialAd?.show(this)
+            if (interstitialAd!= null)
+                interstitialAd?.show(this)
+            else if (adManagerAd != null)
+                adManagerAd?.show(this)
         }
 
         binding.btnRewardedInterstitialAd.setOnClickListener {
@@ -156,8 +161,12 @@ class MainActivity : AppCompatActivity() {
             interstitialAd = ad
         }
 
-        override fun onAdLoaded(ad: InterstitialAd?) {
+        override fun onAdLoaded(
+            ad: InterstitialAd?,
+            adManagerInterstitialAd: AdManagerInterstitialAd?
+        ) {
             interstitialAd = ad
+            adManagerAd = adManagerInterstitialAd
         }
 
         override fun onAdImpression() {

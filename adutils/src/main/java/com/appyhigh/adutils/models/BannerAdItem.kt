@@ -16,5 +16,6 @@ data class BannerAdItem(
     val adName: String,
     val bannerAdLoadCallback: BannerAdLoadCallback?,
     var contentURL: String?,
-    var neighbourContentURL: List<String>?
+    var neighbourContentURL: List<String>?,
+    var isAdManager:Boolean
 )

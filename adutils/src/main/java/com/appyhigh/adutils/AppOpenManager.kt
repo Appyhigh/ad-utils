@@ -183,9 +183,6 @@ class AppOpenManager(
                 }
             )
         }
-
-
-
     }
 
     private fun loadOpenAd(fetchedTimer:Int, primartIds:List<String>,appOpenInternalCallback: AppOpenInternalCallback){
