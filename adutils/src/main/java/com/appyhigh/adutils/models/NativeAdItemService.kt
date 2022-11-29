@@ -29,6 +29,7 @@ data class NativeAdItemService(
     var autoRefresh: Boolean = true,
     var contentURL: String?,
     var neighbourContentURL: List<String>?,
-    var buttonColor: Int = Color.parseColor("#000000")
+    var buttonColor: Int = Color.parseColor("#000000"),
+    var isAdmanager: Boolean,
 ) {
 }

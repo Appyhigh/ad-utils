@@ -17,6 +17,7 @@ import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.admanager.AdManagerAdRequest
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.appopen.AppOpenAd.AppOpenAdLoadCallback
 import java.util.*
@@ -32,7 +33,8 @@ class AppOpenManager(
     private val adName: String,
     private val isShownOnlyOnce: Boolean,
     private var backgroundThreshold: Int = 30000,
-    private var appOpenAdCallback: AppOpenAdCallback?
+    private var appOpenAdCallback: AppOpenAdCallback?,
+    private var isAdmanager:Boolean
 ) :
     LifecycleObserver,
     ActivityLifecycleCallbacks {
@@ -48,6 +50,10 @@ class AppOpenManager(
      */
     private val adRequest: AdRequest
         get() = AdRequest.Builder().build()
+
+    private val adManagerRequest: AdRequest
+        get() = AdManagerAdRequest.Builder().build()
+
 
     /**
      * Utility method to check if ad was loaded more than n hours ago.
@@ -218,7 +224,7 @@ class AppOpenManager(
                 }
 
             }
-            val request = adRequest
+            val request = if (!isAdmanager) adRequest else adManagerRequest
             AppOpenAd.load(
                 myApplication, appOpenAdUnit, request,
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback!!

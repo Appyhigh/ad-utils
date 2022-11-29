@@ -25,7 +25,8 @@ data class NativeAdItem(
     var buttonColor: Int = Color.parseColor("#000000"),
     var contentURL: String? = null,
     var neighbourContentURL: List<String>? = null,
-    var showLoadingMessage: Boolean
+    var showLoadingMessage: Boolean,
+    var isAdManager:Boolean
 
 
 )

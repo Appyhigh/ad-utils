@@ -53,10 +53,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
         binding.btnInterstitialAd.setOnClickListener {
-            if (interstitialAd!= null)
-                interstitialAd?.show(this)
-            else if (adManagerAd != null)
-                adManagerAd?.show(this)
+            AdSdk.showAvailableInterstitialAd(this,interstitialAd,adManagerAd)
         }
 
         binding.btnRewardedInterstitialAd.setOnClickListener {
