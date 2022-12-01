@@ -10,9 +10,9 @@ import retrofit2.http.POST
 
 interface AdmobApi {
 
-    @GET("api/app")
+    @GET("api/v2/app")
     fun getAllAppsData(): Single<AppAppsResponse>
 
-    @POST("api/app/info")
+    @POST("api/v2/app/info")
     fun getAppInfo(@Body body: AppRequest): Single<SingleAppResponse>
 }
