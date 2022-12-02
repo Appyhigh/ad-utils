@@ -4138,6 +4138,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         if (nativeAd == null)
                             nativeAd = null
+                        viewGroup.removeAllViews()
 //                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
@@ -6074,6 +6075,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         if (nativeAd == null)
                             nativeAd = null
+                        viewGroup.removeAllViews()
                     }
 
                     override fun onAdLoaded() {
