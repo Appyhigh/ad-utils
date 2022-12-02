@@ -31,6 +31,7 @@ import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
 import com.appyhigh.adutils.models.NativeAdItemService
 import com.appyhigh.adutils.models.PreloadNativeAds
+import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.utils.AdMobUtil
 import com.appyhigh.adutils.utils.AdMobUtil.fetchBannerAdSize
 import com.example.speakinenglish.container.AppPrefs
@@ -330,7 +331,7 @@ object AdSdk {
     }
 
     interface FetchingCallback{
-        fun OnComplete()
+        fun OnComplete(app: AppsData?)
     }
 
     lateinit var listener: VersionCallback

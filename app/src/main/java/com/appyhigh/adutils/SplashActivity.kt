@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
+import com.appyhigh.adutils.models.apimodels.AppsData
 
 class SplashActivity : AppCompatActivity() {
     lateinit var binding: ActivitySplashBinding
@@ -29,7 +30,7 @@ class SplashActivity : AppCompatActivity() {
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
             preloadingNativeAdList = null,
             fetchingCallback = object : AdSdk.FetchingCallback {
-                override fun OnComplete() {
+                override fun OnComplete(app: AppsData?) {
                     runOnUiThread {
                         if (BuildConfig.DEBUG) {
                             AdSdk.attachAppOpenAdManager(
