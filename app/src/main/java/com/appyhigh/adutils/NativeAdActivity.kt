@@ -3,6 +3,7 @@ package com.appyhigh.adutils
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.appyhigh.adutils.callbacks.NativeAdLoadCallback
 import com.appyhigh.adutils.databinding.ActivityNativeAdBinding
 import com.google.android.gms.ads.LoadAdError
@@ -32,14 +33,19 @@ class NativeAdActivity : AppCompatActivity() {
             callback = nativeAdLoadCallback("1"),
             background = null, textColor1 = null, textColor2 = null,
         )*/
-        AdSdk.loadNativeAd(
-            lifecycle = lifecycle,
+        AdSdk.loadNativeAdFromService(
+            layoutInflater,
+            applicationContext,
             adUnit = "ca-app-pub-3940256099942544/2247696110",
-            viewGroup = binding.llRoot1,
-            adType = AdSdk.ADType.BIGV3,
-            callback = nativeAdLoadCallback("2"),
-            background = null, textColor1 = null, textColor2 = null,
-            showLoadingMessage = true
+            viewGroup = binding.llRoot,
+            nativeAdLoadCallback = nativeAdLoadCallback("1"),
+            adType = AdSdk.ADType.BIGV1,
+            100,
+            24,
+            ContextCompat.getColor(this,R.color.NativeAdBackground),
+            null,
+            null,
+            preloadAds = true,
         )
         /*AdSdk.loadNativeAd(
             lifecycle = lifecycle,
