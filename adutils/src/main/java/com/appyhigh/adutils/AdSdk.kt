@@ -230,7 +230,7 @@ object AdSdk {
     private fun refreshBanner(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
-                if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName)) {
+                if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
                         if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && AdMobUtil.fetchAdStatusFromAdId(item.value.adName))
                             Handler(Looper.getMainLooper()).post {
@@ -256,7 +256,7 @@ object AdSdk {
     private fun refreshNative(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName)) {
+                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
                         if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
@@ -294,7 +294,7 @@ object AdSdk {
     fun refreshNativeService(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
-                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName)) {
+                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
                         if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && value.autoRefresh && AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
