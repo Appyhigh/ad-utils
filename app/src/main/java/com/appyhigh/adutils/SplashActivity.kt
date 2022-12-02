@@ -1,13 +1,16 @@
 package com.appyhigh.adutils
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.appyhigh.adutils.callbacks.AppOpenAdLoadCallback
 import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
+import com.google.android.gms.ads.appopen.AppOpenAd
 
 class SplashActivity : AppCompatActivity() {
     lateinit var binding: ActivitySplashBinding

@@ -444,13 +444,194 @@ object AdSdk {
     fun loadAppOpenAd(
         activity: Activity,
         appOpenAdUnit: String,
+        adName:String,
         showWhenLoaded: Boolean,
-        appOpenAdCallback: AppOpenAdLoadCallback? = null
+        appOpenAdCallback: AppOpenAdLoadCallback? = null,
+        isAdmanager: Boolean = false
     ) {
         if (application != null) {
+            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            if (fetchedTimer == 0){
+                fetchedTimer = 3500
+            }
+            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+            Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
+            if (primaryIds.size > 0){
+                loadAppOpenAd(
+                    fetchedTimer,
+                    primaryIds,
+                    appOpenAdCallback,
+                    object: AppOpenInternalCallback{
+                        override fun onSuccess(ad: AppOpenAd) {
+                        Log.d("appopen_new", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                            appOpenAdCallback?.onAdLoaded(ad)
+                            if (showWhenLoaded)
+                                ad.show(activity)
+                        }
+
+                        override fun onFailed() {
+                            if (secondaryIds.size > 0){
+                                loadAppOpenAd(
+                                    fetchedTimer,
+                                    secondaryIds,
+                                    appOpenAdCallback,
+                                    object: AppOpenInternalCallback{
+                                        override fun onSuccess(ad: AppOpenAd) {
+                                        Log.d("appopen_new", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                            appOpenAdCallback?.onAdLoaded(ad)
+                                            if (showWhenLoaded)
+                                                ad.show(activity)
+                                        }
+
+                                        override fun onFailed() {
+                                            loadAppOpenAd(
+                                                fetchedTimer,
+                                                listOf(appOpenAdUnit),
+                                                appOpenAdCallback,
+                                                object: AppOpenInternalCallback{
+                                                    override fun onSuccess(ad: AppOpenAd) {
+                                                    Log.d("appopen_new", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                        appOpenAdCallback?.onAdLoaded(ad)
+                                                        if (showWhenLoaded)
+                                                            ad.show(activity)
+                                                    }
+
+                                                    override fun onFailed() {
+                                                        appOpenAdCallback?.onAdFailedToLoad()
+                                                    }
+
+                                                },
+                                                isAdmanager
+                                            )
+                                        }
+
+                                    },
+                                    isAdmanager
+                                )
+                            }
+                            else {
+                                loadAppOpenAd(
+                                    fetchedTimer,
+                                    listOf(appOpenAdUnit),
+                                    appOpenAdCallback,
+                                    object: AppOpenInternalCallback{
+                                        override fun onSuccess(ad: AppOpenAd) {
+                                        Log.d("appopen_new", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            appOpenAdCallback?.onAdLoaded(ad)
+                                            if (showWhenLoaded)
+                                                ad.show(activity)
+                                        }
+
+                                        override fun onFailed() {
+                                            appOpenAdCallback?.onAdFailedToLoad()
+                                        }
+
+                                    },
+                                    isAdmanager
+                                )
+                            }
+                        }
+
+                    },
+                    isAdmanager
+                )
+            }
+            else if (secondaryIds.size > 0){
+                loadAppOpenAd(
+                    fetchedTimer,
+                    secondaryIds,
+                    appOpenAdCallback,
+                    object: AppOpenInternalCallback{
+                        override fun onSuccess(ad: AppOpenAd) {
+                        Log.d("appopen_new", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                            appOpenAdCallback?.onAdLoaded(ad)
+                            if (showWhenLoaded)
+                                ad.show(activity)
+                        }
+
+                        override fun onFailed() {
+                            loadAppOpenAd(
+                                fetchedTimer,
+                                listOf(appOpenAdUnit),
+                                appOpenAdCallback,
+                                object: AppOpenInternalCallback{
+                                    override fun onSuccess(ad: AppOpenAd) {
+                                    Log.d("appopen_new", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                        appOpenAdCallback?.onAdLoaded(ad)
+                                        if (showWhenLoaded)
+                                            ad.show(activity)
+                                    }
+
+                                    override fun onFailed() {
+                                        appOpenAdCallback?.onAdFailedToLoad()
+                                    }
+
+                                },
+                                isAdmanager
+                            )
+                        }
+
+                    },
+                    isAdmanager
+                )
+            }
+            else {
+                loadAppOpenAd(
+                    fetchedTimer,
+                    listOf(appOpenAdUnit),
+                    appOpenAdCallback,
+                    object: AppOpenInternalCallback{
+                        override fun onSuccess(ad: AppOpenAd) {
+                        Log.d("appopen_new", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                            appOpenAdCallback?.onAdLoaded(ad)
+                            if (showWhenLoaded)
+                                ad.show(activity)
+                        }
+
+                        override fun onFailed() {
+                            appOpenAdCallback?.onAdFailedToLoad()
+                        }
+
+                    },
+                    isAdmanager
+                )
+            }
+        }
+    }
+
+    private fun loadAppOpenAd(
+        fetchedTimer:Int,
+        primaryIds:List<String>,
+        appOpenAdCallback: AppOpenAdLoadCallback? = null,
+        appOpenInternalCallback: AppOpenInternalCallback? = null,
+        isAdmanager: Boolean = false
+    ){
+        var appOpenAd: AppOpenAd? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (appOpenAd != null) {
+                    appOpenInternalCallback?.onSuccess(appOpenAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (appOpenAd != null) {
+                    appOpenInternalCallback?.onSuccess(appOpenAd!!)
+                }
+                else
+                    appOpenInternalCallback?.onFailed()
+            }
+        }.start()
+        for (appOpenAdUnit in primaryIds){
             val loadCallback = object : AppOpenAd.AppOpenAdLoadCallback() {
 
                 override fun onAdLoaded(ad: AppOpenAd) {
+                    if (appOpenAd == null)
+                        appOpenAd = ad
                     ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                         override fun onAdDismissedFullScreenContent() {
                             appOpenAdCallback?.onAdClosed()
@@ -460,18 +641,21 @@ object AdSdk {
                             appOpenAdCallback?.onAdFailedToShow(adError)
                         }
                     }
-                    appOpenAdCallback?.onAdLoaded(ad)
-                    if (showWhenLoaded)
-                        ad.show(activity)
+//                    appOpenAdCallback?.onAdLoaded(ad)
+//                    if (showWhenLoaded)
+//                        ad.show(activity)
                 }
 
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                     Log.d(TAG, loadAdError.message)
-                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                    if (appOpenAd == null)
+                        appOpenAd = null
+//                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                 }
 
             }
-            AppOpenAd.load(
+            if (!isAdmanager){
+                AppOpenAd.load(
                 application!!, appOpenAdUnit,
                 AdRequest.Builder()
                     .addNetworkExtrasBundle(
@@ -481,7 +665,17 @@ object AdSdk {
                     .build(),
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
             )
+            }
+            else {
+                AppOpenAd.load(
+                application!!, appOpenAdUnit,
+                AdManagerAdRequest.Builder()
+                    .build(),
+                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
+            )
+            }
         }
+
     }
 
     val extras = Bundle()

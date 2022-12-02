@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
+import com.appyhigh.adutils.callbacks.AppOpenAdLoadCallback
 import com.appyhigh.adutils.callbacks.InterstitialAdUtilLoadCallback
 import com.appyhigh.adutils.callbacks.InterstitialCallback
 import com.appyhigh.adutils.callbacks.RewardedAdUtilLoadCallback
@@ -15,6 +16,7 @@ import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.OnUserEarnedRewardListener
 import com.google.android.gms.ads.admanager.AdManagerInterstitialAd
+import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewarded.RewardedAd
@@ -48,6 +50,18 @@ class MainActivity : AppCompatActivity() {
             this,
             "pub-3940256099942544",
             "182790353ADD7F5B71982136E0704453"
+        )
+        AdSdk.loadAppOpenAd(
+            this@MainActivity,
+            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+            "util_appopen",
+            true,
+            object : AppOpenAdLoadCallback() {
+                override fun onAdLoaded(ad: AppOpenAd) {
+                    super.onAdLoaded(ad)
+                }
+            },
+            true
         )
         binding.btnBannerAd.setOnClickListener {
             startActivity(Intent(this, BannerAdActivity::class.java))
