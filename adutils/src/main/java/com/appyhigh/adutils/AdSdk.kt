@@ -413,7 +413,7 @@ object AdSdk {
          appOpenAdCallback: AppOpenAdCallback? = null,
         backgroundThreshold: Int = 30000,
         isShownOnlyOnce: Boolean = false,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (application != null && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (!AppOpenManager.initialized) {
@@ -513,7 +513,7 @@ object AdSdk {
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             loadBannerAd(
@@ -552,7 +552,7 @@ object AdSdk {
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
@@ -1299,7 +1299,7 @@ object AdSdk {
         adName: String,
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (application != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var mInterstitialAd: InterstitialAd? = null
@@ -1683,7 +1683,7 @@ object AdSdk {
         activity: Activity?,
         callback: SplashInterstitialCallback,
         timer: Long = 5000L,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
 
@@ -2060,7 +2060,7 @@ object AdSdk {
         adUnit: String,
         adName: String,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
-        isAdmanager:Boolean = true,
+        isAdmanager:Boolean = false,
     ) {
         if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName))
         {
@@ -2529,7 +2529,7 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
         var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
@@ -2598,7 +2598,7 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
@@ -2649,7 +2649,7 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
@@ -4343,7 +4343,7 @@ object AdSdk {
         autoRefresh: Boolean = false,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ){
         if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             loadNativeAdFromService(
@@ -4579,7 +4579,7 @@ object AdSdk {
         autoRefresh: Boolean = false,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
-        isAdmanager:Boolean = true
+        isAdmanager:Boolean = false
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
@@ -6661,7 +6661,7 @@ object AdSdk {
         adId: String,
         adName: String,
         interstitialCallback: InterstitialCallback,
-        isAdmanager:Boolean = true,
+        isAdmanager:Boolean = false,
     ) {
         if (adId != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
