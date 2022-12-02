@@ -81,7 +81,7 @@ class DynamicsAds {
                                         AppPrefs.ads.set(string)
                                         AppPrefs.commit(applicationContext)
                                         Log.d("Dynamicads", "getDynamicAds: "+AdMobUtil.fetchAdById("util_interstitial"))
-                                        fetchingCallback?.OnComplete()
+                                        fetchingCallback?.OnComplete(item)
                                     }
                                     if (added == 0) {
                                         AppPrefs.ads.set("")
@@ -93,7 +93,7 @@ class DynamicsAds {
                             ?.observeOn(AndroidSchedulers.mainThread())
                             ?.subscribe({
                             }, {
-                                fetchingCallback?.OnComplete()
+                                fetchingCallback?.OnComplete(null)
                                 Log.d("DunamicAds", "getDynamicAds: "+it.localizedMessage)
                             })
 //                    }
