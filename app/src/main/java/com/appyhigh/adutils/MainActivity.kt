@@ -3,6 +3,7 @@ package com.appyhigh.adutils
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
@@ -51,7 +52,60 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRewardedAd.setOnClickListener {
-            rewardedAd?.show(this) {}
+            //Load Rewarded Ads and Use it whatever way....
+            AdSdk.loadRewardedAd(
+                this,
+                "ca-app-pub-3940256099942544/5224354917",
+                object : RewardedAdUtilLoadCallback {
+                    override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
+                        Log.d("AdSdk", "onAdFailedToLoad: " + adError?.message)
+                    }
+
+                    override fun onAdLoaded(ad: RewardedAd?) {
+                        Log.d("AdSdk", "onAdLoaded: ")
+                        ad?.show(this@MainActivity) {
+
+                        }
+                    }
+
+                    override fun onAdDismissedFullScreenContent() {
+                        Log.d("AdSdk", "onAdDismissedFullScreenContent: ")
+                    }
+
+                    override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
+                        Log.d("AdSdk", "onAdFailedToShowFullScreenContent: " + adError?.message)
+                    }
+
+                    override fun onAdShowedFullScreenContent() {
+                        Log.d("AdSdk", "onAdShowedFullScreenContent: ")
+                    }
+                }
+            )
+/*
+            AdSdk.showRewardedAdsAfterWait(
+                this,
+                4000,
+                "ca-app-pub-3940256099942544/5224354917",
+                object : RewardedCallback {
+                    override fun moveNext(rewarded: Boolean) {
+                        Log.d("ADSDK", "moveNext: " + rewarded)
+                    }
+
+                    override fun moveNext(error: LoadAdError) {
+
+                    }
+
+                    override fun moveNext(error: AdError) {
+
+                    }
+
+                    override fun adNotLoaded() {
+
+                    }
+                }
+            )
+*/
+
         }
 
         binding.btnNativeAd.setOnClickListener {
@@ -63,6 +117,7 @@ class MainActivity : AppCompatActivity() {
         }
         loadInterstitialAd(this)
         loadRewardedAd(this)
+//        AdSdk.preLoadRewardedAd(this, "ca-app-pub-3940256099942544/5224354917")
     }
 
     private val mInterstitialAdUtilCallback = object : InterstitialAdUtilLoadCallback {

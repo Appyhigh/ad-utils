@@ -234,6 +234,7 @@ object AdSdk {
                                             mediaMaxHeight = value.mediaMaxHeight,
                                             loadingTextSize = value.textSize,
                                             contentURL = value.contentURL,
+                                            showLoadingMessage = value.showLoadingMessage,
                                             neighbourContentURL = value.neighbourContentURL
                                         )
                                     }
@@ -629,17 +630,17 @@ object AdSdk {
      */
 
     fun loadRewardedAd(
-        activity: Activity,
+        activity: Activity?,
         adUnit: String,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
     ) {
-        if (application != null) {
+        if (activity != null) {
             var mRewardedAd: RewardedAd?
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             RewardedAd.load(
-                application!!,
+                activity,
                 adUnit,
                 adRequest,
                 object : RewardedAdLoadCallback() {
@@ -674,6 +675,7 @@ object AdSdk {
             )
         }
     }
+
 
     /**
      * Call loadNativeAd with following params to load a Native Ad
@@ -710,7 +712,8 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int = 48,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
         @LayoutRes val layoutId = when (adType) {
@@ -737,7 +740,10 @@ object AdSdk {
             textColor1,
             textColor2,
             mediaMaxHeight1,
-            loadingTextSize, contentURL, neighbourContentURL
+            loadingTextSize,
+            contentURL,
+            neighbourContentURL,
+            showLoadingMessage = showLoadingMessage
         )
 
     }
@@ -767,7 +773,8 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
@@ -783,7 +790,9 @@ object AdSdk {
             textColor2,
             mediaMaxHeight,
             loadingTextSize,
-            contentURL, neighbourContentURL
+            contentURL,
+            neighbourContentURL,
+            showLoadingMessage
         )
     }
 
@@ -811,7 +820,8 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean
     ) {
         viewGroup.visibility = VISIBLE
         if (application != null) {
@@ -834,7 +844,9 @@ object AdSdk {
                 }
             }
             viewGroup.removeAllViews()
-            viewGroup.addView(inflate)
+            if (showLoadingMessage) {
+                viewGroup.addView(inflate)
+            }
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
                 AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
@@ -851,7 +863,9 @@ object AdSdk {
                     textColor2,
                     mediaMaxHeight,
                     loadingTextSize,
-                    contentURL = contentURL, neighbourContentURL = neighbourContentURL
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage
                 )
             }
             lifecycle.addObserver(object : LifecycleObserver {
@@ -1361,6 +1375,7 @@ object AdSdk {
     }
 
     var create: AlertDialog? = null
+    var builder: AlertDialog.Builder? = null
     fun showRewardedIntersAd(
         activity: Activity,
         adId: String,
@@ -1380,14 +1395,7 @@ object AdSdk {
             }
         }
         ctd.start()
-        val builder = AlertDialog.Builder(activity, R.style.DialogTheme)
-        builder.setView(
-            LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
-        )
-        create = builder.create()
-        if (!activity.isFinishing) {
-            create?.show()
-        }
+        showAdLoaderLayout(activity)
         RewardedInterstitialAd.load(activity, adId,
             AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
@@ -1429,6 +1437,122 @@ object AdSdk {
                     }
                 }
             })
+    }
+
+    private fun showAdLoaderLayout(activity: Activity) {
+        dismissAdLoaderLayout(activity)//Added This So that The alertDialog Variable is never used twice which will lead to no closing of the dialog
+        builder = AlertDialog.Builder(activity, R.style.DialogTheme)
+        builder?.setView(
+            LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
+        )
+        create = builder?.create()
+        if (!activity.isFinishing) {
+            create?.show()
+        }
+    }
+
+
+    val preloadedRewardedAdList: HashMap<String, RewardedAd?> = hashMapOf()
+    val AdRewardedList: HashMap<String, Boolean> = hashMapOf()
+
+    fun preLoadRewardedAd(
+        activity: Activity?,
+        adUnit: String
+    ) {
+        EmptyAdList(adUnit)
+        if (activity != null) {
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                .build()
+            RewardedAd.load(
+                activity,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        EmptyAdList(adUnit)
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        preloadedRewardedAdList[adUnit] = rewardedAd
+                        AdRewardedList[adUnit] = false
+                    }
+                },
+            )
+        }
+    }
+
+    private fun EmptyAdList(adUnit: String) {
+        preloadedRewardedAdList[adUnit] = null
+        AdRewardedList[adUnit] = false
+    }
+
+    fun showRewardedAdsAfterWait(
+        activity: Activity?,
+        timeToWait: Long = 5000,
+        adId: String,
+        callback: RewardedCallback
+    ) {
+        if (activity != null) {
+            showAdLoaderLayout(activity)
+            if (preloadedRewardedAdList.containsKey(adId)) {
+                var rewardedAd: RewardedAd? = null
+                var ctd: CountDownTimer? = null
+                ctd = object : CountDownTimer(timeToWait, 1000) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        rewardedAd = preloadedRewardedAdList[adId]
+                        if (rewardedAd != null) {
+                            ctd?.cancel()
+                            ctd = null
+                            rewardedAd?.fullScreenContentCallback =
+                                object : FullScreenContentCallback() {
+                                    override fun onAdDismissedFullScreenContent() {
+                                        super.onAdDismissedFullScreenContent()
+                                        callback.moveNext(AdRewardedList[adId] ?: false)
+                                        dismissAdLoaderLayout(activity)
+                                    }
+
+                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                        super.onAdFailedToShowFullScreenContent(p0)
+                                        callback.moveNext(p0)
+                                        dismissAdLoaderLayout(activity)
+                                    }
+
+                                    override fun onAdShowedFullScreenContent() {
+                                        super.onAdShowedFullScreenContent()
+                                        preloadedRewardedAdList.remove(adId)
+                                        AdRewardedList[adId] = false
+                                        dismissAdLoaderLayout(activity)
+                                    }
+                                }
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                rewardedAd?.show(
+                                    activity
+                                ) { AdRewardedList[adId] = true }
+                            }, 1500)
+                        }
+                    }
+
+                    override fun onFinish() {
+                        EmptyAdList(adId)
+                        preloadedRewardedAdList.remove(adId)
+                        AdRewardedList[adId] = false
+                        dismissAdLoaderLayout(activity)
+                        callback.adNotLoaded()
+                    }
+                }
+                ctd?.start()
+            } else {
+                preLoadRewardedAd(activity, adId)
+                showRewardedAdsAfterWait(
+                    activity,
+                    timeToWait,
+                    adId,
+                    callback
+                )
+            }
+
+        }
     }
 
     private fun dismissAdLoaderLayout(activity: Activity) {
