@@ -4,9 +4,8 @@
     android:id="@+id/native_ad_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_centerInParent="true"
-    android:layout_gravity="center"
     android:layout_margin="5dp"
+    android:background="@drawable/nad_bg_empty"
     android:elevation="1dp">
 
     <com.google.android.gms.ads.nativead.MediaView
@@ -25,7 +24,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_centerInParent="true"
-        android:background="@drawable/nad_bg"
         android:gravity="center"
         android:orientation="vertical">
 
