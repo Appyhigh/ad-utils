@@ -140,7 +140,7 @@ object AdMobUtil {
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
                 var adsObj:List<AdMod> = Gson().fromJson(ads,type)
-                return adsObj.filter { ad -> ad.ad_name.equals(id)}.get(0).isActive
+                return adsObj.filter { ad -> ad.ad_name.trim().lowercase().equals(id.trim().lowercase())}.get(0).isActive
             }
             catch (e:IndexOutOfBoundsException){
                 return false
