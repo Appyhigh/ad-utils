@@ -449,7 +449,7 @@ object AdSdk {
         appOpenAdCallback: AppOpenAdLoadCallback? = null,
         isAdmanager: Boolean = false
     ) {
-        if (application != null) {
+        if (application != null && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
             if (fetchedTimer == 0){
                 fetchedTimer = 3500
