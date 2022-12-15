@@ -72,9 +72,9 @@ class AppOpenManager(
 
     private fun fetchAd() {
         // Have unused ad, no need to fetch another.
-        if (isAdAvailable) {
-            return
-        }
+//        if (isAdAvailable) {
+//            return
+//        }
         var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
         if (fetchedTimer == 0){
             fetchedTimer = 3500
