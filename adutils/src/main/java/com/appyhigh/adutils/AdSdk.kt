@@ -729,6 +729,9 @@ object AdSdk {
                 isAdmanager
             )
         }
+        else {
+            viewGroup.visibility = GONE
+        }
 
     }
 
@@ -751,6 +754,7 @@ object AdSdk {
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
+                viewGroup.visibility = VISIBLE
                 if (adUnit.isBlank()) return
 
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
@@ -2762,6 +2766,9 @@ object AdSdk {
                 isAdmanager = isAdmanager
             )
         }
+        else {
+            viewGroup.visibility = GONE
+        }
 
     }
 
@@ -4564,6 +4571,9 @@ object AdSdk {
                 neighbourContentURL = neighbourContentURL,
                 isAdmanager = isAdmanager
             )
+        }
+        else {
+            viewGroup.visibility = GONE
         }
     }
 
