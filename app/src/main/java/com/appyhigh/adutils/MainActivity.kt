@@ -239,7 +239,8 @@ class MainActivity : AppCompatActivity() {
             activity,
             "ca-app-pub-3940256099942544/5224354917",
             "util_rewarded",
-            mRewardedAdUtilCallback
+            mRewardedAdUtilCallback,
+            false
         )
     }
 }

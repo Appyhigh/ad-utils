@@ -28,42 +28,55 @@ class SplashActivity : AppCompatActivity() {
                 AdSdk.ADType.MEDIUM
             )
         )
+        preloadingNativeAdList.put(
+            "util_native_preload1",
+            PreloadNativeAds(
+                "ca-app-pub-3940256099942544/2247696110",
+                "util_native_preload1",
+                AdSdk.ADType.MEDIUM
+            )
+        )
         AdSdk.initialize(
             applicationContext as MyApp,
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
             preloadingNativeAdList = null,
             fetchingCallback = object : AdSdk.FetchingCallback {
                 override fun OnComplete(app: AppsData?) {
-                    runOnUiThread {
-                        if (BuildConfig.DEBUG) {
-                            AdSdk.attachAppOpenAdManager(
-                                DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-                                "util_appopen",
-                                null,
-                                1000,
-                                false
-                            )
-                        } else {
-                            AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-                                "util_appopen",
-                                null)
-                        }
+                    if (app != null){
+                        runOnUiThread {
+                            if (BuildConfig.DEBUG) {
+                                AdSdk.attachAppOpenAdManager(
+                                    DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                                    "util_appopen",
+                                    null,
+                                    1000,
+                                    false
+                                )
+                            } else {
+                                AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                                    "util_appopen",
+                                    null)
+                            }
 
-                        AdSdk.loadSplashAd(
-                            "ca-app-pub-3940256099942544/1033173712",
-                            "util_interstitial",
-                            this@SplashActivity,
-                            object : SplashInterstitialCallback {
-                                override fun moveNext() {
-                                    finish()
-                                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-                                }
-                            }, 5000
-                        )
-                        AdSdk.preloadAds(
-                            applicationContext as MyApp,
-                            preloadingNativeAdList
-                        )
+                            AdSdk.loadSplashAd(
+                                "ca-app-pub-3940256099942544/1033173712",
+                                "util_interstitial",
+                                this@SplashActivity,
+                                object : SplashInterstitialCallback {
+                                    override fun moveNext() {
+                                        finish()
+                                        startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                                    }
+                                }, 5000
+                            )
+                            AdSdk.preloadAds(
+                                applicationContext as MyApp,
+                                preloadingNativeAdList
+                            )
+                        }
+                    }
+                    else {
+                        Toast.makeText(applicationContext,"Failed",Toast.LENGTH_LONG).show()
                     }
                 }
             }

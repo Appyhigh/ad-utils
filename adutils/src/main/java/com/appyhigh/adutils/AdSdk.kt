@@ -2259,6 +2259,7 @@ object AdSdk {
         adUnit: String,
         adName: String,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
+        showLoaderScreen: Boolean = false,
         isAdmanager:Boolean = false,
     ) {
         if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName))
@@ -2269,7 +2270,8 @@ object AdSdk {
             }
             var primaryIds = AdMobUtil.fetchPrimaryById(adName)
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
-
+            if (showLoaderScreen)
+                showAdLoaderLayout(activity)
             Log.d("rewarded","OnStart:" + System.currentTimeMillis()/1000)
             if (!isAdmanager){
                 if (primaryIds.size > 0){
@@ -2281,6 +2283,8 @@ object AdSdk {
                         object :RewardInternalCallback{
                             override fun onSuccess(rewardAds: RewardedAd) {
                                 Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                if (showLoaderScreen)
+                                dismissAdLoaderLayout(activity)
                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                             }
 
@@ -2294,6 +2298,8 @@ object AdSdk {
                                         object :RewardInternalCallback{
                                             override fun onSuccess(rewardAds: RewardedAd) {
                                                 Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                if (showLoaderScreen)
+                                                dismissAdLoaderLayout(activity)
                                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                             }
 
@@ -2309,6 +2315,8 @@ object AdSdk {
                                                     object :RewardInternalCallback{
                                                         override fun onSuccess(rewardAds: RewardedAd) {
                                                             Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            if (showLoaderScreen)
+                                                            dismissAdLoaderLayout(activity)
                                                             rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                                         }
 
@@ -2332,6 +2340,9 @@ object AdSdk {
                                         object :RewardInternalCallback{
                                             override fun onSuccess(rewardAds: RewardedAd) {
                                                 Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                if (showLoaderScreen)
+                                                dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                             }
 
                                             override fun onFailed(
@@ -2358,6 +2369,8 @@ object AdSdk {
                                     "rewarded",
                                     "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
                                 )
+                                if (showLoaderScreen)
+                                dismissAdLoaderLayout(activity)
                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                             }
 
@@ -2376,6 +2389,8 @@ object AdSdk {
                                                 "rewarded",
                                                 "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
                                             )
+                                            if (showLoaderScreen)
+                                            dismissAdLoaderLayout(activity)
                                             rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                         }
 
@@ -2403,6 +2418,9 @@ object AdSdk {
                                     "rewarded",
                                     "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
                                 )
+                                if (showLoaderScreen)
+                                dismissAdLoaderLayout(activity)
+                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                             }
 
                             override fun onFailed(
@@ -2425,6 +2443,8 @@ object AdSdk {
                         object :RewardInternalCallback{
                             override fun onSuccess(rewardAds: RewardedAd) {
                                 Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                if (showLoaderScreen)
+                                dismissAdLoaderLayout(activity)
                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                             }
 
@@ -2438,6 +2458,8 @@ object AdSdk {
                                         object :RewardInternalCallback{
                                             override fun onSuccess(rewardAds: RewardedAd) {
                                                 Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                if (showLoaderScreen)
+                                                dismissAdLoaderLayout(activity)
                                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                             }
 
@@ -2453,6 +2475,8 @@ object AdSdk {
                                                     object :RewardInternalCallback{
                                                         override fun onSuccess(rewardAds: RewardedAd) {
                                                             Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            if (showLoaderScreen)
+                                                            dismissAdLoaderLayout(activity)
                                                             rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                                         }
 
@@ -2476,6 +2500,9 @@ object AdSdk {
                                         object :RewardInternalCallback{
                                             override fun onSuccess(rewardAds: RewardedAd) {
                                                 Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                if (showLoaderScreen)
+                                                dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                             }
 
                                             override fun onFailed(
@@ -2502,6 +2529,8 @@ object AdSdk {
                                     "rewarded",
                                     "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
                                 )
+                                if (showLoaderScreen)
+                                dismissAdLoaderLayout(activity)
                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                             }
 
@@ -2520,6 +2549,8 @@ object AdSdk {
                                                 "rewarded",
                                                 "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
                                             )
+                                            if (showLoaderScreen)
+                                            dismissAdLoaderLayout(activity)
                                             rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                         }
 
@@ -2547,6 +2578,9 @@ object AdSdk {
                                     "rewarded",
                                     "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
                                 )
+                                if (showLoaderScreen)
+                                dismissAdLoaderLayout(activity)
+                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                             }
 
                             override fun onFailed(

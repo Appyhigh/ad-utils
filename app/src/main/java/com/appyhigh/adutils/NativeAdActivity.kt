@@ -121,6 +121,20 @@ class NativeAdActivity : AppCompatActivity() {
                 preloadAds = true,
                 autoRefresh = true
             )
+
+            AdSdk.loadNativeAdFromSrvs(
+                context = applicationContext,
+                lifecycle = lifecycle,
+                layoutInflater = layoutInflater,
+                adUnit = adUnit,
+                adName = "util_native_preload1",
+                viewGroup = binding.llRoot,
+                adType = AdSdk.ADType.MEDIUM,
+                background = null, textColor1 = null, textColor2 = null,
+                nativeAdLoadCallback = null,
+                preloadAds = true,
+                autoRefresh = true
+            )
         }
 
         binding.removeAds.setOnClickListener {
