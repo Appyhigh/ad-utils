@@ -2324,6 +2324,7 @@ object AdSdk {
                                                             adError: LoadAdError?,
                                                             ad: RewardedAd?
                                                         ) {
+                                                            dismissAdLoaderLayout(activity)
                                                             rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
                                                         }
                                                     }
@@ -2349,6 +2350,7 @@ object AdSdk {
                                                 adError: LoadAdError?,
                                                 ad: RewardedAd?
                                             ) {
+                                                dismissAdLoaderLayout(activity)
                                                 rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
                                             }
                                         }
@@ -2398,6 +2400,7 @@ object AdSdk {
                                             adError: LoadAdError?,
                                             ad: RewardedAd?
                                         ) {
+                                            dismissAdLoaderLayout(activity)
                                             rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                                         }
                                     }
@@ -2427,6 +2430,7 @@ object AdSdk {
                                 adError: LoadAdError?,
                                 ad: RewardedAd?
                             ) {
+                                dismissAdLoaderLayout(activity)
                                 rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                             }
                         }
@@ -2484,6 +2488,7 @@ object AdSdk {
                                                             adError: LoadAdError?,
                                                             ad: RewardedAd?
                                                         ) {
+                                                            dismissAdLoaderLayout(activity)
                                                             rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
                                                         }
                                                     }
@@ -2509,6 +2514,7 @@ object AdSdk {
                                                 adError: LoadAdError?,
                                                 ad: RewardedAd?
                                             ) {
+                                                dismissAdLoaderLayout(activity)
                                                 rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
                                             }
                                         }
@@ -2558,6 +2564,7 @@ object AdSdk {
                                             adError: LoadAdError?,
                                             ad: RewardedAd?
                                         ) {
+                                            dismissAdLoaderLayout(activity)
                                             rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                                         }
                                     }
@@ -2587,6 +2594,7 @@ object AdSdk {
                                 adError: LoadAdError?,
                                 ad: RewardedAd?
                             ) {
+                                dismissAdLoaderLayout(activity)
                                 rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                             }
                         }
