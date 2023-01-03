@@ -232,7 +232,8 @@ object AdSdk {
             for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
                 if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
-                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && AdMobUtil.fetchAdStatusFromAdId(item.value.adName))
+                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && bannerRefresh == REFRESH_STATE.REFRESH_ON &&
+                            AdMobUtil.fetchAdStatusFromAdId(item.value.adName))
                             Handler(Looper.getMainLooper()).post {
                                 loadBannerAdRefresh(
                                     item.value.activity,
@@ -259,7 +260,7 @@ object AdSdk {
                 if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
-                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
                             AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
                             Handler(Looper.getMainLooper()).post {
                                 loadNativeAdRefresh(
@@ -297,7 +298,8 @@ object AdSdk {
                 if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
-                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && value.autoRefresh && AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
+                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
+                            value.autoRefresh && AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
                             Handler(Looper.getMainLooper()).post {
                                 loadNativeAdFromServiceRefresh(
                                     value.layoutInflater,
