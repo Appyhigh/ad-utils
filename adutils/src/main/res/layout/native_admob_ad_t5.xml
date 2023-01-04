@@ -44,7 +44,7 @@
                 android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/ad_media">
+                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view5">
 
                 <LinearLayout
                     android:id="@+id/linearLayout"
@@ -135,22 +135,25 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/call_to_action"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center"
-                    android:layout_margin="5dp"
-                    android:background="@drawable/ads_bg_lib_curver"
-                    android:gravity="center"
-                    android:minWidth="100dp"
-                    android:padding="6dp"
-                    android:textColor="@color/color_white"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="Install" />
-
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/call_to_action"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:layout_margin="5dp"
+                android:background="@drawable/ads_bg_lib_curver"
+                android:gravity="center"
+                android:minWidth="100dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:padding="6dp"
+                android:textColor="@color/color_white"
+                app:layout_constraintTop_toBottomOf="@+id/ad_media"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Install" />
 
 
             <com.google.android.gms.ads.nativead.MediaView
@@ -162,7 +165,7 @@
                 android:maxHeight="200dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/ad_notification_view5" />
+                app:layout_constraintTop_toBottomOf="@+id/linearLayout4" />
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>
