@@ -85,6 +85,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.BIGV1,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
+            mediaMaxHeight = 500
         )
 
         AdSdk.loadNativeAd(
@@ -95,6 +96,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.BIGV2,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
+            mediaMaxHeight = 500
         )
 
         AdSdk.loadNativeAd(
