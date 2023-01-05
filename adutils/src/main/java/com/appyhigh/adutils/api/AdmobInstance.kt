@@ -3,6 +3,7 @@ package com.appyhigh.adutils.api
 import android.app.Activity
 import android.content.Context
 import android.provider.Settings
+import com.appyhigh.adutils.BuildConfig
 import com.appyhigh.adutils.DynamicsAds
 import com.appyhigh.adutils.utils.HttpConstants
 import okhttp3.Interceptor
@@ -38,7 +39,7 @@ object AdmobInstance {
         clientBuilder.addInterceptor(interceptor)
 
         val retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(TEST_API)
+            .baseUrl(API)
             .client(clientBuilder.build())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(GsonConverterFactory.create())
