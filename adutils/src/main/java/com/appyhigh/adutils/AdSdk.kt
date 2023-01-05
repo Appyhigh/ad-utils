@@ -6194,6 +6194,7 @@ object AdSdk {
         neighbourContentURL: List<String>? = null,
         isAdmanager: Boolean
     ) {
+        Log.d("preLoadNativeAd: ",adName)
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
             @LayoutRes val layoutId = when (newAdSize) {
