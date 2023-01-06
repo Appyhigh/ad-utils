@@ -107,6 +107,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.BIGV3,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
+            doRefresh = false
         )
 
         binding.refresh.setOnClickListener {

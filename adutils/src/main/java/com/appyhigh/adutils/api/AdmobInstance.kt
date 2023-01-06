@@ -39,7 +39,7 @@ object AdmobInstance {
         clientBuilder.addInterceptor(interceptor)
 
         val retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(API)
+            .baseUrl(TEST_API)
             .client(clientBuilder.build())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(GsonConverterFactory.create())

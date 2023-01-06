@@ -260,31 +260,32 @@ object AdSdk {
                 if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
                     fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
-                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
-                            AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
-                            Handler(Looper.getMainLooper()).post {
-                                loadNativeAdRefresh(
-                                    value.id,
-                                    value.lifecycle,
-                                    value.adUnit,
-                                    value.adName,
-                                    value.viewGroup,
-                                    value.nativeAdLoadCallback,
-                                    value.layoutId,
-                                    value.populator,
-                                    background = value.background,
-                                    textColor1 = value.textColor1,
-                                    textColor2 = value.textColor2,
-                                    mediaMaxHeight = value.mediaMaxHeight,
-                                    loadingTextSize = value.textSize,
-                                    contentURL = value.contentURL,
-                                    showLoadingMessage = value.showLoadingMessage,
-                                    neighbourContentURL = value.neighbourContentURL,
-                                    isAdmanager = value.isAdManager
-                                )
-                                Log.d(TAG, "refreshNative: "+"${value.adName}:"+ System.currentTimeMillis()/1000)
+                        if (value.lifecycle != null && value.doRefresh)
+                            if (value.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
+                                AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
+                                Handler(Looper.getMainLooper()).post {
+                                    loadNativeAdRefresh(
+                                        value.id,
+                                        value.lifecycle,
+                                        value.adUnit,
+                                        value.adName,
+                                        value.viewGroup,
+                                        value.nativeAdLoadCallback,
+                                        value.layoutId,
+                                        value.populator,
+                                        background = value.background,
+                                        textColor1 = value.textColor1,
+                                        textColor2 = value.textColor2,
+                                        mediaMaxHeight = value.mediaMaxHeight,
+                                        loadingTextSize = value.textSize,
+                                        contentURL = value.contentURL,
+                                        showLoadingMessage = value.showLoadingMessage,
+                                        neighbourContentURL = value.neighbourContentURL,
+                                        isAdmanager = value.isAdManager
+                                    )
+                                    Log.d(TAG, "refreshNative: "+"${value.adName}:"+ System.currentTimeMillis()/1000)
+                                }
                             }
-                        }
                     }
                 }
             }
@@ -2758,7 +2759,7 @@ object AdSdk {
     }
 
     fun loadNativeAd(
-        lifecycle: Lifecycle,
+        lifecycle: Lifecycle?,
         adUnit: String,
         adName: String,
         viewGroup: ViewGroup,
@@ -2772,7 +2773,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        doRefresh:Boolean = true
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
         var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
@@ -2807,7 +2809,8 @@ object AdSdk {
                 contentURL,
                 neighbourContentURL,
                 showLoadingMessage = showLoadingMessage,
-                isAdmanager = isAdmanager
+                isAdmanager = isAdmanager,
+                doRefresh
             )
         }
         else {
@@ -2828,7 +2831,7 @@ object AdSdk {
      * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView?) as params
      */
     private fun loadNativeAd(
-        lifecycle: Lifecycle,
+        lifecycle: Lifecycle?,
         adUnit: String,
         adName: String,
         viewGroup: ViewGroup,
@@ -2844,7 +2847,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        doRefresh:Boolean = true
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
@@ -2864,7 +2868,8 @@ object AdSdk {
             contentURL,
             neighbourContentURL,
             showLoadingMessage,
-            isAdmanager = isAdmanager
+            isAdmanager = isAdmanager,
+            doRefresh
         )
     }
 
@@ -2879,7 +2884,7 @@ object AdSdk {
      */
     private fun loadNativeAd(
         id: Long = System.currentTimeMillis(),
-        lifecycle: Lifecycle,
+        lifecycle: Lifecycle?,
         adUnit: String,
         adName: String,
         viewGroup: ViewGroup,
@@ -2895,7 +2900,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        doRefresh:Boolean = true
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
@@ -3173,11 +3179,13 @@ object AdSdk {
 
                                                         },
                                                         isAdmanager = isAdmanager,
+                                                        doRefresh
                                                     )
                                                 }
 
                                             },
                                             isAdmanager = isAdmanager,
+                                            doRefresh
                                         )
                                     }
                                     else{
@@ -3263,12 +3271,14 @@ object AdSdk {
 
                                             },
                                             isAdmanager = isAdmanager,
+                                            doRefresh
                                         )
                                     }
                                 }
 
                             },
                             isAdmanager = isAdmanager,
+                            doRefresh
                         )
                     }
                     else if (secondaryIds.size >0){
@@ -3431,11 +3441,13 @@ object AdSdk {
 
                                         },
                                         isAdmanager = isAdmanager,
+                                        doRefresh
                                     )
                                 }
 
                             },
                             isAdmanager = isAdmanager,
+                            doRefresh
                         )
                     }
                     else{
@@ -3521,6 +3533,7 @@ object AdSdk {
 
                             },
                             isAdmanager = isAdmanager,
+                            doRefresh
                         )
                     }
                 }
@@ -3626,7 +3639,7 @@ object AdSdk {
                                             fetchedTimer,
                                             object: NativeInternalCallback{
                                                 override fun onSuccess(nativeAd: NativeAd?) {
-                                                    Log.d("native_admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("native_admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
                                                     nativeAdLoadCallback?.onAdLoaded()
                                                     if (nativeAd != null) {
                                                         val adView =
@@ -3703,7 +3716,7 @@ object AdSdk {
                                                         fetchedTimer,
                                                         object: NativeInternalCallback{
                                                             override fun onSuccess(nativeAd: NativeAd?) {
-                                                                Log.d("native_admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                Log.d("native_admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
                                                                 nativeAdLoadCallback?.onAdLoaded()
                                                                 if (nativeAd != null) {
                                                                     val adView =
@@ -3764,11 +3777,13 @@ object AdSdk {
 
                                                         },
                                                         isAdmanager = isAdmanager,
+                                                        doRefresh
                                                     )
                                                 }
 
                                             },
                                             isAdmanager = isAdmanager,
+                                            doRefresh
                                         )
                                     }
                                     else{
@@ -3793,7 +3808,7 @@ object AdSdk {
                                             fetchedTimer,
                                             object: NativeInternalCallback{
                                                 override fun onSuccess(nativeAd: NativeAd?) {
-                                                    Log.d("native_admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("native_admanager", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
                                                     nativeAdLoadCallback?.onAdLoaded()
                                                     if (nativeAd != null) {
                                                         val adView =
@@ -3854,12 +3869,14 @@ object AdSdk {
 
                                             },
                                             isAdmanager = isAdmanager,
+                                            doRefresh
                                         )
                                     }
                                 }
 
                             },
                             isAdmanager = isAdmanager,
+                            doRefresh
                         )
                     }
                     else if (secondaryIds.size >0){
@@ -4022,11 +4039,13 @@ object AdSdk {
 
                                         },
                                         isAdmanager = isAdmanager,
+                                        doRefresh
                                     )
                                 }
 
                             },
                             isAdmanager = isAdmanager,
+                            doRefresh
                         )
                     }
                     else{
@@ -4112,6 +4131,7 @@ object AdSdk {
 
                             },
                             isAdmanager = isAdmanager,
+                            doRefresh
                         )
                     }
                 }
@@ -4126,7 +4146,7 @@ object AdSdk {
 
     private fun loadNativeAd(
         id: Long = System.currentTimeMillis(),
-        lifecycle: Lifecycle,
+        lifecycle: Lifecycle?,
         adName: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
@@ -4144,7 +4164,8 @@ object AdSdk {
         primaryIds: List<String>,
         fetchedTimer: Int,
         nativeInternalCallback: NativeInternalCallback,
-        isAdmanager: Boolean
+        isAdmanager: Boolean,
+        doRefresh:Boolean
     ){
         var nativeAd: NativeAd? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
@@ -4165,7 +4186,7 @@ object AdSdk {
         }.start()
         var loadedId = ""
         for (adUnit in primaryIds){
-            lifecycle.addObserver(object : LifecycleObserver {
+            lifecycle?.addObserver(object : LifecycleObserver {
                 @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 fun onDestroy() {
                     AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
@@ -4215,7 +4236,8 @@ object AdSdk {
                                     contentURL = contentURL,
                                     neighbourContentURL = neighbourContentURL,
                                     showLoadingMessage = showLoadingMessage,
-                                    isAdManager = isAdmanager
+                                    isAdManager = isAdmanager,
+                                    doRefresh = doRefresh
                                 )
                             }
                         }
@@ -4243,7 +4265,7 @@ object AdSdk {
 
     private fun loadNativeAdManager(
         id: Long = System.currentTimeMillis(),
-        lifecycle: Lifecycle,
+        lifecycle: Lifecycle?,
         adName: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
@@ -4261,7 +4283,8 @@ object AdSdk {
         primaryIds: List<String>,
         fetchedTimer: Int,
         nativeInternalCallback: NativeInternalCallback,
-        isAdmanager: Boolean
+        isAdmanager: Boolean,
+        doRefresh: Boolean
     ){
         var nativeAd: NativeAd? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
@@ -4282,7 +4305,7 @@ object AdSdk {
         }.start()
         var loadedId = ""
         for (adUnit in primaryIds){
-            lifecycle.addObserver(object : LifecycleObserver {
+            lifecycle?.addObserver(object : LifecycleObserver {
                 @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 fun onDestroy() {
                     AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
@@ -4331,7 +4354,8 @@ object AdSdk {
                                     contentURL = contentURL,
                                     neighbourContentURL = neighbourContentURL,
                                     showLoadingMessage = showLoadingMessage,
-                                    isAdManager = isAdmanager
+                                    isAdManager = isAdmanager,
+                                    doRefresh = doRefresh
                                 )
                             }
                         }

@@ -9,7 +9,7 @@ import com.google.android.gms.ads.nativead.NativeAdView
 
 data class NativeAdItem(
     val id: Long,
-    val lifecycle: Lifecycle,
+    val lifecycle: Lifecycle?,
     val adUnit: String,
     val adName:String,
     val viewGroup: ViewGroup,
@@ -26,7 +26,6 @@ data class NativeAdItem(
     var contentURL: String? = null,
     var neighbourContentURL: List<String>? = null,
     var showLoadingMessage: Boolean,
-    var isAdManager:Boolean
-
-
+    var isAdManager:Boolean,
+    var doRefresh:Boolean = true
 )
