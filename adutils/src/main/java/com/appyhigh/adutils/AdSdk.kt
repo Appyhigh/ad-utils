@@ -321,6 +321,7 @@ object AdSdk {
                                     autoRefresh = value.preloadAds,
                                     contentURL = value.contentURL,
                                     neighbourContentURL = value.neighbourContentURL,
+                                    showLoadingMessage = value.showLoadingMessage,
                                     isAdmanager = value.isAdmanager
                                 )
                                 Log.d(TAG, "refreshNativeService: "+"${value.adName}:"+ System.currentTimeMillis()/1000)
@@ -4590,6 +4591,7 @@ object AdSdk {
         autoRefresh: Boolean = false,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
         isAdmanager:Boolean = false
     ){
         if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -4613,6 +4615,7 @@ object AdSdk {
                 autoRefresh = preloadAds,
                 contentURL = contentURL,
                 neighbourContentURL = neighbourContentURL,
+                showLoadingMessage = showLoadingMessage,
                 isAdmanager = isAdmanager
             )
         }
@@ -4641,6 +4644,7 @@ object AdSdk {
         autoRefresh: Boolean = false,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
         isAdmanager: Boolean
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -4675,7 +4679,8 @@ object AdSdk {
                 }
             }
             viewGroup.removeAllViews()
-            viewGroup.addView(inflate)
+            if (showLoadingMessage)
+                viewGroup.addView(inflate)
             if (adUnit.isBlank()) return
             if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null) {
                 AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
@@ -4698,6 +4703,7 @@ object AdSdk {
                     autoRefresh,
                     contentURL,
                     neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage,
                     isAdmanager = isAdmanager
                 )
             }
@@ -4829,6 +4835,7 @@ object AdSdk {
         autoRefresh: Boolean = false,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
         isAdmanager:Boolean = false
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -4870,7 +4877,8 @@ object AdSdk {
                 }
             }
             viewGroup.removeAllViews()
-            viewGroup.addView(inflate)
+            if (showLoadingMessage)
+                viewGroup.addView(inflate)
             if (adUnit.isBlank()) return
             if (preloadNativeAdList != null) {
                 val preloadNativeAds = preloadNativeAdList!![adName]
@@ -4909,6 +4917,7 @@ object AdSdk {
                             autoRefresh,
                             contentURL,
                             neighbourContentURL,
+                            showLoadingMessage = showLoadingMessage,
                             isAdmanager = isAdmanager
                         )
                         refreshNativeService(adName)
@@ -5149,10 +5158,12 @@ object AdSdk {
                                                                 nativeAdLoadCallback?.onAdFailed(null)
                                                             }
                                                         },
+                                                        showLoadingMessage,
                                                         isAdmanager
                                                     )
                                                 }
                                             },
+                                            showLoadingMessage,
                                             isAdmanager
                                         )
                                     }
@@ -5235,11 +5246,13 @@ object AdSdk {
                                                     nativeAdLoadCallback?.onAdFailed(null)
                                                 }
                                             },
+                                            showLoadingMessage,
                                             isAdmanager
                                         )
                                     }
                                 }
                             },
+                            showLoadingMessage,
                             isAdmanager
                         )
                     }
@@ -5397,10 +5410,12 @@ object AdSdk {
                                                 nativeAdLoadCallback?.onAdFailed(null)
                                             }
                                         },
+                                        showLoadingMessage,
                                         isAdmanager
                                     )
                                 }
                             },
+                            showLoadingMessage,
                             isAdmanager
                         )
                     }
@@ -5483,6 +5498,7 @@ object AdSdk {
                                     nativeAdLoadCallback?.onAdFailed(null)
                                 }
                             },
+                            showLoadingMessage,
                             isAdmanager
                         )
                     }
@@ -5722,10 +5738,12 @@ object AdSdk {
                                                             nativeAdLoadCallback?.onAdFailed(null)
                                                         }
                                                     },
+                                                    showLoadingMessage,
                                                     isAdmanager
                                                 )
                                             }
                                         },
+                                        showLoadingMessage,
                                         isAdmanager
                                     )
                                 }
@@ -5808,11 +5826,13 @@ object AdSdk {
                                                 nativeAdLoadCallback?.onAdFailed(null)
                                             }
                                         },
+                                        showLoadingMessage,
                                         isAdmanager
                                     )
                                 }
                             }
                         },
+                        showLoadingMessage,
                         isAdmanager
                     )
                 }
@@ -5970,10 +5990,12 @@ object AdSdk {
                                             nativeAdLoadCallback?.onAdFailed(null)
                                         }
                                     },
+                                    showLoadingMessage,
                                     isAdmanager
                                 )
                             }
                         },
+                        showLoadingMessage,
                         isAdmanager
                     )
                 }
@@ -6056,6 +6078,7 @@ object AdSdk {
                                 nativeAdLoadCallback?.onAdFailed(null)
                             }
                         },
+                        showLoadingMessage,
                         isAdmanager
                     )
                 }
@@ -6088,6 +6111,7 @@ object AdSdk {
         fetchedTimer: Int,
         primaryIds: List<String>,
         nativeInternalCallback: NativeInternalCallback,
+        showLoadingMessage: Boolean,
         isAdmanager: Boolean
     ) {
         var nativeAd: NativeAd? = null
@@ -6155,6 +6179,7 @@ object AdSdk {
                                 autoRefresh,
                                 contentURL,
                                 neighbourContentURL,
+                                showLoadingMessage = showLoadingMessage,
                                 isAdmanager = isAdmanager
                             )
                         }
