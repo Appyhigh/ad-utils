@@ -7,10 +7,7 @@ import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
-import com.appyhigh.adutils.callbacks.AppOpenAdLoadCallback
-import com.appyhigh.adutils.callbacks.InterstitialAdUtilLoadCallback
-import com.appyhigh.adutils.callbacks.InterstitialCallback
-import com.appyhigh.adutils.callbacks.RewardedAdUtilLoadCallback
+import com.appyhigh.adutils.callbacks.*
 import com.appyhigh.adutils.databinding.ActivityMainBinding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
@@ -21,7 +18,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewarded.RewardedAd
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), VersionCallback {
     private lateinit var binding: ActivityMainBinding
     private var interstitialAd: InterstitialAd? = null
     private var adManagerAd: AdManagerInterstitialAd? = null
@@ -50,6 +47,12 @@ class MainActivity : AppCompatActivity() {
             this,
             "pub-3940256099942544",
             "182790353ADD7F5B71982136E0704453"
+        )
+        AdSdk.initVersionController(
+            this@MainActivity,
+            90,
+            binding.root,
+            this
         )
         AdSdk.loadAppOpenAd(
             this@MainActivity,
@@ -242,5 +245,13 @@ class MainActivity : AppCompatActivity() {
             mRewardedAdUtilCallback,
             false
         )
+    }
+
+    override fun OnSoftUpdate() {
+        TODO("Not yet implemented")
+    }
+
+    override fun OnHardUpdate() {
+        TODO("Not yet implemented")
     }
 }

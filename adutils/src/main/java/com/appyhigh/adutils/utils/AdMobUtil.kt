@@ -176,6 +176,7 @@ object AdMobUtil {
                 ad?.size.trim().equals("bigv1",ignoreCase = true) -> AdSdk.ADType.BIGV1
                 ad?.size.trim().equals("bigv2",ignoreCase = true) -> AdSdk.ADType.BIGV2
                 ad?.size.trim().equals("bigv3",ignoreCase = true) -> AdSdk.ADType.BIGV3
+                ad?.size.trim().equals("grid_ad",ignoreCase = true) -> AdSdk.ADType.GRID_AD
                 else -> AdSdk.ADType.DEFAULT_AD
             }
         else

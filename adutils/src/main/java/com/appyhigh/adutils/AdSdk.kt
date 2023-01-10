@@ -356,7 +356,9 @@ object AdSdk {
     fun initVersionController(activity: Activity,
                               version:Int,
                               view:View,
-                              listener:VersionCallback = this.listener){
+                              listener:VersionCallback?){
+        if (listener == null)
+            throw NullPointerException()
         this.listener = listener
         VersionControlSdk.initializeSdk(
             activity,
@@ -2755,6 +2757,7 @@ object AdSdk {
             val BIGV1 = "1"
             val BIGV2 = "5"
             val BIGV3 = "2"
+            val GRID_AD = "7"
         }
     }
 
@@ -2787,6 +2790,7 @@ object AdSdk {
             "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
             "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
             "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+            "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
             else -> R.layout.native_admob_ad_t1
         }
 
