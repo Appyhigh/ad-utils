@@ -4661,6 +4661,7 @@ object AdSdk {
                 "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
                 "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
                 "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+                "7" -> R.layout.native_admob_ad_t7
                 else -> R.layout.native_admob_ad_t1
             }
             viewGroup.visibility = VISIBLE
@@ -4851,6 +4852,7 @@ object AdSdk {
                 "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
                 "5" -> R.layout.native_admob_ad_t5/*BIG*/
                 "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
+                "7" -> R.layout.native_admob_ad_t7
                 else -> R.layout.native_admob_ad_t1
             }
             viewGroup.visibility = VISIBLE
@@ -6231,6 +6233,7 @@ object AdSdk {
                 "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
                 "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
                 "5" -> R.layout.native_admob_ad_t5/*BIG*/
+                "7" -> R.layout.native_admob_ad_t7
                 "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
                 else -> R.layout.native_admob_ad_t1
             }
