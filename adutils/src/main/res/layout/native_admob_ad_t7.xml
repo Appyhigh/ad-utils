@@ -13,15 +13,13 @@
         android:id="@+id/ad_unit_content"
         android:layout_width="fill_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingBottom="5dp">
+        android:orientation="vertical">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="fill_parent"
             android:layout_height="match_parent"
             android:layout_centerInParent="true"
-            android:orientation="vertical"
-            android:paddingBottom="5dp">
+            android:orientation="vertical">
 
             <com.google.android.gms.ads.nativead.MediaView
                 android:id="@+id/ad_media"
