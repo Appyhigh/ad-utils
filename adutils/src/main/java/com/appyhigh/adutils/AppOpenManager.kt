@@ -191,7 +191,12 @@ class AppOpenManager(
         }
     }
 
-    private fun loadOpenAd(fetchedTimer:Int, primartIds:List<String>,appOpenInternalCallback: AppOpenInternalCallback){
+    private var TAG = "AdSdk"
+
+    private fun loadOpenAd(
+        fetchedTimer:Int,
+        primartIds:List<String>,
+        appOpenInternalCallback: AppOpenInternalCallback){
         var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
@@ -223,6 +228,7 @@ class AppOpenManager(
                     super.onAdFailedToLoad(loadAdError)
                     Log.d(LOG_TAG, loadAdError.message)
                     AdError = loadAdError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+appOpenAdUnit+" : "+loadAdError.message)
                 }
 
             }

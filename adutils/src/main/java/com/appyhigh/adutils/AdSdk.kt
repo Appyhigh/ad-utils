@@ -465,6 +465,7 @@ object AdSdk {
             Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
             if (primaryIds.size > 0){
                 loadAppOpenAd(
+                    adName,
                     fetchedTimer,
                     primaryIds,
                     appOpenAdCallback,
@@ -480,6 +481,7 @@ object AdSdk {
                         override fun onFailed(loadAdError: LoadAdError?) {
                             if (secondaryIds.size > 0){
                                 loadAppOpenAd(
+                                    adName,
                                     fetchedTimer,
                                     secondaryIds,
                                     appOpenAdCallback,
@@ -493,6 +495,7 @@ object AdSdk {
 
                                         override fun onFailed(loadAdError: LoadAdError?) {
                                             loadAppOpenAd(
+                                                adName,
                                                 fetchedTimer,
                                                 listOf(appOpenAdUnit),
                                                 appOpenAdCallback,
@@ -519,6 +522,7 @@ object AdSdk {
                             }
                             else {
                                 loadAppOpenAd(
+                                    adName,
                                     fetchedTimer,
                                     listOf(appOpenAdUnit),
                                     appOpenAdCallback,
@@ -546,6 +550,7 @@ object AdSdk {
             }
             else if (secondaryIds.size > 0){
                 loadAppOpenAd(
+                    adName,
                     fetchedTimer,
                     secondaryIds,
                     appOpenAdCallback,
@@ -559,6 +564,7 @@ object AdSdk {
 
                         override fun onFailed(loadAdError: LoadAdError?) {
                             loadAppOpenAd(
+                                adName,
                                 fetchedTimer,
                                 listOf(appOpenAdUnit),
                                 appOpenAdCallback,
@@ -585,6 +591,7 @@ object AdSdk {
             }
             else {
                 loadAppOpenAd(
+                    adName,
                     fetchedTimer,
                     listOf(appOpenAdUnit),
                     appOpenAdCallback,
@@ -608,6 +615,7 @@ object AdSdk {
     }
 
     private fun loadAppOpenAd(
+        adName:String,
         fetchedTimer:Int,
         primaryIds:List<String>,
         appOpenAdCallback: AppOpenAdLoadCallback? = null,
@@ -616,7 +624,7 @@ object AdSdk {
     ){
         var appOpenAd: AppOpenAd? = null
         var AdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (appOpenAd != null) {
                     appOpenInternalCallback?.onSuccess(appOpenAd!!)
@@ -657,6 +665,7 @@ object AdSdk {
                     if (appOpenAd == null)
                         appOpenAd = null
                     AdError = loadAdError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+appOpenAdUnit+" : "+loadAdError.message)
 //                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                 }
 
@@ -1191,7 +1200,7 @@ object AdSdk {
 
         var isShown = false
         var AdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (isShown) {
                     bannerInternalCallback.onSuccess()
@@ -1254,6 +1263,7 @@ object AdSdk {
                 // Code to be executed when an ad request fails.
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     AdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                 }
 
                 // Code to be executed when an ad opens an overlay that
@@ -1294,7 +1304,7 @@ object AdSdk {
 
         var isShown = false
         var AdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (isShown) {
                     bannerInternalCallback.onSuccess()
@@ -1357,6 +1367,7 @@ object AdSdk {
                 // Code to be executed when an ad request fails.
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     AdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                 }
 
                 // Code to be executed when an ad opens an overlay that
@@ -1520,6 +1531,7 @@ object AdSdk {
             if (!isAdmanager){
                 if (primaryIds.size > 0){
                     loadInterstitialAd(
+                            adName,
                         fetchedTimer.toLong(),
                         primaryIds,
                         interstitialAdUtilLoadCallback,
@@ -1533,6 +1545,7 @@ object AdSdk {
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0){
                                     loadInterstitialAd(
+                                        adName,
                                         fetchedTimer.toLong(),
                                         secondaryIds,
                                         interstitialAdUtilLoadCallback,
@@ -1544,6 +1557,7 @@ object AdSdk {
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadInterstitialAd(
+                                                    adName,
                                                     fetchedTimer.toLong(),
                                                     listOf(adUnit),
                                                     interstitialAdUtilLoadCallback,
@@ -1564,6 +1578,7 @@ object AdSdk {
                                 }
                                 else{
                                     loadInterstitialAd(
+                                            adName,
                                         fetchedTimer.toLong(),
                                         listOf(adUnit),
                                         interstitialAdUtilLoadCallback,
@@ -1585,6 +1600,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0){
                     loadInterstitialAd(
+                            adName,
                         fetchedTimer.toLong(),
                         secondaryIds,
                         interstitialAdUtilLoadCallback,
@@ -1596,6 +1612,7 @@ object AdSdk {
 
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 loadInterstitialAd(
+                                    adName,
                                     fetchedTimer.toLong(),
                                     listOf(adUnit),
                                     interstitialAdUtilLoadCallback,
@@ -1616,6 +1633,7 @@ object AdSdk {
                 }
                 else{
                     loadInterstitialAd(
+                        adName,
                         fetchedTimer.toLong(),
                         listOf(adUnit),
                         interstitialAdUtilLoadCallback,
@@ -1635,6 +1653,7 @@ object AdSdk {
             else {
                 if (primaryIds.size > 0){
                     loadInterstitialAdManager(
+                            adName,
                         fetchedTimer.toLong(),
                         primaryIds,
                         interstitialAdUtilLoadCallback,
@@ -1648,6 +1667,7 @@ object AdSdk {
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0){
                                     loadInterstitialAdManager(
+                                        adName,
                                         fetchedTimer.toLong(),
                                         secondaryIds,
                                         interstitialAdUtilLoadCallback,
@@ -1659,6 +1679,7 @@ object AdSdk {
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadInterstitialAdManager(
+                                                    adName,
                                                     fetchedTimer.toLong(),
                                                     listOf(adUnit),
                                                     interstitialAdUtilLoadCallback,
@@ -1679,6 +1700,7 @@ object AdSdk {
                                 }
                                 else{
                                     loadInterstitialAdManager(
+                                        adName,
                                         fetchedTimer.toLong(),
                                         listOf(adUnit),
                                         interstitialAdUtilLoadCallback,
@@ -1700,6 +1722,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0){
                     loadInterstitialAdManager(
+                        adName,
                         fetchedTimer.toLong(),
                         secondaryIds,
                         interstitialAdUtilLoadCallback,
@@ -1711,6 +1734,7 @@ object AdSdk {
 
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 loadInterstitialAdManager(
+                                    adName,
                                     fetchedTimer.toLong(),
                                     listOf(adUnit),
                                     interstitialAdUtilLoadCallback,
@@ -1731,6 +1755,7 @@ object AdSdk {
                 }
                 else{
                     loadInterstitialAdManager(
+                        adName,
                         fetchedTimer.toLong(),
                         listOf(adUnit),
                         interstitialAdUtilLoadCallback,
@@ -1751,6 +1776,7 @@ object AdSdk {
     }
 
     private fun loadInterstitialAd(
+        adName: String,
         timer: Long = 5000L,
         primaryIds: List<String>,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
@@ -1758,7 +1784,7 @@ object AdSdk {
     ){
         var mInterstitialAd: InterstitialAd? = null
         var AdError: LoadAdError? = null
-        object : CountDownTimer(timer.toLong(), 1000) {
+        object : CountDownTimer(timer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mInterstitialAd != null) {
                     interstitialInternalCallback.onSuccess(interstitialAd = mInterstitialAd!!)
@@ -1787,6 +1813,7 @@ object AdSdk {
                         if (mInterstitialAd == null)
                             mInterstitialAd = null
                         AdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                     }
 
                     override fun onAdLoaded(interstitialAd: InterstitialAd) {
@@ -1823,6 +1850,7 @@ object AdSdk {
     }
 
     private fun loadInterstitialAdManager(
+        adName: String,
         timer: Long = 5000L,
         primaryIds: List<String>,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
@@ -1830,7 +1858,7 @@ object AdSdk {
     ){
         var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(timer.toLong(), 1000) {
+        object : CountDownTimer(timer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mAdManagerInterstitialAd != null) {
                     interstitialInternalCallback.onSuccess(adManagerInterstitialAd = mAdManagerInterstitialAd!!)
@@ -1855,6 +1883,7 @@ object AdSdk {
                     if (mAdManagerInterstitialAd == null)
                         mAdManagerInterstitialAd = null
                     loadAdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                 }
 
                 override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
@@ -1910,6 +1939,7 @@ object AdSdk {
                  Log.d("interstitial","OnStart:" + System.currentTimeMillis()/1000)
                 if (primaryIds.size > 0){
                     loadSplashAd(
+                        adName,
                         activity,
                         callback,
                         fetchedTimer,
@@ -1923,6 +1953,7 @@ object AdSdk {
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0)
                                     loadSplashAd(
+                                        adName,
                                         activity,
                                         callback,
                                         fetchedTimer,
@@ -1934,6 +1965,7 @@ object AdSdk {
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadSplashAd(
+                                                    adName,
                                                     activity,
                                                     callback,
                                                     fetchedTimer,
@@ -1953,6 +1985,7 @@ object AdSdk {
                                     )
                                 else
                                     loadSplashAd(
+                                        adName,
                                         activity,
                                         callback,
                                         fetchedTimer,
@@ -1973,6 +2006,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0) {
                     loadSplashAd(
+                        adName,
                         activity,
                         callback,
                         fetchedTimer,
@@ -1984,6 +2018,7 @@ object AdSdk {
 
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 loadSplashAd(
+                                    adName,
                                     activity,
                                     callback,
                                     fetchedTimer,
@@ -2004,6 +2039,7 @@ object AdSdk {
                 }
                 else {
                     loadSplashAd(
+                        adName,
                         activity,
                         callback,
                         fetchedTimer,
@@ -2024,6 +2060,7 @@ object AdSdk {
                  Log.d("interstitial-admanager","OnStart:" + System.currentTimeMillis()/1000)
                 if (primaryIds.size > 0){
                     loadSplashAdManager(
+                            adName,
                         activity,
                         callback,
                         fetchedTimer,
@@ -2037,6 +2074,7 @@ object AdSdk {
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0)
                                     loadSplashAdManager(
+                                        adName,
                                         activity,
                                         callback,
                                         fetchedTimer,
@@ -2048,6 +2086,7 @@ object AdSdk {
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadSplashAdManager(
+                                                    adName,
                                                     activity,
                                                     callback,
                                                     fetchedTimer,
@@ -2067,6 +2106,7 @@ object AdSdk {
                                     )
                                 else
                                     loadSplashAdManager(
+                                        adName,
                                         activity,
                                         callback,
                                         fetchedTimer,
@@ -2087,6 +2127,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0) {
                     loadSplashAdManager(
+                        adName,
                         activity,
                         callback,
                         fetchedTimer,
@@ -2098,6 +2139,7 @@ object AdSdk {
 
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 loadSplashAdManager(
+                                    adName,
                                     activity,
                                     callback,
                                     fetchedTimer,
@@ -2118,6 +2160,7 @@ object AdSdk {
                 }
                 else {
                     loadSplashAdManager(
+                        adName,
                         activity,
                         callback,
                         fetchedTimer,
@@ -2141,6 +2184,7 @@ object AdSdk {
     }
 
     private fun loadSplashAd(
+        adName: String,
         activity: Activity,
         callback: SplashInterstitialCallback,
         fetchedTimer: Int,
@@ -2149,7 +2193,7 @@ object AdSdk {
 
         var splash: InterstitialAd? = null
         var AdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (splash != null) {
                     splash?.show(activity)
@@ -2195,6 +2239,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(p0: LoadAdError) {
                         super.onAdFailedToLoad(p0)
                         AdError = p0
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+p0.message)
                     }
                 }
             )
@@ -2203,6 +2248,7 @@ object AdSdk {
     }
 
     private fun loadSplashAdManager(
+        adName: String,
         activity: Activity,
         callback: SplashInterstitialCallback,
         fetchedTimer: Int,
@@ -2212,7 +2258,7 @@ object AdSdk {
 
         var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mAdManagerInterstitialAd != null) {
                     mAdManagerInterstitialAd?.show(activity)
@@ -2239,6 +2285,7 @@ object AdSdk {
                     if (mAdManagerInterstitialAd == null)
                         mAdManagerInterstitialAd = null
                     loadAdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                 }
 
                 override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
@@ -2292,6 +2339,7 @@ object AdSdk {
             if (!isAdmanager){
                 if (primaryIds.size > 0){
                     loadRewardedAd(
+                        adName,
                         activity,
                         rewardedAdUtilLoadCallback,
                         fetchedTimer.toLong(),
@@ -2307,6 +2355,7 @@ object AdSdk {
                             override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
                                 if (secondaryIds.size > 0)
                                     loadRewardedAd(
+                                        adName,
                                         activity,
                                         rewardedAdUtilLoadCallback,
                                         fetchedTimer.toLong(),
@@ -2324,6 +2373,7 @@ object AdSdk {
                                                 ad: RewardedAd?
                                             ) {
                                                 loadRewardedAd(
+                                                    adName,
                                                     activity,
                                                     rewardedAdUtilLoadCallback,
                                                     fetchedTimer.toLong(),
@@ -2350,6 +2400,7 @@ object AdSdk {
                                     )
                                 else
                                     loadRewardedAd(
+                                        adName,
                                         activity,
                                         rewardedAdUtilLoadCallback,
                                         fetchedTimer.toLong(),
@@ -2377,6 +2428,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0) {
                     loadRewardedAd(
+                        adName,
                         activity,
                         rewardedAdUtilLoadCallback,
                         fetchedTimer.toLong(),
@@ -2397,6 +2449,7 @@ object AdSdk {
                                 ad: RewardedAd?
                             ) {
                                 loadRewardedAd(
+                                    adName,
                                     activity,
                                     rewardedAdUtilLoadCallback,
                                     fetchedTimer.toLong(),
@@ -2427,6 +2480,7 @@ object AdSdk {
                 }
                 else {
                     loadRewardedAd(
+                        adName,
                         activity,
                         rewardedAdUtilLoadCallback,
                         fetchedTimer.toLong(),
@@ -2456,6 +2510,7 @@ object AdSdk {
             else {
                 if (primaryIds.size > 0){
                     loadRewardedAdManager(
+                            adName,
                         activity,
                         rewardedAdUtilLoadCallback,
                         fetchedTimer.toLong(),
@@ -2471,6 +2526,7 @@ object AdSdk {
                             override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
                                 if (secondaryIds.size > 0)
                                     loadRewardedAdManager(
+                                        adName,
                                         activity,
                                         rewardedAdUtilLoadCallback,
                                         fetchedTimer.toLong(),
@@ -2488,6 +2544,7 @@ object AdSdk {
                                                 ad: RewardedAd?
                                             ) {
                                                 loadRewardedAdManager(
+                                                    adName,
                                                     activity,
                                                     rewardedAdUtilLoadCallback,
                                                     fetchedTimer.toLong(),
@@ -2514,6 +2571,7 @@ object AdSdk {
                                     )
                                 else
                                     loadRewardedAdManager(
+                                        adName,
                                         activity,
                                         rewardedAdUtilLoadCallback,
                                         fetchedTimer.toLong(),
@@ -2541,6 +2599,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0) {
                     loadRewardedAdManager(
+                        adName,
                         activity,
                         rewardedAdUtilLoadCallback,
                         fetchedTimer.toLong(),
@@ -2561,6 +2620,7 @@ object AdSdk {
                                 ad: RewardedAd?
                             ) {
                                 loadRewardedAdManager(
+                                    adName,
                                     activity,
                                     rewardedAdUtilLoadCallback,
                                     fetchedTimer.toLong(),
@@ -2591,6 +2651,7 @@ object AdSdk {
                 }
                 else {
                     loadRewardedAdManager(
+                        adName,
                         activity,
                         rewardedAdUtilLoadCallback,
                         fetchedTimer.toLong(),
@@ -2622,6 +2683,7 @@ object AdSdk {
     }
 
     private fun loadRewardedAd(
+        adName: String,
         activity: Activity,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
         timer: Long = 5000L,
@@ -2630,7 +2692,7 @@ object AdSdk {
     ){
         var mRewardedAd: RewardedAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(timer.toLong(), 1000) {
+        object : CountDownTimer(timer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mRewardedAd != null) {
                     rewardInternalCallback.onSuccess(mRewardedAd!!)
@@ -2659,6 +2721,7 @@ object AdSdk {
                         if (mRewardedAd == null)
                             mRewardedAd = null
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
@@ -2688,6 +2751,7 @@ object AdSdk {
     }
 
     private fun loadRewardedAdManager(
+        adName: String,
         activity: Activity,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
         timer: Long = 5000L,
@@ -2696,7 +2760,7 @@ object AdSdk {
     ){
         var mRewardedAd: RewardedAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(timer.toLong(), 1000) {
+        object : CountDownTimer(timer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mRewardedAd != null) {
                     rewardInternalCallback.onSuccess(mRewardedAd!!)
@@ -2723,6 +2787,8 @@ object AdSdk {
                         if (mRewardedAd == null)
                             mRewardedAd = null
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
@@ -4168,7 +4234,7 @@ object AdSdk {
     ){
         var nativeAd: NativeAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
                     nativeInternalCallback.onSuccess(nativeAd)
@@ -4212,6 +4278,7 @@ object AdSdk {
                             nativeAd = null
                         viewGroup.removeAllViews()
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
 //                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
@@ -4287,7 +4354,7 @@ object AdSdk {
     ){
         var nativeAd: NativeAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
                     nativeInternalCallback.onSuccess(nativeAd)
@@ -4330,6 +4397,8 @@ object AdSdk {
                         if (nativeAd == null)
                             nativeAd = null
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
 //                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
@@ -6141,7 +6210,7 @@ object AdSdk {
     ) {
         var nativeAd: NativeAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
                     nativeInternalCallback.onSuccess(nativeAd)
@@ -6181,6 +6250,8 @@ object AdSdk {
                             nativeAd = null
                         viewGroup.removeAllViews()
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
                     }
 
                     override fun onAdLoaded() {
@@ -6291,6 +6362,7 @@ object AdSdk {
             Log.d("preload_native", "onStart" + System.currentTimeMillis()/1000)
             if (primaryIds.size>0){
                 preLoadNativeAd(
+                    adName,
                     context,
                     contentURL = contentURL,
                     neighbourContentURL = neighbourContentURL,
@@ -6351,6 +6423,7 @@ object AdSdk {
                         override fun onFailure(loadAdError: LoadAdError?) {
                             if (secondaryIds.size > 0){
                                 preLoadNativeAd(
+                                    adName,
                                     context,
                                     contentURL = contentURL,
                                     neighbourContentURL = neighbourContentURL,
@@ -6410,6 +6483,7 @@ object AdSdk {
 
                                         override fun onFailure(loadAdError: LoadAdError?) {
                                             preLoadNativeAd(
+                                                adName,
                                                 context,
                                                 contentURL = contentURL,
                                                 neighbourContentURL = neighbourContentURL,
@@ -6480,6 +6554,7 @@ object AdSdk {
                             }
                             else{
                                 preLoadNativeAd(
+                                    adName,
                                     context,
                                     contentURL = contentURL,
                                     neighbourContentURL = neighbourContentURL,
@@ -6551,6 +6626,7 @@ object AdSdk {
             }
             else if (secondaryIds.size > 0){
                 preLoadNativeAd(
+                    adName,
                     context,
                     contentURL = contentURL,
                     neighbourContentURL = neighbourContentURL,
@@ -6610,6 +6686,7 @@ object AdSdk {
 
                         override fun onFailure(loadAdError: LoadAdError?) {
                             preLoadNativeAd(
+                                adName,
                                 context,
                                 contentURL = contentURL,
                                 neighbourContentURL = neighbourContentURL,
@@ -6680,6 +6757,7 @@ object AdSdk {
             }
             else{
                 preLoadNativeAd(
+                    adName,
                     context,
                     contentURL = contentURL,
                     neighbourContentURL = neighbourContentURL,
@@ -6748,6 +6826,7 @@ object AdSdk {
     }
 
     private fun preLoadNativeAd(
+        adName: String,
         context: Context,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
@@ -6758,7 +6837,7 @@ object AdSdk {
     ) {
         var nativeAd: NativeAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(fetchedTimer.toLong(), 1000) {
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
                     nativeInternalCallback.onSuccess(nativeAd)
@@ -6787,6 +6866,8 @@ object AdSdk {
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
                     }
 
                     override fun onAdLoaded() {
@@ -6983,6 +7064,7 @@ object AdSdk {
             if (!isAdmanager) {
                 if (primaryIds.size > 0) {
                     showRewardedIntersAd(
+                            adName,
                         activity,
                         fetchedTimer.toLong(),
                         primaryIds,
@@ -7004,6 +7086,7 @@ object AdSdk {
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0) {
                                     showRewardedIntersAd(
+                                        adName,
                                         activity,
                                         fetchedTimer.toLong(),
                                         secondaryIds,
@@ -7024,6 +7107,7 @@ object AdSdk {
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
                                                 showRewardedIntersAd(
+                                                    adName,
                                                     activity,
                                                     fetchedTimer.toLong(),
                                                     listOf(adId),
@@ -7052,6 +7136,7 @@ object AdSdk {
                                     )
                                 } else {
                                     showRewardedIntersAd(
+                                            adName,
                                         activity,
                                         fetchedTimer.toLong(),
                                         listOf(adId),
@@ -7081,6 +7166,7 @@ object AdSdk {
                     )
                 } else if (secondaryIds.size > 0) {
                     showRewardedIntersAd(
+                            adName,
                         activity,
                         fetchedTimer.toLong(),
                         secondaryIds,
@@ -7101,6 +7187,7 @@ object AdSdk {
 
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 showRewardedIntersAd(
+                                    adName,
                                     activity,
                                     fetchedTimer.toLong(),
                                     listOf(adId),
@@ -7129,6 +7216,7 @@ object AdSdk {
                     )
                 } else {
                     showRewardedIntersAd(
+                        adName,
                         activity,
                         fetchedTimer.toLong(),
                         listOf(adId),
@@ -7157,6 +7245,7 @@ object AdSdk {
             else {
                 if (primaryIds.size >0){
                     showRewardedIntersAdManager(
+                            adName,
                         activity,
                         fetchedTimer.toLong(),
                         primaryIds,
@@ -7175,6 +7264,7 @@ object AdSdk {
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0){
                                     showRewardedIntersAdManager(
+                                        adName,
                                         activity,
                                         fetchedTimer.toLong(),
                                         secondaryIds,
@@ -7192,6 +7282,7 @@ object AdSdk {
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
                                                 showRewardedIntersAdManager(
+                                                    adName,
                                                     activity,
                                                     fetchedTimer.toLong(),
                                                     listOf(adId),
@@ -7218,6 +7309,7 @@ object AdSdk {
                                 }
                                 else{
                                     showRewardedIntersAdManager(
+                                            adName,
                                         activity,
                                         fetchedTimer.toLong(),
                                         listOf(adId),
@@ -7245,6 +7337,7 @@ object AdSdk {
                 }
                 else if (secondaryIds.size > 0){
                     showRewardedIntersAdManager(
+                            adName,
                         activity,
                         fetchedTimer.toLong(),
                         secondaryIds,
@@ -7262,6 +7355,7 @@ object AdSdk {
 
                             override fun onFailed(loadAdError: LoadAdError?) {
                                 showRewardedIntersAdManager(
+                                    adName,
                                     activity,
                                     fetchedTimer.toLong(),
                                     listOf(adId),
@@ -7288,6 +7382,7 @@ object AdSdk {
                 }
                 else{
                     showRewardedIntersAdManager(
+                        adName,
                         activity,
                         fetchedTimer.toLong(),
                         listOf(adId),
@@ -7316,6 +7411,7 @@ object AdSdk {
     }
 
     private  fun showRewardedIntersAd(
+        adName:String,
         activity: Activity,
         timer: Long = 5000L,
         primaryIds: List<String>,
@@ -7325,7 +7421,7 @@ object AdSdk {
         var isShown = false
         var ads: RewardedInterstitialAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(timer, 1000) {
+        object : CountDownTimer(timer, 500) {
             override fun onTick(p0: Long) {
                 if (ads != null){
                     rewardInternalCallback.onSuccess(ads)
@@ -7370,6 +7466,7 @@ object AdSdk {
                         if (ads == null)
                             ads = null
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adId+" : "+adError.message)
 //                        if (!isShown) {
 //                            interstitialCallback.moveNext(adError)
 //                            isShown = true
@@ -7380,6 +7477,7 @@ object AdSdk {
     }
 
     private  fun showRewardedIntersAdManager(
+        adName: String,
         activity: Activity,
         timer: Long = 5000L,
         primaryIds: List<String>,
@@ -7389,7 +7487,7 @@ object AdSdk {
         var isShown = false
         var ads: RewardedInterstitialAd? = null
         var loadAdError: LoadAdError? = null
-        object : CountDownTimer(timer, 1000) {
+        object : CountDownTimer(timer, 500) {
             override fun onTick(p0: Long) {
                 if (ads != null){
                     rewardInternalCallback.onSuccess(ads)
@@ -7434,6 +7532,7 @@ object AdSdk {
                         if (ads == null)
                             ads = null
                         loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adId+" : "+adError.message)
 //                        if (!isShown) {
 //                            interstitialCallback.moveNext(adError)
 //                            isShown = true
@@ -7504,7 +7603,7 @@ object AdSdk {
             if (preloadedRewardedAdList.containsKey(adId)) {
                 var rewardedAd: RewardedAd? = null
                 var ctd: CountDownTimer? = null
-                ctd = object : CountDownTimer(timeToWait, 1000) {
+                ctd = object : CountDownTimer(timeToWait, 500) {
                     override fun onTick(millisUntilFinished: Long) {
                         rewardedAd = preloadedRewardedAdList[adId]
                         if (rewardedAd != null) {
