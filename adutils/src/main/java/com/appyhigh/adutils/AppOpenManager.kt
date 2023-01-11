@@ -94,29 +94,29 @@ class AppOpenManager(
                         appOpenAdCallback?.onAdLoaded(ad)
                     }
 
-                    override fun onFailed() {
+                    override fun onFailed(loadAdError: LoadAdError?) {
                         if (secondaryIds.size>0){
                             loadOpenAd(
                                 fetchedTimer,
                                 secondaryIds,
                                 object :AppOpenInternalCallback{
                                     override fun onSuccess(ad: AppOpenAd) {
-                                        Log.d("appopen", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                        Log.d("appopen", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
                                         appOpenAdCallback?.onAdLoaded(ad)
                                     }
 
-                                    override fun onFailed() {
+                                    override fun onFailed(loadAdError: LoadAdError?) {
                                         loadOpenAd(
                                             fetchedTimer,
                                             listOf(appOpenAdUnit),
                                             object :AppOpenInternalCallback{
                                                 override fun onSuccess(ad: AppOpenAd) {
-                                                    Log.d("appopen", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("appopen", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                                     appOpenAdCallback?.onAdLoaded(ad)
                                                 }
 
-                                                override fun onFailed() {
-                                                    appOpenAdCallback?.onAdFailedToLoad()
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                                                 }
                                             }
                                         )
@@ -130,12 +130,12 @@ class AppOpenManager(
                                 listOf(appOpenAdUnit),
                                 object :AppOpenInternalCallback{
                                     override fun onSuccess(ad: AppOpenAd) {
-                                        Log.d("appopen", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                        Log.d("appopen", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
                                         appOpenAdCallback?.onAdLoaded(ad)
                                     }
 
-                                    override fun onFailed() {
-                                        appOpenAdCallback?.onAdFailedToLoad()
+                                    override fun onFailed(loadAdError: LoadAdError?) {
+                                        appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                                     }
                                 }
                             )
@@ -154,7 +154,7 @@ class AppOpenManager(
                         appOpenAdCallback?.onAdLoaded(ad)
                     }
 
-                    override fun onFailed() {
+                    override fun onFailed(loadAdError: LoadAdError?) {
                         loadOpenAd(
                             fetchedTimer,
                             listOf(appOpenAdUnit),
@@ -164,8 +164,8 @@ class AppOpenManager(
                                     appOpenAdCallback?.onAdLoaded(ad)
                                 }
 
-                                override fun onFailed() {
-                                    appOpenAdCallback?.onAdFailedToLoad()
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                                 }
                             }
                         )
@@ -183,8 +183,8 @@ class AppOpenManager(
                         appOpenAdCallback?.onAdLoaded(ad)
                     }
 
-                    override fun onFailed() {
-                        appOpenAdCallback?.onAdFailedToLoad()
+                    override fun onFailed(loadAdError: LoadAdError?) {
+                        appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                     }
                 }
             )
@@ -192,6 +192,7 @@ class AppOpenManager(
     }
 
     private fun loadOpenAd(fetchedTimer:Int, primartIds:List<String>,appOpenInternalCallback: AppOpenInternalCallback){
+        var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (appOpenAd != null) {
@@ -205,7 +206,7 @@ class AppOpenManager(
                     appOpenInternalCallback.onSuccess(appOpenAd!!)
                 }
                 else
-                    appOpenInternalCallback.onFailed()
+                    appOpenInternalCallback.onFailed(AdError)
             }
         }.start()
         for (appOpenAdUnit in primartIds){
@@ -221,6 +222,7 @@ class AppOpenManager(
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                     super.onAdFailedToLoad(loadAdError)
                     Log.d(LOG_TAG, loadAdError.message)
+                    AdError = loadAdError
                 }
 
             }

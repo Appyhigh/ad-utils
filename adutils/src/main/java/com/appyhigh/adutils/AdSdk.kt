@@ -477,7 +477,7 @@ object AdSdk {
                                 ad.show(activity)
                         }
 
-                        override fun onFailed() {
+                        override fun onFailed(loadAdError: LoadAdError?) {
                             if (secondaryIds.size > 0){
                                 loadAppOpenAd(
                                     fetchedTimer,
@@ -491,7 +491,7 @@ object AdSdk {
                                                 ad.show(activity)
                                         }
 
-                                        override fun onFailed() {
+                                        override fun onFailed(loadAdError: LoadAdError?) {
                                             loadAppOpenAd(
                                                 fetchedTimer,
                                                 listOf(appOpenAdUnit),
@@ -504,8 +504,8 @@ object AdSdk {
                                                             ad.show(activity)
                                                     }
 
-                                                    override fun onFailed() {
-                                                        appOpenAdCallback?.onAdFailedToLoad()
+                                                    override fun onFailed(loadAdError: LoadAdError?) {
+                                                        appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                                                     }
 
                                                 },
@@ -530,8 +530,8 @@ object AdSdk {
                                                 ad.show(activity)
                                         }
 
-                                        override fun onFailed() {
-                                            appOpenAdCallback?.onAdFailedToLoad()
+                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                            appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                                         }
 
                                     },
@@ -557,7 +557,7 @@ object AdSdk {
                                 ad.show(activity)
                         }
 
-                        override fun onFailed() {
+                        override fun onFailed(loadAdError: LoadAdError?) {
                             loadAppOpenAd(
                                 fetchedTimer,
                                 listOf(appOpenAdUnit),
@@ -570,8 +570,8 @@ object AdSdk {
                                             ad.show(activity)
                                     }
 
-                                    override fun onFailed() {
-                                        appOpenAdCallback?.onAdFailedToLoad()
+                                    override fun onFailed(loadAdError: LoadAdError?) {
+                                        appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                                     }
 
                                 },
@@ -596,8 +596,8 @@ object AdSdk {
                                 ad.show(activity)
                         }
 
-                        override fun onFailed() {
-                            appOpenAdCallback?.onAdFailedToLoad()
+                        override fun onFailed(loadAdError: LoadAdError?) {
+                            appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                         }
 
                     },
@@ -615,6 +615,7 @@ object AdSdk {
         isAdmanager: Boolean = false
     ){
         var appOpenAd: AppOpenAd? = null
+        var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (appOpenAd != null) {
@@ -628,7 +629,7 @@ object AdSdk {
                     appOpenInternalCallback?.onSuccess(appOpenAd!!)
                 }
                 else
-                    appOpenInternalCallback?.onFailed()
+                    appOpenInternalCallback?.onFailed(AdError)
             }
         }.start()
         for (appOpenAdUnit in primaryIds){
@@ -655,6 +656,7 @@ object AdSdk {
                     Log.d(TAG, loadAdError.message)
                     if (appOpenAd == null)
                         appOpenAd = null
+                    AdError = loadAdError
 //                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                 }
 
@@ -806,7 +808,7 @@ object AdSdk {
                                     bannerAdLoadCallback?.onAdLoaded()
                                 }
 
-                                override fun onFailed(msg: String?) {
+                                override fun onFailed(loadAdError: LoadAdError?) {
                                     if(secondaryIds.size > 0){
                                         loadBannerAd(
                                             activity,
@@ -828,7 +830,7 @@ object AdSdk {
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
-                                                override fun onFailed(msg: String?) {
+                                                override fun onFailed(loadAdError: LoadAdError?) {
                                                     loadBannerAd(
                                                         activity,
                                                         id,
@@ -849,8 +851,8 @@ object AdSdk {
                                                                 bannerAdLoadCallback?.onAdLoaded()
                                                             }
 
-                                                            override fun onFailed(msg: String?) {
-                                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                                             }
 
                                                         }
@@ -881,10 +883,9 @@ object AdSdk {
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
-                                                override fun onFailed(msg: String?) {
-                                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                                 }
-
                                             }
                                         )
                                     }
@@ -914,7 +915,7 @@ object AdSdk {
                                     bannerAdLoadCallback?.onAdLoaded()
                                 }
 
-                                override fun onFailed(msg: String?) {
+                                override fun onFailed(loadAdError: LoadAdError?) {
                                     loadBannerAd(
                                         activity,
                                         id,
@@ -935,8 +936,8 @@ object AdSdk {
                                                 bannerAdLoadCallback?.onAdLoaded()
                                             }
 
-                                            override fun onFailed(msg: String?) {
-                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                             }
 
                                         }
@@ -967,8 +968,8 @@ object AdSdk {
                                     bannerAdLoadCallback?.onAdLoaded()
                                 }
 
-                                override fun onFailed(msg: String?) {
-                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                 }
 
                             }
@@ -999,7 +1000,7 @@ object AdSdk {
                                     bannerAdLoadCallback?.onAdLoaded()
                                 }
 
-                                override fun onFailed(msg: String?) {
+                                override fun onFailed(loadAdError: LoadAdError?) {
                                     if(secondaryIds.size > 0){
                                         loadBannerAdManager(
                                             activity,
@@ -1021,7 +1022,7 @@ object AdSdk {
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
-                                                override fun onFailed(msg: String?) {
+                                                override fun onFailed(loadAdError: LoadAdError?) {
                                                     loadBannerAdManager(
                                                         activity,
                                                         id,
@@ -1042,8 +1043,8 @@ object AdSdk {
                                                                 bannerAdLoadCallback?.onAdLoaded()
                                                             }
 
-                                                            override fun onFailed(msg: String?) {
-                                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                                             }
 
                                                         }
@@ -1074,8 +1075,8 @@ object AdSdk {
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
-                                                override fun onFailed(msg: String?) {
-                                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                                 }
 
                                             }
@@ -1107,7 +1108,7 @@ object AdSdk {
                                     bannerAdLoadCallback?.onAdLoaded()
                                 }
 
-                                override fun onFailed(msg: String?) {
+                                override fun onFailed(loadAdError: LoadAdError?) {
                                     loadBannerAdManager(
                                         activity,
                                         id,
@@ -1128,8 +1129,8 @@ object AdSdk {
                                                 bannerAdLoadCallback?.onAdLoaded()
                                             }
 
-                                            override fun onFailed(msg: String?) {
-                                                bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                             }
 
                                         }
@@ -1160,8 +1161,8 @@ object AdSdk {
                                     bannerAdLoadCallback?.onAdLoaded()
                                 }
 
-                                override fun onFailed(msg: String?) {
-                                    bannerAdLoadCallback?.onAdFailedToLoad(null)
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                 }
 
                             }
@@ -1189,6 +1190,7 @@ object AdSdk {
     ) {
 
         var isShown = false
+        var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (isShown) {
@@ -1202,7 +1204,7 @@ object AdSdk {
                     bannerInternalCallback.onSuccess()
                 }
                 else
-                    bannerInternalCallback.onFailed()
+                    bannerInternalCallback.onFailed(AdError)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -1251,7 +1253,7 @@ object AdSdk {
 
                 // Code to be executed when an ad request fails.
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-
+                    AdError = adError
                 }
 
                 // Code to be executed when an ad opens an overlay that
@@ -1291,6 +1293,7 @@ object AdSdk {
     ) {
 
         var isShown = false
+        var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (isShown) {
@@ -1304,7 +1307,7 @@ object AdSdk {
                     bannerInternalCallback.onSuccess()
                 }
                 else
-                    bannerInternalCallback.onFailed()
+                    bannerInternalCallback.onFailed(AdError)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -1353,7 +1356,7 @@ object AdSdk {
 
                 // Code to be executed when an ad request fails.
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-
+                    AdError = adError
                 }
 
                 // Code to be executed when an ad opens an overlay that
@@ -1527,7 +1530,7 @@ object AdSdk {
                                 interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0){
                                     loadInterstitialAd(
                                         fetchedTimer.toLong(),
@@ -1539,7 +1542,7 @@ object AdSdk {
                                                 interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                             }
 
-                                            override fun onFailed(msg: String?) {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadInterstitialAd(
                                                     fetchedTimer.toLong(),
                                                     listOf(adUnit),
@@ -1550,8 +1553,8 @@ object AdSdk {
                                                             interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                                         }
 
-                                                        override fun onFailed(msg: String?) {
-                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                                                         }
                                                     }
                                                 )
@@ -1570,8 +1573,8 @@ object AdSdk {
                                                 interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                             }
 
-                                            override fun onFailed(msg: String?) {
-                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                                             }
                                         }
                                     )
@@ -1591,7 +1594,7 @@ object AdSdk {
                                 interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 loadInterstitialAd(
                                     fetchedTimer.toLong(),
                                     listOf(adUnit),
@@ -1602,8 +1605,8 @@ object AdSdk {
                                             interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                         }
 
-                                        override fun onFailed(msg: String?) {
-                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                                         }
                                     }
                                 )
@@ -1622,8 +1625,8 @@ object AdSdk {
                                 interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                             }
 
-                            override fun onFailed(msg: String?) {
-                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                             }
                         }
                     )
@@ -1642,7 +1645,7 @@ object AdSdk {
                                 interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0){
                                     loadInterstitialAdManager(
                                         fetchedTimer.toLong(),
@@ -1654,7 +1657,7 @@ object AdSdk {
                                                 interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                                             }
 
-                                            override fun onFailed(msg: String?) {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadInterstitialAdManager(
                                                     fetchedTimer.toLong(),
                                                     listOf(adUnit),
@@ -1665,8 +1668,8 @@ object AdSdk {
                                                             interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                                                         }
 
-                                                        override fun onFailed(msg: String?) {
-                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                                                         }
                                                     }
                                                 )
@@ -1685,8 +1688,8 @@ object AdSdk {
                                                 interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                                             }
 
-                                            override fun onFailed(msg: String?) {
-                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                                             }
                                         }
                                     )
@@ -1706,7 +1709,7 @@ object AdSdk {
                                 interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 loadInterstitialAdManager(
                                     fetchedTimer.toLong(),
                                     listOf(adUnit),
@@ -1717,8 +1720,8 @@ object AdSdk {
                                             interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                                         }
 
-                                        override fun onFailed(msg: String?) {
-                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                                         }
                                     }
                                 )
@@ -1737,8 +1740,8 @@ object AdSdk {
                                 interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                             }
 
-                            override fun onFailed(msg: String?) {
-                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(null, mInterstitialAd)
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
                             }
                         }
                     )
@@ -1754,6 +1757,7 @@ object AdSdk {
         interstitialInternalCallback: InterstitialInternalCallback
     ){
         var mInterstitialAd: InterstitialAd? = null
+        var AdError: LoadAdError? = null
         object : CountDownTimer(timer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mInterstitialAd != null) {
@@ -1767,7 +1771,7 @@ object AdSdk {
                     interstitialInternalCallback.onSuccess(interstitialAd = mInterstitialAd!!)
                 }
                 else
-                    interstitialInternalCallback.onFailed()
+                    interstitialInternalCallback.onFailed(AdError)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -1782,6 +1786,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         if (mInterstitialAd == null)
                             mInterstitialAd = null
+                        AdError = adError
                     }
 
                     override fun onAdLoaded(interstitialAd: InterstitialAd) {
@@ -1824,6 +1829,7 @@ object AdSdk {
         interstitialInternalCallback: InterstitialInternalCallback
     ){
         var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(timer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mAdManagerInterstitialAd != null) {
@@ -1837,7 +1843,7 @@ object AdSdk {
                     interstitialInternalCallback.onSuccess(adManagerInterstitialAd = mAdManagerInterstitialAd!!)
                 }
                 else
-                    interstitialInternalCallback.onFailed()
+                    interstitialInternalCallback.onFailed(loadAdError)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -1848,6 +1854,7 @@ object AdSdk {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     if (mAdManagerInterstitialAd == null)
                         mAdManagerInterstitialAd = null
+                    loadAdError = adError
                 }
 
                 override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
@@ -1913,7 +1920,7 @@ object AdSdk {
 
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0)
                                     loadSplashAd(
                                         activity,
@@ -1925,7 +1932,7 @@ object AdSdk {
                                                 Log.d("interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
                                             }
 
-                                            override fun onFailed(msg: String?) {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadSplashAd(
                                                     activity,
                                                     callback,
@@ -1936,7 +1943,7 @@ object AdSdk {
                                                             Log.d("interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
                                                         }
 
-                                                        override fun onFailed(msg: String?) {
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
                                                             callback.moveNext()
                                                         }
                                                     }
@@ -1955,7 +1962,7 @@ object AdSdk {
                                                 Log.d("interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
                                             }
 
-                                            override fun onFailed(msg: String?) {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 callback.moveNext()
                                             }
                                         }
@@ -1975,7 +1982,7 @@ object AdSdk {
                                 Log.d("interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 loadSplashAd(
                                     activity,
                                     callback,
@@ -1986,7 +1993,7 @@ object AdSdk {
                                             Log.d("interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                         }
 
-                                        override fun onFailed(msg: String?) {
+                                        override fun onFailed(loadAdError: LoadAdError?) {
                                             callback.moveNext()
                                         }
                                     }
@@ -2006,7 +2013,7 @@ object AdSdk {
                                 Log.d("interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 callback.moveNext()
                             }
                         }
@@ -2027,7 +2034,7 @@ object AdSdk {
 
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0)
                                     loadSplashAdManager(
                                         activity,
@@ -2039,7 +2046,7 @@ object AdSdk {
                                                 Log.d("interstitial-admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
                                             }
 
-                                            override fun onFailed(msg: String?) {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 loadSplashAdManager(
                                                     activity,
                                                     callback,
@@ -2050,7 +2057,7 @@ object AdSdk {
                                                             Log.d("interstitial-admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
                                                         }
 
-                                                        override fun onFailed(msg: String?) {
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
                                                             callback.moveNext()
                                                         }
                                                     }
@@ -2069,7 +2076,7 @@ object AdSdk {
                                                 Log.d("interstitial-admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
                                             }
 
-                                            override fun onFailed(msg: String?) {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 callback.moveNext()
                                             }
                                         }
@@ -2089,7 +2096,7 @@ object AdSdk {
                                 Log.d("interstitial-admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 loadSplashAdManager(
                                     activity,
                                     callback,
@@ -2100,7 +2107,7 @@ object AdSdk {
                                             Log.d("interstitial-admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                         }
 
-                                        override fun onFailed(msg: String?) {
+                                        override fun onFailed(loadAdError: LoadAdError?) {
                                             callback.moveNext()
                                         }
                                     }
@@ -2120,7 +2127,7 @@ object AdSdk {
                                 Log.d("interstitial-admanager", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
                             }
 
-                            override fun onFailed(msg: String?) {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 callback.moveNext()
                             }
                         }
@@ -2141,6 +2148,7 @@ object AdSdk {
         interstitialInternalCallback: InterstitialInternalCallback) {
 
         var splash: InterstitialAd? = null
+        var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (splash != null) {
@@ -2156,7 +2164,7 @@ object AdSdk {
                     interstitialInternalCallback.onSuccess(splash!!)
                 }
                 else
-                    interstitialInternalCallback.onFailed()
+                    interstitialInternalCallback.onFailed(AdError)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -2186,6 +2194,7 @@ object AdSdk {
 
                     override fun onAdFailedToLoad(p0: LoadAdError) {
                         super.onAdFailedToLoad(p0)
+                        AdError = p0
                     }
                 }
             )
@@ -2202,6 +2211,7 @@ object AdSdk {
     ) {
 
         var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mAdManagerInterstitialAd != null) {
@@ -2217,7 +2227,7 @@ object AdSdk {
                     interstitialInternalCallback.onSuccess(mAdManagerInterstitialAd!!)
                 }
                 else
-                    interstitialInternalCallback.onFailed()
+                    interstitialInternalCallback.onFailed(loadAdError)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -2228,6 +2238,7 @@ object AdSdk {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     if (mAdManagerInterstitialAd == null)
                         mAdManagerInterstitialAd = null
+                    loadAdError = adError
                 }
 
                 override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
@@ -2618,6 +2629,7 @@ object AdSdk {
         rewardInternalCallback: RewardInternalCallback
     ){
         var mRewardedAd: RewardedAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(timer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mRewardedAd != null) {
@@ -2631,7 +2643,7 @@ object AdSdk {
                     rewardInternalCallback.onSuccess(mRewardedAd!!)
                 }
                 else
-                    rewardInternalCallback.onFailed(null,mRewardedAd)
+                    rewardInternalCallback.onFailed(loadAdError,mRewardedAd)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -2646,6 +2658,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         if (mRewardedAd == null)
                             mRewardedAd = null
+                        loadAdError = adError
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
@@ -2682,6 +2695,7 @@ object AdSdk {
         rewardInternalCallback: RewardInternalCallback
     ){
         var mRewardedAd: RewardedAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(timer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (mRewardedAd != null) {
@@ -2695,7 +2709,7 @@ object AdSdk {
                     rewardInternalCallback.onSuccess(mRewardedAd!!)
                 }
                 else
-                    rewardInternalCallback.onFailed(null,mRewardedAd)
+                    rewardInternalCallback.onFailed(loadAdError,mRewardedAd)
             }
         }.start()
         for (adUnit in primaryIds){
@@ -2708,6 +2722,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         if (mRewardedAd == null)
                             mRewardedAd = null
+                        loadAdError = adError
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
@@ -3017,7 +3032,7 @@ object AdSdk {
                                     }
                                 }
 
-                                override fun onFailure() {
+                                override fun onFailure(loadAdError: LoadAdError?) {
                                     if (secondaryIds.size >0){
                                         loadNativeAd(
                                             id,
@@ -3095,7 +3110,7 @@ object AdSdk {
                                                     }
                                                 }
 
-                                                override fun onFailure() {
+                                                override fun onFailure(loadAdError: LoadAdError?) {
                                                     loadNativeAd(
                                                         id,
                                                         lifecycle,
@@ -3172,8 +3187,8 @@ object AdSdk {
                                                                 }
                                                             }
 
-                                                            override fun onFailure() {
-                                                                nativeAdLoadCallback?.onAdFailed(null)
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                             }
 
                                                         },
@@ -3262,8 +3277,8 @@ object AdSdk {
                                                     }
                                                 }
 
-                                                override fun onFailure() {
-                                                    nativeAdLoadCallback?.onAdFailed(null)
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                 }
 
                                             },
@@ -3353,7 +3368,7 @@ object AdSdk {
                                     }
                                 }
 
-                                override fun onFailure() {
+                                override fun onFailure(loadAdError: LoadAdError?) {
                                     loadNativeAd(
                                         id,
                                         lifecycle,
@@ -3430,8 +3445,8 @@ object AdSdk {
                                                 }
                                             }
 
-                                            override fun onFailure() {
-                                                nativeAdLoadCallback?.onAdFailed(null)
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                             }
 
                                         },
@@ -3520,8 +3535,8 @@ object AdSdk {
                                     }
                                 }
 
-                                override fun onFailure() {
-                                    nativeAdLoadCallback?.onAdFailed(null)
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
                                 }
 
                             },
@@ -3608,7 +3623,7 @@ object AdSdk {
                                     }
                                 }
 
-                                override fun onFailure() {
+                                override fun onFailure(loadAdError: LoadAdError?) {
                                     if (secondaryIds.size >0){
                                         loadNativeAdManager(
                                             id,
@@ -3686,7 +3701,7 @@ object AdSdk {
                                                     }
                                                 }
 
-                                                override fun onFailure() {
+                                                override fun onFailure(loadAdError: LoadAdError?) {
                                                     loadNativeAdManager(
                                                         id,
                                                         lifecycle,
@@ -3763,8 +3778,8 @@ object AdSdk {
                                                                 }
                                                             }
 
-                                                            override fun onFailure() {
-                                                                nativeAdLoadCallback?.onAdFailed(null)
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                             }
 
                                                         },
@@ -3853,8 +3868,8 @@ object AdSdk {
                                                     }
                                                 }
 
-                                                override fun onFailure() {
-                                                    nativeAdLoadCallback?.onAdFailed(null)
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                 }
 
                                             },
@@ -3944,7 +3959,7 @@ object AdSdk {
                                     }
                                 }
 
-                                override fun onFailure() {
+                                override fun onFailure(loadAdError: LoadAdError?) {
                                     loadNativeAdManager(
                                         id,
                                         lifecycle,
@@ -4021,8 +4036,8 @@ object AdSdk {
                                                 }
                                             }
 
-                                            override fun onFailure() {
-                                                nativeAdLoadCallback?.onAdFailed(null)
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                             }
 
                                         },
@@ -4111,8 +4126,8 @@ object AdSdk {
                                     }
                                 }
 
-                                override fun onFailure() {
-                                    nativeAdLoadCallback?.onAdFailed(null)
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
                                 }
 
                             },
@@ -4152,6 +4167,7 @@ object AdSdk {
         isAdmanager: Boolean
     ){
         var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
@@ -4165,7 +4181,7 @@ object AdSdk {
                     nativeInternalCallback.onSuccess(nativeAd)
                 }
                 else
-                    nativeInternalCallback.onFailure()
+                    nativeInternalCallback.onFailure(loadAdError)
             }
         }.start()
         var loadedId = ""
@@ -4195,6 +4211,7 @@ object AdSdk {
                         if (nativeAd == null)
                             nativeAd = null
                         viewGroup.removeAllViews()
+                        loadAdError = adError
 //                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
@@ -4269,6 +4286,7 @@ object AdSdk {
         isAdmanager: Boolean
     ){
         var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
@@ -4282,7 +4300,7 @@ object AdSdk {
                     nativeInternalCallback.onSuccess(nativeAd)
                 }
                 else
-                    nativeInternalCallback.onFailure()
+                    nativeInternalCallback.onFailure(loadAdError)
             }
         }.start()
         var loadedId = ""
@@ -4311,6 +4329,7 @@ object AdSdk {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         if (nativeAd == null)
                             nativeAd = null
+                        loadAdError = adError
 //                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
@@ -5009,7 +5028,7 @@ object AdSdk {
                                     refreshNativeService(adName)
                                 }
 
-                                override fun onFailure() {
+                                override fun onFailure(loadAdError: LoadAdError?) {
                                     if (secondaryIds.size>0){
                                         loadNativeAdFromService(
                                             layoutInflater,
@@ -5085,7 +5104,7 @@ object AdSdk {
                                                     refreshNativeService(adName)
                                                 }
 
-                                                override fun onFailure() {
+                                                override fun onFailure(loadAdError: LoadAdError?) {
                                                     loadNativeAdFromService(
                                                         layoutInflater,
                                                         context,
@@ -5160,8 +5179,8 @@ object AdSdk {
                                                                 refreshNativeService(adName)
                                                             }
 
-                                                            override fun onFailure() {
-                                                                nativeAdLoadCallback?.onAdFailed(null)
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                             }
                                                         },
                                                         showLoadingMessage,
@@ -5248,8 +5267,8 @@ object AdSdk {
                                                     refreshNativeService(adName)
                                                 }
 
-                                                override fun onFailure() {
-                                                    nativeAdLoadCallback?.onAdFailed(null)
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                 }
                                             },
                                             showLoadingMessage,
@@ -5337,7 +5356,7 @@ object AdSdk {
                                     refreshNativeService(adName)
                                 }
 
-                                override fun onFailure() {
+                                override fun onFailure(loadAdError: LoadAdError?) {
                                     loadNativeAdFromService(
                                         layoutInflater,
                                         context,
@@ -5412,8 +5431,8 @@ object AdSdk {
                                                 refreshNativeService(adName)
                                             }
 
-                                            override fun onFailure() {
-                                                nativeAdLoadCallback?.onAdFailed(null)
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                             }
                                         },
                                         showLoadingMessage,
@@ -5500,8 +5519,8 @@ object AdSdk {
                                     refreshNativeService(adName)
                                 }
 
-                                override fun onFailure() {
-                                    nativeAdLoadCallback?.onAdFailed(null)
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
                                 }
                             },
                             showLoadingMessage,
@@ -5589,7 +5608,7 @@ object AdSdk {
                                 refreshNativeService(adName)
                             }
 
-                            override fun onFailure() {
+                            override fun onFailure(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size>0){
                                     loadNativeAdFromService(
                                         layoutInflater,
@@ -5665,7 +5684,7 @@ object AdSdk {
                                                 refreshNativeService(adName)
                                             }
 
-                                            override fun onFailure() {
+                                            override fun onFailure(loadAdError: LoadAdError?) {
                                                 loadNativeAdFromService(
                                                     layoutInflater,
                                                     context,
@@ -5740,8 +5759,8 @@ object AdSdk {
                                                             refreshNativeService(adName)
                                                         }
 
-                                                        override fun onFailure() {
-                                                            nativeAdLoadCallback?.onAdFailed(null)
+                                                        override fun onFailure(loadAdError: LoadAdError?) {
+                                                            nativeAdLoadCallback?.onAdFailed(loadAdError)
                                                         }
                                                     },
                                                     showLoadingMessage,
@@ -5828,8 +5847,8 @@ object AdSdk {
                                                 refreshNativeService(adName)
                                             }
 
-                                            override fun onFailure() {
-                                                nativeAdLoadCallback?.onAdFailed(null)
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                                             }
                                         },
                                         showLoadingMessage,
@@ -5917,7 +5936,7 @@ object AdSdk {
                                 refreshNativeService(adName)
                             }
 
-                            override fun onFailure() {
+                            override fun onFailure(loadAdError: LoadAdError?) {
                                 loadNativeAdFromService(
                                     layoutInflater,
                                     context,
@@ -5992,8 +6011,8 @@ object AdSdk {
                                             refreshNativeService(adName)
                                         }
 
-                                        override fun onFailure() {
-                                            nativeAdLoadCallback?.onAdFailed(null)
+                                        override fun onFailure(loadAdError: LoadAdError?) {
+                                            nativeAdLoadCallback?.onAdFailed(loadAdError)
                                         }
                                     },
                                     showLoadingMessage,
@@ -6080,8 +6099,8 @@ object AdSdk {
                                 refreshNativeService(adName)
                             }
 
-                            override fun onFailure() {
-                                nativeAdLoadCallback?.onAdFailed(null)
+                            override fun onFailure(loadAdError: LoadAdError?) {
+                                nativeAdLoadCallback?.onAdFailed(loadAdError)
                             }
                         },
                         showLoadingMessage,
@@ -6121,6 +6140,7 @@ object AdSdk {
         isAdmanager: Boolean
     ) {
         var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
@@ -6134,7 +6154,7 @@ object AdSdk {
                     nativeInternalCallback.onSuccess(nativeAd)
                 }
                 else
-                    nativeInternalCallback.onFailure()
+                    nativeInternalCallback.onFailure(loadAdError)
             }
         }.start()
         var loadedUnit = ""
@@ -6160,6 +6180,7 @@ object AdSdk {
                         if (nativeAd == null)
                             nativeAd = null
                         viewGroup.removeAllViews()
+                        loadAdError = adError
                     }
 
                     override fun onAdLoaded() {
@@ -6327,7 +6348,7 @@ object AdSdk {
                             }
                         }
 
-                        override fun onFailure() {
+                        override fun onFailure(loadAdError: LoadAdError?) {
                             if (secondaryIds.size > 0){
                                 preLoadNativeAd(
                                     context,
@@ -6387,7 +6408,7 @@ object AdSdk {
                                             }
                                         }
 
-                                        override fun onFailure() {
+                                        override fun onFailure(loadAdError: LoadAdError?) {
                                             preLoadNativeAd(
                                                 context,
                                                 contentURL = contentURL,
@@ -6446,7 +6467,7 @@ object AdSdk {
                                                         }
                                                     }
 
-                                                    override fun onFailure() {
+                                                    override fun onFailure(loadAdError: LoadAdError?) {
 
                                                     }
                                                 },
@@ -6516,7 +6537,7 @@ object AdSdk {
                                             }
                                         }
 
-                                        override fun onFailure() {
+                                        override fun onFailure(loadAdError: LoadAdError?) {
 
                                         }
                                     },
@@ -6587,7 +6608,7 @@ object AdSdk {
                             }
                         }
 
-                        override fun onFailure() {
+                        override fun onFailure(loadAdError: LoadAdError?) {
                             preLoadNativeAd(
                                 context,
                                 contentURL = contentURL,
@@ -6646,7 +6667,7 @@ object AdSdk {
                                         }
                                     }
 
-                                    override fun onFailure() {
+                                    override fun onFailure(loadAdError: LoadAdError?) {
 
                                     }
                                 },
@@ -6716,7 +6737,7 @@ object AdSdk {
                             }
                         }
 
-                        override fun onFailure() {
+                        override fun onFailure(loadAdError: LoadAdError?) {
 
                         }
                     },
@@ -6736,6 +6757,7 @@ object AdSdk {
         isAdmanager: Boolean
     ) {
         var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 if (nativeAd != null) {
@@ -6749,7 +6771,7 @@ object AdSdk {
                     nativeInternalCallback.onSuccess(nativeAd)
                 }
                 else
-                    nativeInternalCallback.onFailure()
+                    nativeInternalCallback.onFailure(loadAdError)
             }
         }.start()
         var loadedId = ""
@@ -6764,6 +6786,7 @@ object AdSdk {
                 .withAdListener(object : AdListener() {
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
+                        loadAdError = adError
                     }
 
                     override fun onAdLoaded() {
@@ -6978,7 +7001,7 @@ object AdSdk {
                                 }
                             }
 
-                            override fun onFailed() {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0) {
                                     showRewardedIntersAd(
                                         activity,
@@ -6999,7 +7022,7 @@ object AdSdk {
                                                 }
                                             }
 
-                                            override fun onFailed() {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 showRewardedIntersAd(
                                                     activity,
                                                     fetchedTimer.toLong(),
@@ -7019,7 +7042,7 @@ object AdSdk {
                                                             }
                                                         }
 
-                                                        override fun onFailed() {
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
                                                             interstitialCallback.moveNext()
                                                         }
                                                     }
@@ -7047,7 +7070,7 @@ object AdSdk {
                                                 }
                                             }
 
-                                            override fun onFailed() {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 interstitialCallback.moveNext()
                                             }
                                         }
@@ -7076,7 +7099,7 @@ object AdSdk {
                                 }
                             }
 
-                            override fun onFailed() {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 showRewardedIntersAd(
                                     activity,
                                     fetchedTimer.toLong(),
@@ -7096,7 +7119,7 @@ object AdSdk {
                                             }
                                         }
 
-                                        override fun onFailed() {
+                                        override fun onFailed(loadAdError: LoadAdError?) {
                                             interstitialCallback.moveNext()
                                         }
                                     }
@@ -7124,7 +7147,7 @@ object AdSdk {
                                 }
                             }
 
-                            override fun onFailed() {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 interstitialCallback.moveNext()
                             }
                         }
@@ -7149,7 +7172,7 @@ object AdSdk {
                                 }
                             }
 
-                            override fun onFailed() {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 if (secondaryIds.size > 0){
                                     showRewardedIntersAdManager(
                                         activity,
@@ -7167,7 +7190,7 @@ object AdSdk {
                                                 }
                                             }
 
-                                            override fun onFailed() {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 showRewardedIntersAdManager(
                                                     activity,
                                                     fetchedTimer.toLong(),
@@ -7184,7 +7207,7 @@ object AdSdk {
                                                             }
                                                         }
 
-                                                        override fun onFailed() {
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
                                                             interstitialCallback.moveNext()
                                                         }
                                                     }
@@ -7210,7 +7233,7 @@ object AdSdk {
                                                 }
                                             }
 
-                                            override fun onFailed() {
+                                            override fun onFailed(loadAdError: LoadAdError?) {
                                                 interstitialCallback.moveNext()
                                             }
                                         }
@@ -7237,7 +7260,7 @@ object AdSdk {
                                 }
                             }
 
-                            override fun onFailed() {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 showRewardedIntersAdManager(
                                     activity,
                                     fetchedTimer.toLong(),
@@ -7254,7 +7277,7 @@ object AdSdk {
                                             }
                                         }
 
-                                        override fun onFailed() {
+                                        override fun onFailed(loadAdError: LoadAdError?) {
                                             interstitialCallback.moveNext()
                                         }
                                     }
@@ -7280,7 +7303,7 @@ object AdSdk {
                                 }
                             }
 
-                            override fun onFailed() {
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 interstitialCallback.moveNext()
                             }
                         }
@@ -7301,6 +7324,7 @@ object AdSdk {
     ){
         var isShown = false
         var ads: RewardedInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(timer, 1000) {
             override fun onTick(p0: Long) {
                 if (ads != null){
@@ -7314,7 +7338,7 @@ object AdSdk {
                     rewardInternalCallback.onSuccess(ads)
                 }
                 else{
-                    rewardInternalCallback.onFailed()
+                    rewardInternalCallback.onFailed(loadAdError)
                 }
             }
         }.start()
@@ -7345,6 +7369,7 @@ object AdSdk {
 //                        dismissAdLoaderLayout(activity)
                         if (ads == null)
                             ads = null
+                        loadAdError = adError
 //                        if (!isShown) {
 //                            interstitialCallback.moveNext(adError)
 //                            isShown = true
@@ -7363,6 +7388,7 @@ object AdSdk {
     ){
         var isShown = false
         var ads: RewardedInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
         object : CountDownTimer(timer, 1000) {
             override fun onTick(p0: Long) {
                 if (ads != null){
@@ -7376,7 +7402,7 @@ object AdSdk {
                     rewardInternalCallback.onSuccess(ads)
                 }
                 else{
-                    rewardInternalCallback.onFailed()
+                    rewardInternalCallback.onFailed(loadAdError)
                 }
             }
         }.start()
@@ -7407,6 +7433,7 @@ object AdSdk {
 //                        dismissAdLoaderLayout(activity)
                         if (ads == null)
                             ads = null
+                        loadAdError = adError
 //                        if (!isShown) {
 //                            interstitialCallback.moveNext(adError)
 //                            isShown = true
