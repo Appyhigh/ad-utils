@@ -42,7 +42,7 @@ class SplashActivity : AppCompatActivity() {
             preloadingNativeAdList = null,
             fetchingCallback = object : AdSdk.FetchingCallback {
                 override fun OnComplete(app: AppsData?) {
-                    if (app != null){
+                    if (app == null){
                         runOnUiThread {
                             if (BuildConfig.DEBUG) {
                                 AdSdk.attachAppOpenAdManager(

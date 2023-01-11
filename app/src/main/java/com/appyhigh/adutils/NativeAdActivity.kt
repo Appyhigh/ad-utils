@@ -49,6 +49,29 @@ class NativeAdActivity : AppCompatActivity() {
             preloadAds = true,
             autoRefresh = true
         )*/
+
+        AdSdk.loadNativeAd(
+            lifecycle = lifecycle,
+            adUnit = adUnit,
+            adName = "util_native_grid",
+            viewGroup = binding.llRoot8,
+            adType = AdSdk.ADType.GRID_AD,
+            callback = nativeAdLoadCallback("6"),
+            background = null, textColor1 = null, textColor2 = null,
+            mediaMaxHeight = 200
+        )
+
+        AdSdk.loadNativeAd(
+            lifecycle = lifecycle,
+            adUnit = adUnit,
+            adName = "util_native_grid",
+            viewGroup = binding.llRoot9,
+            adType = AdSdk.ADType.GRID_AD,
+            callback = nativeAdLoadCallback("6"),
+            background = null, textColor1 = null, textColor2 = null,
+            mediaMaxHeight = 200
+        )
+
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
             adUnit = adUnit2,
@@ -109,25 +132,7 @@ class NativeAdActivity : AppCompatActivity() {
             background = null, textColor1 = null, textColor2 = null,
         )
 
-        AdSdk.loadNativeAd(
-            lifecycle = lifecycle,
-            adUnit = adUnit,
-            adName = "util_native_grid",
-            viewGroup = binding.llRoot8,
-            adType = AdSdk.ADType.GRID_AD,
-            callback = nativeAdLoadCallback("6"),
-            background = null, textColor1 = null, textColor2 = null,
-        )
 
-        AdSdk.loadNativeAd(
-            lifecycle = lifecycle,
-            adUnit = adUnit,
-            adName = "util_native_grid",
-            viewGroup = binding.llRoot9,
-            adType = AdSdk.ADType.GRID_AD,
-            callback = nativeAdLoadCallback("6"),
-            background = null, textColor1 = null, textColor2 = null,
-        )
 
         binding.refresh.setOnClickListener {
             AdSdk.loadNativeAdFromSrvs(

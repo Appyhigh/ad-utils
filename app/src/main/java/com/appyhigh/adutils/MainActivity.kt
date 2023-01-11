@@ -56,8 +56,8 @@ class MainActivity : AppCompatActivity(), VersionCallback {
         )
         AdSdk.loadAppOpenAd(
             this@MainActivity,
-            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-            "util_appopen",
+                DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                "util_appopen",
             true,
             object : AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity(), VersionCallback {
                 }
             },
             true
-        )
+            )
         binding.btnBannerAd.setOnClickListener {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
