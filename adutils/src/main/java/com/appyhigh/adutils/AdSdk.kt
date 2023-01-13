@@ -4867,7 +4867,7 @@ object AdSdk {
             }
             viewGroup.visibility = VISIBLE
             val inflate = View.inflate(application, R.layout.shimmer, null)
-            when (adType) {
+            when (newAdSize) {
                 "6" -> {
                     inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
                 }/*DEFAULT_AD*/
@@ -5100,7 +5100,7 @@ object AdSdk {
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
             val inflate = View.inflate(application, R.layout.shimmer, null)
-            when (adType) {
+            when (newAdSize) {
                 "6" -> {
                     inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
                 }/*DEFAULT_AD*/
@@ -6500,15 +6500,19 @@ object AdSdk {
         isAdmanager: Boolean
     ) {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            var mediaMaxHeight1 = mediaMaxHeight
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
             @LayoutRes val layoutId = when (newAdSize) {
-                "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
-                "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
-                "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
-                "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
-                "5" -> R.layout.native_admob_ad_t5/*BIG*/
-                "7" -> R.layout.native_admob_ad_t7
-                "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
+                "6" -> {
+                    mediaMaxHeight1 = 200
+                    R.layout.native_admob_ad_t6
+                }/*DEFAULT_AD*/
+                "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+                "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+                "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+                "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+                "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+                "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
                 else -> R.layout.native_admob_ad_t1
             }
             if (adUnit.isBlank()) return
@@ -6524,7 +6528,7 @@ object AdSdk {
             val preloadNativeAds = preloadNativeAdList?.get(adName)
 
             val inflate = View.inflate(application, R.layout.shimmer, null)
-            when (adType) {
+            when (newAdSize) {
                 "6" -> {
                     inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
                 }/*DEFAULT_AD*/
@@ -6628,7 +6632,7 @@ object AdSdk {
                                         textColor1,
                                         textColor2,
                                         AdMobUtil.fetchColor(adName),
-                                        mediaMaxHeight
+                                        mediaMaxHeight1
                                     )
                                     Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                 }
@@ -6689,7 +6693,7 @@ object AdSdk {
                                                         textColor1,
                                                         textColor2,
                                                         AdMobUtil.fetchColor(adName),
-                                                        mediaMaxHeight
+                                                        mediaMaxHeight1
                                                     )
                                                     Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                                 }
@@ -6749,7 +6753,7 @@ object AdSdk {
                                                                     textColor1,
                                                                     textColor2,
                                                                     AdMobUtil.fetchColor(adName),
-                                                                    mediaMaxHeight
+                                                                    mediaMaxHeight1
                                                                 )
                                                                 Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                                             }
@@ -6820,7 +6824,7 @@ object AdSdk {
                                                         textColor1,
                                                         textColor2,
                                                         AdMobUtil.fetchColor(adName),
-                                                        mediaMaxHeight
+                                                        mediaMaxHeight1
                                                     )
                                                     Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                                 }
@@ -6892,7 +6896,7 @@ object AdSdk {
                                         textColor1,
                                         textColor2,
                                         AdMobUtil.fetchColor(adName),
-                                        mediaMaxHeight
+                                        mediaMaxHeight1
                                     )
                                     Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                 }
@@ -6952,7 +6956,7 @@ object AdSdk {
                                                     textColor1,
                                                     textColor2,
                                                     AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                    mediaMaxHeight1
                                                 )
                                                 Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                             }
@@ -7023,7 +7027,7 @@ object AdSdk {
                                         textColor1,
                                         textColor2,
                                         AdMobUtil.fetchColor(adName),
-                                        mediaMaxHeight
+                                        mediaMaxHeight1
                                     )
                                     Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                 }
