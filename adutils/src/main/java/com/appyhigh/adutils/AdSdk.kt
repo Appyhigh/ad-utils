@@ -44,7 +44,6 @@ import com.google.android.gms.ads.admanager.AdManagerInterstitialAdLoadCallback
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-import com.google.android.gms.ads.mediation.customevent.CustomEventAdapter
 import com.google.android.gms.ads.nativead.*
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
@@ -53,13 +52,9 @@ import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoa
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.GoogleApiAvailability.GOOGLE_PLAY_SERVICES_VERSION_CODE
-import org.json.JSONArray
-import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
 import java.util.*
-import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 import kotlin.concurrent.fixedRateTimer
 
 
@@ -244,6 +239,7 @@ object AdSdk {
                                     item.value.adName,
                                     item.value.adSize,
                                     item.value.bannerAdLoadCallback,
+                                    showLoadingMessage = item.value.showLoadingMessage,
                                     isAdmanager = item.value.isAdManager
                                 )
                                 Log.d(TAG, "refreshBanner: "+"${item.value.adName}:"+ System.currentTimeMillis()/1000)
@@ -781,12 +777,26 @@ object AdSdk {
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
 
-                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
-                val cardView = inflate.findViewById<CardView>(R.id.cardView)
-                val tv = inflate.findViewById<TextView>(R.id.tv)
-                tv.textSize = loadingTextSize.toFloat()
-                tv.setTextColor(textColor1)
-                cardView.setCardBackgroundColor(background)
+                val inflate = View.inflate(application, R.layout.shimmer_banner, null)
+                when (adSize) {
+                    AdSize.BANNER -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+                    AdSize.LARGE_BANNER -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    AdSize.MEDIUM_RECTANGLE -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+                }
+//                val cardView = inflate.findViewById<CardView>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                tv.setTextColor(textColor1)
+//                cardView.setCardBackgroundColor(background)
                 viewGroup.removeAllViews()
 
                 if (showLoadingMessage) {
@@ -803,6 +813,7 @@ object AdSdk {
                             viewGroup,
                             adName,
                             adSize,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL,
                             neighbourContentURL,
@@ -826,6 +837,7 @@ object AdSdk {
                                             viewGroup,
                                             adName,
                                             adSize,
+                                            showLoadingMessage,
                                             bannerAdLoadCallback,
                                             contentURL,
                                             neighbourContentURL,
@@ -835,7 +847,7 @@ object AdSdk {
                                             object :BannerInternalCallback{
                                                 override fun onSuccess() {
                                                     refreshBanner(adName)
-                                                    Log.d("banner", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("banner", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
@@ -847,6 +859,7 @@ object AdSdk {
                                                         viewGroup,
                                                         adName,
                                                         adSize,
+                                                        showLoadingMessage,
                                                         bannerAdLoadCallback,
                                                         contentURL,
                                                         neighbourContentURL,
@@ -856,7 +869,7 @@ object AdSdk {
                                                         object :BannerInternalCallback{
                                                             override fun onSuccess() {
                                                                 refreshBanner(adName)
-                                                                Log.d("banner", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                Log.d("banner", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                                                 bannerAdLoadCallback?.onAdLoaded()
                                                             }
 
@@ -879,6 +892,7 @@ object AdSdk {
                                             viewGroup,
                                             adName,
                                             adSize,
+                                            showLoadingMessage,
                                             bannerAdLoadCallback,
                                             contentURL,
                                             neighbourContentURL,
@@ -888,13 +902,14 @@ object AdSdk {
                                             object :BannerInternalCallback{
                                                 override fun onSuccess() {
                                                     refreshBanner(adName)
-                                                    Log.d("banner", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("banner", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
                                                 override fun onFailed(loadAdError: LoadAdError?) {
                                                     bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
                                                 }
+
                                             }
                                         )
                                     }
@@ -911,6 +926,7 @@ object AdSdk {
                             viewGroup,
                             adName,
                             adSize,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL,
                             neighbourContentURL,
@@ -932,6 +948,7 @@ object AdSdk {
                                         viewGroup,
                                         adName,
                                         adSize,
+                                        showLoadingMessage,
                                         bannerAdLoadCallback,
                                         contentURL,
                                         neighbourContentURL,
@@ -964,6 +981,7 @@ object AdSdk {
                             viewGroup,
                             adName,
                             adSize,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL,
                             neighbourContentURL,
@@ -995,6 +1013,7 @@ object AdSdk {
                             viewGroup,
                             adName,
                             adSize,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL,
                             neighbourContentURL,
@@ -1018,6 +1037,7 @@ object AdSdk {
                                             viewGroup,
                                             adName,
                                             adSize,
+                                            showLoadingMessage,
                                             bannerAdLoadCallback,
                                             contentURL,
                                             neighbourContentURL,
@@ -1027,7 +1047,7 @@ object AdSdk {
                                             object :BannerInternalCallback{
                                                 override fun onSuccess() {
                                                     refreshBanner(adName)
-                                                    Log.d("banner_admanager", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("banner_admanager", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
@@ -1039,6 +1059,7 @@ object AdSdk {
                                                         viewGroup,
                                                         adName,
                                                         adSize,
+                                                        showLoadingMessage,
                                                         bannerAdLoadCallback,
                                                         contentURL,
                                                         neighbourContentURL,
@@ -1048,7 +1069,7 @@ object AdSdk {
                                                         object :BannerInternalCallback{
                                                             override fun onSuccess() {
                                                                 refreshBanner(adName)
-                                                                Log.d("banner_admanager", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                Log.d("banner_admanager", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                                                 bannerAdLoadCallback?.onAdLoaded()
                                                             }
 
@@ -1071,6 +1092,7 @@ object AdSdk {
                                             viewGroup,
                                             adName,
                                             adSize,
+                                            showLoadingMessage,
                                             bannerAdLoadCallback,
                                             contentURL,
                                             neighbourContentURL,
@@ -1080,7 +1102,7 @@ object AdSdk {
                                             object :BannerInternalCallback{
                                                 override fun onSuccess() {
                                                     refreshBanner(adName)
-                                                    Log.d("banner_admanager", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    Log.d("banner_admanager", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
                                                     bannerAdLoadCallback?.onAdLoaded()
                                                 }
 
@@ -1104,6 +1126,7 @@ object AdSdk {
                             viewGroup,
                             adName,
                             adSize,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL,
                             neighbourContentURL,
@@ -1125,6 +1148,7 @@ object AdSdk {
                                         viewGroup,
                                         adName,
                                         adSize,
+                                        showLoadingMessage,
                                         bannerAdLoadCallback,
                                         contentURL,
                                         neighbourContentURL,
@@ -1157,6 +1181,7 @@ object AdSdk {
                             viewGroup,
                             adName,
                             adSize,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL,
                             neighbourContentURL,
@@ -1189,6 +1214,7 @@ object AdSdk {
         viewGroup: ViewGroup,
         adName: String,
         adSize: AdSize,
+        showLoadingMessage: Boolean,
         bannerAdLoadCallback: BannerAdLoadCallback?,
         contentURL: String?,
         neighbourContentURL: List<String>?,
@@ -1251,6 +1277,7 @@ object AdSdk {
                                     mAdView.adUnitId,
                                     adSize,
                                     adName,
+                                    showLoadingMessage,
                                     bannerAdLoadCallback,
                                     contentURL, neighbourContentURL,
                                     isAdmanager
@@ -1293,6 +1320,7 @@ object AdSdk {
         viewGroup: ViewGroup,
         adName: String,
         adSize: AdSize,
+        showLoadingMessage: Boolean,
         bannerAdLoadCallback: BannerAdLoadCallback?,
         contentURL: String?,
         neighbourContentURL: List<String>?,
@@ -1355,6 +1383,7 @@ object AdSdk {
                                     mAdView.adUnitId,
                                     adSize,
                                     adName,
+                                    showLoadingMessage,
                                     bannerAdLoadCallback,
                                     contentURL, neighbourContentURL,
                                     isAdmanager
@@ -1410,12 +1439,27 @@ object AdSdk {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
                 if (adUnit.isBlank()) return
-                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
-                val cardView = inflate.findViewById<CardView>(R.id.cardView)
-                val tv = inflate.findViewById<TextView>(R.id.tv)
-                tv.textSize = loadingTextSize.toFloat()
-                tv.setTextColor(textColor1)
-                cardView.setCardBackgroundColor(background)
+                val inflate = View.inflate(application, R.layout.shimmer_banner, null)
+                when (adSize) {
+                    AdSize.BANNER -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+                    AdSize.LARGE_BANNER -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    AdSize.MEDIUM_RECTANGLE -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+                }
+//                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
+//                val cardView = inflate.findViewById<CardView>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                tv.setTextColor(textColor1)
+//                cardView.setCardBackgroundColor(background)
                 viewGroup.removeAllViews()
 
                 if (showLoadingMessage) {
@@ -1432,6 +1476,7 @@ object AdSdk {
                             adUnit,
                             adSize,
                             adName,
+                            showLoadingMessage,
                             bannerAdLoadCallback,
                             contentURL, neighbourContentURL,
                             isAdmanager
@@ -2995,24 +3040,58 @@ object AdSdk {
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
-                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
-                val id1 = inflate.findViewById<View>(R.id.cardView)
-                val tv = inflate.findViewById<TextView>(R.id.tv)
-                tv.textSize = loadingTextSize.toFloat()
-                if (textColor1 != null) {
-                    tv.setTextColor(textColor1)
+                val inflate = View.inflate(application, R.layout.shimmer, null)
+                when (adType) {
+                    "6" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }/*DEFAULT_AD*/
+                    "3" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    /*SMALL*/
+                    "4" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                    }
+                    /*MEDIUM*/
+                    "1" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    /*BIGV1*/
+                    "5" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                    }
+                    /*BIGV2*/
+                    "2" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                    }
+                    /*BIGV3*/
+                    "7" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    /*GRID_AD*/
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+
                 }
-                when (background) {
-                    is String -> {
-                        id1.setBackgroundColor(Color.parseColor(background))
-                    }
-                    is Drawable -> {
-                        id1.background = background
-                    }
-                    is Int -> {
-                        id1.setBackgroundColor(background)
-                    }
-                }
+
+//                val id1 = inflate.findViewById<View>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                if (textColor1 != null) {
+//                    tv.setTextColor(textColor1)
+//                }
+//                when (background) {
+//                    is String -> {
+//                        id1.setBackgroundColor(Color.parseColor(background))
+//                    }
+//                    is Drawable -> {
+//                        id1.background = background
+//                    }
+//                    is Int -> {
+//                        id1.setBackgroundColor(background)
+//                    }
+//                }
                 viewGroup.removeAllViews()
                 if (showLoadingMessage) {
                     viewGroup.addView(inflate)
@@ -4470,24 +4549,57 @@ object AdSdk {
         if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (application != null) {
-                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
-                val id1 = inflate.findViewById<View>(R.id.cardView)
-                val tv = inflate.findViewById<TextView>(R.id.tv)
-                tv.textSize = loadingTextSize.toFloat()
-                if (textColor1 != null) {
-                    tv.setTextColor(textColor1)
+                val inflate = View.inflate(application, R.layout.shimmer, null)
+                when (adType) {
+                    "6" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }/*DEFAULT_AD*/
+                    "3" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    /*SMALL*/
+                    "4" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                    }
+                    /*MEDIUM*/
+                    "1" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    /*BIGV1*/
+                    "5" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                    }
+                    /*BIGV2*/
+                    "2" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                    }
+                    /*BIGV3*/
+                    "7" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    /*GRID_AD*/
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+
                 }
-                when (background) {
-                    is String -> {
-                        id1.setBackgroundColor(Color.parseColor(background))
-                    }
-                    is Drawable -> {
-                        id1.background = background
-                    }
-                    is Int -> {
-                        id1.setBackgroundColor(background)
-                    }
-                }
+//                val id1 = inflate.findViewById<View>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                if (textColor1 != null) {
+//                    tv.setTextColor(textColor1)
+//                }
+//                when (background) {
+//                    is String -> {
+//                        id1.setBackgroundColor(Color.parseColor(background))
+//                    }
+//                    is Drawable -> {
+//                        id1.background = background
+//                    }
+//                    is Int -> {
+//                        id1.setBackgroundColor(background)
+//                    }
+//                }
                 viewGroup.removeAllViews()
                 if (showLoadingMessage) {
                     viewGroup.addView(inflate)
@@ -4753,24 +4865,58 @@ object AdSdk {
                 else -> R.layout.native_admob_ad_t1
             }
             viewGroup.visibility = VISIBLE
-            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-            val id1 = inflate.findViewById<View>(R.id.cardView)
-            val tv = inflate.findViewById<TextView>(R.id.tv)
-            tv.textSize = loadingTextSize.toFloat()
-            if (textColor1 != null) {
-                tv.setTextColor(textColor1)
+            val inflate = View.inflate(application, R.layout.shimmer, null)
+            when (adType) {
+                "6" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }/*DEFAULT_AD*/
+                "3" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                }
+                /*SMALL*/
+                "4" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                }
+                /*MEDIUM*/
+                "1" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                }
+                /*BIGV1*/
+                "5" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                }
+                /*BIGV2*/
+                "2" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                }
+                /*BIGV3*/
+                "7" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                }
+                /*GRID_AD*/
+                else -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }
+
             }
-            when (background) {
-                is String -> {
-                    id1.setBackgroundColor(Color.parseColor(background))
-                }
-                is Drawable -> {
-                    id1.background = background
-                }
-                is Int -> {
-                    id1.setBackgroundColor(background)
-                }
-            }
+//            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+//            val id1 = inflate.findViewById<View>(R.id.cardView)
+//            val tv = inflate.findViewById<TextView>(R.id.tv)
+//            tv.textSize = loadingTextSize.toFloat()
+//            if (textColor1 != null) {
+//                tv.setTextColor(textColor1)
+//            }
+//            when (background) {
+//                is String -> {
+//                    id1.setBackgroundColor(Color.parseColor(background))
+//                }
+//                is Drawable -> {
+//                    id1.background = background
+//                }
+//                is Int -> {
+//                    id1.setBackgroundColor(background)
+//                }
+//            }
             viewGroup.removeAllViews()
             if (showLoadingMessage)
                 viewGroup.addView(inflate)
