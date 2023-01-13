@@ -5098,24 +5098,59 @@ object AdSdk {
             var primaryIds = AdMobUtil.fetchPrimaryById(adName)
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
-            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-            val id1 = inflate.findViewById<View>(R.id.cardView)
-            val tv = inflate.findViewById<TextView>(R.id.tv)
-            tv.textSize = loadingTextSize.toFloat()
-            if (textColor1 != null) {
-                tv.setTextColor(textColor1)
+            val inflate = View.inflate(application, R.layout.shimmer, null)
+            when (adType) {
+                "6" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }/*DEFAULT_AD*/
+                "3" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                }
+                /*SMALL*/
+                "4" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                }
+                /*MEDIUM*/
+                "1" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                }
+                /*BIGV1*/
+                "5" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                }
+                /*BIGV2*/
+                "2" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                }
+                /*BIGV3*/
+                "7" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                }
+                /*GRID_AD*/
+                else -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }
+
             }
-            when (background) {
-                is String -> {
-                    id1.setBackgroundColor(Color.parseColor(background))
-                }
-                is Drawable -> {
-                    id1.background = background
-                }
-                is Int -> {
-                    id1.setBackgroundColor(background)
-                }
-            }
+
+//            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+//            val id1 = inflate.findViewById<View>(R.id.cardView)
+//            val tv = inflate.findViewById<TextView>(R.id.tv)
+//            tv.textSize = loadingTextSize.toFloat()
+//            if (textColor1 != null) {
+//                tv.setTextColor(textColor1)
+//            }
+//            when (background) {
+//                is String -> {
+//                    id1.setBackgroundColor(Color.parseColor(background))
+//                }
+//                is Drawable -> {
+//                    id1.background = background
+//                }
+//                is Int -> {
+//                    id1.setBackgroundColor(background)
+//                }
+//            }
             viewGroup.removeAllViews()
             if (showLoadingMessage)
                 viewGroup.addView(inflate)
@@ -6486,24 +6521,60 @@ object AdSdk {
 
 
             val preloadNativeAds = preloadNativeAdList?.get(adName)
-            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-            val id1 = inflate.findViewById<View>(R.id.cardView)
-            val tv = inflate.findViewById<TextView>(R.id.tv)
-            tv.textSize = loadingTextSize.toFloat()
-            if (textColor1 != null) {
-                tv.setTextColor(textColor1)
+
+            val inflate = View.inflate(application, R.layout.shimmer, null)
+            when (adType) {
+                "6" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }/*DEFAULT_AD*/
+                "3" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                }
+                /*SMALL*/
+                "4" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                }
+                /*MEDIUM*/
+                "1" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                }
+                /*BIGV1*/
+                "5" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                }
+                /*BIGV2*/
+                "2" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                }
+                /*BIGV3*/
+                "7" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                }
+                /*GRID_AD*/
+                else -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }
+
             }
-            when (background) {
-                is String -> {
-                    id1.setBackgroundColor(Color.parseColor(background))
-                }
-                is Drawable -> {
-                    id1.background = background
-                }
-                is Int -> {
-                    id1.setBackgroundColor(background)
-                }
-            }
+
+//            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+//            val id1 = inflate.findViewById<View>(R.id.cardView)
+//            val tv = inflate.findViewById<TextView>(R.id.tv)
+//            tv.textSize = loadingTextSize.toFloat()
+//            if (textColor1 != null) {
+//                tv.setTextColor(textColor1)
+//            }
+//            when (background) {
+//                is String -> {
+//                    id1.setBackgroundColor(Color.parseColor(background))
+//                }
+//                is Drawable -> {
+//                    id1.background = background
+//                }
+//                is Int -> {
+//                    id1.setBackgroundColor(background)
+//                }
+//            }
 
             Log.d("preload_native", "onStart" + System.currentTimeMillis()/1000)
             if (primaryIds.size>0){
