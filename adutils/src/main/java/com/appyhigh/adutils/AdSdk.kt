@@ -268,6 +268,7 @@ object AdSdk {
                                     value.nativeAdLoadCallback,
                                     value.layoutId,
                                     value.populator,
+                                    adType = value.viewId,
                                     background = value.background,
                                     textColor1 = value.textColor1,
                                     textColor2 = value.textColor2,
