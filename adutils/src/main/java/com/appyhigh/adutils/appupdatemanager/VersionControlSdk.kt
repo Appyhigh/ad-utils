@@ -49,9 +49,9 @@ object VersionControlSdk {
                 AdMobUtil.fetchCriticalVersion()
             appUpdateManager = AppUpdateManagerFactory.create(context)
             this.view = view
-            if (buildVersion < currentVersion.toInt()) {
+            if (buildVersion < currentVersion.toFloat().toInt()) {
                 when {
-                    buildVersion >= criticalVersion.toInt() -> {
+                    buildVersion >= criticalVersion.toFloat().toInt() -> {
                         Log.d("initializeSdk", "SOFT_UPDATE")
                         if (firstRequest) {
                             checkUpdate(
@@ -61,7 +61,7 @@ object VersionControlSdk {
                             firstRequest = false
                         }
                     }
-                    buildVersion < criticalVersion.toInt() -> {
+                    buildVersion < criticalVersion.toFloat().toInt() -> {
                         Log.d("initializeSdk", "HARD_UPDATE")
                         checkUpdate(context, IMMEDIATE, versionControlListener)
                     }
