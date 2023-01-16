@@ -476,6 +476,9 @@ object AdSdk {
                         }
 
                         override fun onFailed(loadAdError: LoadAdError?) {
+                            if(primaryIds.size > 0){
+                                Log.d("appopen_new", adName+primaryIds[0].toString()+"onFailed: Primary Failed" + loadAdError?.message)
+                            }
                             if (secondaryIds.size > 0){
                                 loadAppOpenAd(
                                     adName,
@@ -491,6 +494,9 @@ object AdSdk {
                                         }
 
                                         override fun onFailed(loadAdError: LoadAdError?) {
+                                            if(secondaryIds.size > 0){
+                                                Log.d("appopen_new", adName+secondaryIds[0].toString()+"onFailed: Secondary Failed" + loadAdError?.message)
+                                            }
                                             loadAppOpenAd(
                                                 adName,
                                                 fetchedTimer,
