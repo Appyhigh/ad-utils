@@ -33,11 +33,11 @@ class NativeAdActivity : AppCompatActivity() {
             background = null, textColor1 = null, textColor2 = null,
         )*/
         val adUnit =
-            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "util_native_default")
+            "ca-app-pub-3940256099942544/2247696110"
         val adUnit2 =
-            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "util_native_small")
+            "ca-app-pub-3940256099942544/2247696110"
         val adUnit3 =
-            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/2247696110", "util_native_medium")
+            "ca-app-pub-3940256099942544/2247696110"
         /*AdSdk.loadNativeAdFromService(
             context = applicationContext,
             layoutInflater = layoutInflater,

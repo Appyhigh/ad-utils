@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity(), VersionCallback {
         )
         if (BuildConfig.DEBUG) {
             AdSdk.attachAppOpenAdManager(
-                DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                "ca-app-pub-3940256099942544/3419835294",
                 "util_appopen",
                 object : AppOpenAdCallback() {
                     override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity(), VersionCallback {
                 loadTimeOut = 4000
             )
         } else {
-            AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+            AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294",
                 "util_appopen",
                 object : AppOpenAdCallback() {
                     override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity(), VersionCallback {
         if (BuildConfig.DEBUG) {
 //            binding.btnNativeAd.performClick()
         }
-        DynamicsAds.listAllAds(this, "AdSdk")
+//        DynamicsAds.listAllAds(this, "AdSdk")
         loadInterstitialAd(this)
         loadRewardedAd(this)
 //        AdSdk.preLoadRewardedAd(this, "ca-app-pub-3940256099942544/5224354917")

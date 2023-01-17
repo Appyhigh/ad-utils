@@ -28,35 +28,35 @@ class DynamicsAds {
         val updateJSON = JSONObject()
         var adMobNew: List<AdMod> = ArrayList()
 
-        fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
-            return try {
-                if (!AdMobUtil.fetchPrimaryById(adName).isEmpty()) {
-                    val string = AdMobUtil.fetchPrimaryById(adName)?.get(0)
-                    string
-                }
-                else{
-                    fallBackAdId
-                }
-            } catch (e: Exception) {
-                fallBackAdId
-            }
-        }
-
-        //TODO : we can pass the for logging the ad names
-        fun listAllAds(applicationContext: Context, logTag: String) {
-            //TODO : List all the ads along with key names for checking
-            val string = AppPref.getString(applicationContext,AppPref.ads)
-            if (string != null) {
-                adMobNew = AdMobUtil.fetchAllAds()!!
-            }
-            if (adMobNew.size > 0) {
-                adMobNew.forEach {
-                    Log.d(logTag, "listAllAds: " + it + " -> " + it.primary_ids)
-                }
-            } else {
-                Log.d(logTag, "No Dynamic Ads Found")
-            }
-        }
+//        fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
+//            return try {
+//                if (!AdMobUtil.fetchPrimaryById(adName).isEmpty()) {
+//                    val string = AdMobUtil.fetchPrimaryById(adName)?.get(0)
+//                    string
+//                }
+//                else{
+//                    fallBackAdId
+//                }
+//            } catch (e: Exception) {
+//                fallBackAdId
+//            }
+//        }
+//
+//        //TODO : we can pass the for logging the ad names
+//        fun listAllAds(applicationContext: Context, logTag: String) {
+//            //TODO : List all the ads along with key names for checking
+//            val string = AppPref.getString(applicationContext,AppPref.ads)
+//            if (string != null) {
+//                adMobNew = AdMobUtil.fetchAllAds()!!
+//            }
+//            if (adMobNew.size > 0) {
+//                adMobNew.forEach {
+//                    Log.d(logTag, "listAllAds: " + it + " -> " + it.primary_ids)
+//                }
+//            } else {
+//                Log.d(logTag, "No Dynamic Ads Found")
+//            }
+//        }
 
         fun getDynamicAds(
             applicationContext: Context,

@@ -70,7 +70,7 @@ class SplashActivity : AppCompatActivity() {
                 override fun OnInitialized() {
                     AdSdk.loadAppOpenAd(
                         this@SplashActivity,
-                        DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                        "ca-app-pub-3940256099942544/3419835294",
                         "util_appopen",
                         true,
                         object : AppOpenAdLoadCallback() {
