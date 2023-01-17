@@ -1,16 +1,20 @@
 package com.appyhigh.adutils
 
+import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.util.Log
+import com.appyhigh.adutils.AdSdk.preloadAds
 import com.appyhigh.adutils.api.AdmobInstance
+import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AdMod
 import com.appyhigh.adutils.models.apimodels.AppRequest
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.models.apimodels.SingleAppResponse
 import com.appyhigh.adutils.utils.AdMobUtil
 import com.appyhigh.adutils.utils.RSAKeyGenerator
+import com.appyhigh.adutils.utils.container.AppPref
 import com.example.speakinenglish.container.AppPrefs
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -41,7 +45,7 @@ class DynamicsAds {
         //TODO : we can pass the for logging the ad names
         fun listAllAds(applicationContext: Context, logTag: String) {
             //TODO : List all the ads along with key names for checking
-            val string = AppPrefs.ads.get()
+            val string = AppPref.getString(applicationContext,AppPref.ads)
             if (string != null) {
                 adMobNew = AdMobUtil.fetchAllAds()!!
             }
@@ -58,11 +62,12 @@ class DynamicsAds {
             applicationContext: Context,
             appPackageName: String,
             dynamicAdsFetchThresholdInSecs: Int,
+            preloadingNativeAdList: HashMap<String, PreloadNativeAds>?,
             fetchingCallback: AdSdk.FetchingCallback?
         ) {
             try {
-                val lastTime = AppPrefs.lastFetched.get()
-                val l = (System.currentTimeMillis() - lastTime) / 1000
+                val lastTime = AppPref.getLong(applicationContext,AppPref.lastFetched)
+                val l = (System.currentTimeMillis() - lastTime!!) / 1000
                 if (l > dynamicAdsFetchThresholdInSecs) {
 //                    if (isNetworkConnected(applicationContext)) {
                         val appRequest = AppRequest(appPackageName,"ANDROID")
@@ -75,17 +80,25 @@ class DynamicsAds {
                                     if (item?.packageId.equals(appPackageName)){
                                         added++
                                         val alldata = Gson().toJson(item,object : TypeToken<AppsData>() {}.type)
-                                        AppPrefs.appdata.set(alldata)
-                                        AppPrefs.showAppAds.set(item?.showAppAds)
+                                        AppPref.put(applicationContext,AppPref.appdata,alldata)
+                                        item?.showAppAds?.let {
+                                            AppPref.put(applicationContext,AppPref.showAppAds,
+                                                it
+                                            )
+                                        }
                                         val string = Gson().toJson(item?.adMob,object : TypeToken<List<AdMod?>?>() {}.type)
-                                        AppPrefs.ads.set(string)
-                                        AppPrefs.commit(applicationContext)
+                                        AppPref.put(applicationContext,AppPref.ads,string)
                                         Log.d("Dynamicads", "getDynamicAds: "+AdMobUtil.fetchAdById("util_interstitial"))
+                                        if (preloadingNativeAdList != null) {
+                                            preloadAds(
+                                                applicationContext as Application,
+                                                preloadingNativeAdList
+                                            )
+                                        }
                                         fetchingCallback?.OnComplete(item)
                                     }
                                     if (added == 0) {
-                                        AppPrefs.ads.set("")
-                                        AppPrefs.commit(applicationContext)
+                                        AppPref.put(applicationContext,AppPref.ads,"")
                                     }
                                 }
                             }

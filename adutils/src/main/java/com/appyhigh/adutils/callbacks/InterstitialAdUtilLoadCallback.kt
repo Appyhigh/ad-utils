@@ -11,7 +11,6 @@ interface InterstitialAdUtilLoadCallback {
     fun onAdImpression() {
 
     }
-
     fun onAdDismissedFullScreenContent()
     fun onAdFailedToShowFullScreenContent(adError: AdError?)
     fun onAdShowedFullScreenContent()

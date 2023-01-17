@@ -1,10 +1,12 @@
 package com.appyhigh.adutils.utils
 
+import android.content.Context
 import android.util.Log
 import com.appyhigh.adutils.AdSdk
 import com.appyhigh.adutils.models.apimodels.AdMod
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.models.apimodels.SingleAppResponse
+import com.appyhigh.adutils.utils.container.AppPref
 import com.example.speakinenglish.container.AppPrefs
 import com.google.android.gms.ads.AdSize
 import com.google.gson.Gson
@@ -14,8 +16,10 @@ import java.lang.reflect.Type
 
 object AdMobUtil {
 
+    lateinit var context: Context
+
     fun fetchAllAds():List<AdMod>{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -30,7 +34,7 @@ object AdMobUtil {
     }
 
     fun fetchLatestVersion():String{
-        var ads = AppPrefs.appdata.get()
+        var ads = AppPref.getString(context,AppPref.appdata)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<AppsData>() {}.type
@@ -45,7 +49,7 @@ object AdMobUtil {
     }
 
     fun fetchCriticalVersion():String{
-        var ads = AppPrefs.appdata.get()
+        var ads = AppPref.getString(context,AppPref.appdata)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<AppsData>() {}.type
@@ -60,7 +64,7 @@ object AdMobUtil {
     }
 
     fun fetchColor(key: String):String{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -75,7 +79,7 @@ object AdMobUtil {
     }
 
     fun fetchRefreshTime(key: String):Long{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -90,7 +94,7 @@ object AdMobUtil {
     }
 
     fun fetchAdById(key:String):AdMod?{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -105,7 +109,7 @@ object AdMobUtil {
     }
 
     fun fetchPrimaryById(key:String):List<String>{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -120,7 +124,7 @@ object AdMobUtil {
     }
 
     fun fetchSecondaryById(key:String):List<String>{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -135,7 +139,7 @@ object AdMobUtil {
     }
 
     fun fetchAdStatusFromAdId(id:String):Boolean{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("") || ads!=null){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
@@ -153,7 +157,7 @@ object AdMobUtil {
     }
 
     fun fetchAdLoadTimeout(id:String):Int{
-        var ads = AppPrefs.ads.get()
+        var ads = AppPref.getString(context,AppPref.ads)
         if (!ads.equals("")){
             try {
                 val type: Type = object : TypeToken<List<AdMod?>?>() {}.type

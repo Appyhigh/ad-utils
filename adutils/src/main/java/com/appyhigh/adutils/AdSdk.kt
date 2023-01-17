@@ -34,6 +34,7 @@ import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.utils.AdMobUtil
 import com.appyhigh.adutils.utils.AdMobUtil.fetchBannerAdSize
+import com.appyhigh.adutils.utils.container.AppPref
 import com.example.speakinenglish.container.AppPrefs
 import com.google.ads.consent.*
 import com.google.ads.mediation.admob.AdMobAdapter
@@ -169,6 +170,8 @@ object AdSdk {
         this.app = app
         application = app
         val inflater = LayoutInflater.from(app)
+        AppPref.getInstance(app.applicationContext)
+        AdMobUtil.context = app.applicationContext
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
@@ -197,9 +200,11 @@ object AdSdk {
                     context,
                     packageName,
                     dynamicAdsFetchThresholdInSecs,
+                    preloadingNativeAdList,
                     fetchingCallback
                 )
             }
+            fetchingCallback?.OnInitialized()
         }
 
         if (isGooglePlayServicesAvailable(app)) {
@@ -222,7 +227,7 @@ object AdSdk {
         }
     }
 
-    private fun refreshBanner(adName:String?){
+    internal fun refreshBanner(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
                 if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
@@ -250,7 +255,7 @@ object AdSdk {
         }
     }
 
-    private fun refreshNative(adName:String?){
+    internal fun refreshNative(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
                 if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
@@ -289,7 +294,7 @@ object AdSdk {
 
     }
 
-    fun refreshNativeService(adName:String?){
+    internal fun refreshNativeService(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
                 if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
@@ -332,6 +337,7 @@ object AdSdk {
 
     interface FetchingCallback{
         fun OnComplete(app: AppsData?)
+        fun OnInitialized()
     }
 
     lateinit var listener: VersionCallback
@@ -387,7 +393,7 @@ object AdSdk {
         }
     }
 
-    private fun isGooglePlayServicesAvailable(application: Application): Boolean {
+    internal fun isGooglePlayServicesAvailable(application: Application): Boolean {
         try {
             val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
             val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(
@@ -418,21 +424,27 @@ object AdSdk {
         isShownOnlyOnce: Boolean = false,
         isAdmanager:Boolean = false
     ) {
-        if (application != null && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            if (!AppOpenManager.initialized) {
-                val appOpenManager =
-                    AppOpenManager(
-                        application!!,
-                        appOpenAdUnit,
-                        adName,
-                        isShownOnlyOnce,
-                        backgroundThreshold,
-                        appOpenAdCallback,
-                        isAdmanager
-                    )
-                appOpenAdCallback?.onInitSuccess(appOpenManager)
+        if (isInitialized){
+            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                if (!AppOpenManager.initialized) {
+                    val appOpenManager =
+                        AppOpenManager(
+                            application!!,
+                            appOpenAdUnit,
+                            adName,
+                            isShownOnlyOnce,
+                            backgroundThreshold,
+                            appOpenAdCallback,
+                            isAdmanager
+                        )
+                    appOpenAdCallback?.onInitSuccess(appOpenManager)
+                }
             }
         }
+        else{
+            appOpenAdCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
+
     }
 
     /**
@@ -451,73 +463,116 @@ object AdSdk {
         appOpenAdCallback: AppOpenAdLoadCallback? = null,
         isAdmanager: Boolean = false
     ) {
-        if (application != null && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
-            if (fetchedTimer == 0){
-                fetchedTimer = 3500
-            }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+        if (isInitialized){
+            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = 3500
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
-            Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
-            if (primaryIds.size > 0){
-                loadAppOpenAd(
-                    adName,
-                    fetchedTimer,
-                    primaryIds,
-                    appOpenAdCallback,
-                    object: AppOpenInternalCallback{
-                        override fun onSuccess(ad: AppOpenAd) {
-                        Log.d("appopen_new", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
+                if (primaryIds.size > 0){
+                    loadAppOpenAd(
+                        adName,
+                        fetchedTimer,
+                        primaryIds,
+                        appOpenAdCallback,
+                        object: AppOpenInternalCallback{
+                            override fun onSuccess(ad: AppOpenAd) {
+                                Log.d("appopen_new", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
-                            appOpenAdCallback?.onAdLoaded(ad)
-                            if (showWhenLoaded)
-                                ad.show(activity)
-                        }
-
-                        override fun onFailed(loadAdError: LoadAdError?) {
-                            if (secondaryIds.size > 0){
-                                loadAppOpenAd(
-                                    adName,
-                                    fetchedTimer,
-                                    secondaryIds,
-                                    appOpenAdCallback,
-                                    object: AppOpenInternalCallback{
-                                        override fun onSuccess(ad: AppOpenAd) {
-                                        Log.d("appopen_new", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                            appOpenAdCallback?.onAdLoaded(ad)
-                                            if (showWhenLoaded)
-                                                ad.show(activity)
-                                        }
-
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            loadAppOpenAd(
-                                                adName,
-                                                fetchedTimer,
-                                                listOf(appOpenAdUnit),
-                                                appOpenAdCallback,
-                                                object: AppOpenInternalCallback{
-                                                    override fun onSuccess(ad: AppOpenAd) {
-                                                    Log.d("appopen_new", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                        appOpenAdCallback?.onAdLoaded(ad)
-                                                        if (showWhenLoaded)
-                                                            ad.show(activity)
-                                                    }
-
-                                                    override fun onFailed(loadAdError: LoadAdError?) {
-                                                        appOpenAdCallback?.onAdFailedToLoad(loadAdError)
-                                                    }
-
-                                                },
-                                                isAdmanager
-                                            )
-                                        }
-
-                                    },
-                                    isAdmanager
-                                )
+                                appOpenAdCallback?.onAdLoaded(ad)
+                                if (showWhenLoaded)
+                                    ad.show(activity)
                             }
-                            else {
+
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                if (secondaryIds.size > 0){
+                                    loadAppOpenAd(
+                                        adName,
+                                        fetchedTimer,
+                                        secondaryIds,
+                                        appOpenAdCallback,
+                                        object: AppOpenInternalCallback{
+                                            override fun onSuccess(ad: AppOpenAd) {
+                                                Log.d("appopen_new", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                appOpenAdCallback?.onAdLoaded(ad)
+                                                if (showWhenLoaded)
+                                                    ad.show(activity)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                loadAppOpenAd(
+                                                    adName,
+                                                    fetchedTimer,
+                                                    listOf(appOpenAdUnit),
+                                                    appOpenAdCallback,
+                                                    object: AppOpenInternalCallback{
+                                                        override fun onSuccess(ad: AppOpenAd) {
+                                                            Log.d("appopen_new", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            appOpenAdCallback?.onAdLoaded(ad)
+                                                            if (showWhenLoaded)
+                                                                ad.show(activity)
+                                                        }
+
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                                            appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                                                        }
+
+                                                    },
+                                                    isAdmanager
+                                                )
+                                            }
+
+                                        },
+                                        isAdmanager
+                                    )
+                                }
+                                else {
+                                    loadAppOpenAd(
+                                        adName,
+                                        fetchedTimer,
+                                        listOf(appOpenAdUnit),
+                                        appOpenAdCallback,
+                                        object: AppOpenInternalCallback{
+                                            override fun onSuccess(ad: AppOpenAd) {
+                                                Log.d("appopen_new", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                appOpenAdCallback?.onAdLoaded(ad)
+                                                if (showWhenLoaded)
+                                                    ad.show(activity)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                                            }
+
+                                        },
+                                        isAdmanager
+                                    )
+                                }
+                            }
+
+                        },
+                        isAdmanager
+                    )
+                }
+                else if (secondaryIds.size > 0){
+                    loadAppOpenAd(
+                        adName,
+                        fetchedTimer,
+                        secondaryIds,
+                        appOpenAdCallback,
+                        object: AppOpenInternalCallback{
+                            override fun onSuccess(ad: AppOpenAd) {
+                                Log.d("appopen_new", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                appOpenAdCallback?.onAdLoaded(ad)
+                                if (showWhenLoaded)
+                                    ad.show(activity)
+                            }
+
+                            override fun onFailed(loadAdError: LoadAdError?) {
                                 loadAppOpenAd(
                                     adName,
                                     fetchedTimer,
@@ -525,7 +580,7 @@ object AdSdk {
                                     appOpenAdCallback,
                                     object: AppOpenInternalCallback{
                                         override fun onSuccess(ad: AppOpenAd) {
-                                        Log.d("appopen_new", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            Log.d("appopen_new", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                             appOpenAdCallback?.onAdLoaded(ad)
                                             if (showWhenLoaded)
                                                 ad.show(activity)
@@ -539,79 +594,41 @@ object AdSdk {
                                     isAdmanager
                                 )
                             }
-                        }
 
-                    },
-                    isAdmanager
-                )
+                        },
+                        isAdmanager
+                    )
+                }
+                else {
+                    loadAppOpenAd(
+                        adName,
+                        fetchedTimer,
+                        listOf(appOpenAdUnit),
+                        appOpenAdCallback,
+                        object: AppOpenInternalCallback{
+                            override fun onSuccess(ad: AppOpenAd) {
+                                Log.d("appopen_new", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                appOpenAdCallback?.onAdLoaded(ad)
+                                if (showWhenLoaded)
+                                    ad.show(activity)
+                            }
+
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                            }
+
+                        },
+                        isAdmanager
+                    )
+                }
             }
-            else if (secondaryIds.size > 0){
-                loadAppOpenAd(
-                    adName,
-                    fetchedTimer,
-                    secondaryIds,
-                    appOpenAdCallback,
-                    object: AppOpenInternalCallback{
-                        override fun onSuccess(ad: AppOpenAd) {
-                        Log.d("appopen_new", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                            appOpenAdCallback?.onAdLoaded(ad)
-                            if (showWhenLoaded)
-                                ad.show(activity)
-                        }
-
-                        override fun onFailed(loadAdError: LoadAdError?) {
-                            loadAppOpenAd(
-                                adName,
-                                fetchedTimer,
-                                listOf(appOpenAdUnit),
-                                appOpenAdCallback,
-                                object: AppOpenInternalCallback{
-                                    override fun onSuccess(ad: AppOpenAd) {
-                                    Log.d("appopen_new", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
-                                        appOpenAdCallback?.onAdLoaded(ad)
-                                        if (showWhenLoaded)
-                                            ad.show(activity)
-                                    }
-
-                                    override fun onFailed(loadAdError: LoadAdError?) {
-                                        appOpenAdCallback?.onAdFailedToLoad(loadAdError)
-                                    }
-
-                                },
-                                isAdmanager
-                            )
-                        }
-
-                    },
-                    isAdmanager
-                )
-            }
-            else {
-                loadAppOpenAd(
-                    adName,
-                    fetchedTimer,
-                    listOf(appOpenAdUnit),
-                    appOpenAdCallback,
-                    object: AppOpenInternalCallback{
-                        override fun onSuccess(ad: AppOpenAd) {
-                        Log.d("appopen_new", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                            appOpenAdCallback?.onAdLoaded(ad)
-                            if (showWhenLoaded)
-                                ad.show(activity)
-                        }
-
-                        override fun onFailed(loadAdError: LoadAdError?) {
-                            appOpenAdCallback?.onAdFailedToLoad(loadAdError)
-                        }
-
-                    },
-                    isAdmanager
-                )
-            }
+        }
+        else {
+            appOpenAdCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
         }
     }
 
-    private fun loadAppOpenAd(
+    internal fun loadAppOpenAd(
         adName:String,
         fetchedTimer:Int,
         primaryIds:List<String>,
@@ -723,32 +740,37 @@ object AdSdk {
         showLoadingMessage: Boolean = true,
         isAdmanager:Boolean = false
     ) {
-        if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            loadBannerAd(
-                activity,
-                System.currentTimeMillis(),
-                lifecycle,
-                viewGroup,
-                adUnit,
-                adName,
-                fetchBannerAdSize(adName,adSize),
-                bannerAdLoadCallback,
-                contentURL,
-                neighbourContentURL,
-                loadingTextSize,
-                textColor1,
-                background,
-                showLoadingMessage,
-                isAdmanager
-            )
+        if (isInitialized){
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                loadBannerAd(
+                    activity,
+                    System.currentTimeMillis(),
+                    lifecycle,
+                    viewGroup,
+                    adUnit,
+                    adName,
+                    fetchBannerAdSize(adName,adSize),
+                    bannerAdLoadCallback,
+                    contentURL,
+                    neighbourContentURL,
+                    loadingTextSize,
+                    textColor1,
+                    background,
+                    showLoadingMessage,
+                    isAdmanager
+                )
+            }
+            else {
+                viewGroup.visibility = GONE
+            }
         }
-        else {
+        else{
             viewGroup.visibility = GONE
+            bannerAdLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
         }
-
     }
 
-    private fun loadBannerAd(
+    internal fun loadBannerAd(
         activity: Activity,
         id: Long,
         lifecycle: Lifecycle,
@@ -765,7 +787,7 @@ object AdSdk {
         showLoadingMessage: Boolean = true,
         isAdmanager:Boolean = false
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
                 viewGroup.visibility = VISIBLE
                 if (adUnit.isBlank()) return
@@ -1208,7 +1230,7 @@ object AdSdk {
         }
     }
 
-    private fun loadBannerAd(
+    internal fun loadBannerAd(
         activity: Activity,
         id: Long,
         lifecycle: Lifecycle,
@@ -1224,7 +1246,6 @@ object AdSdk {
         isAdmanager:Boolean,
         bannerInternalCallback: BannerInternalCallback
     ) {
-
         var isShown = false
         var AdError: LoadAdError? = null
         object : CountDownTimer(fetchedTimer.toLong(), 500) {
@@ -1314,7 +1335,7 @@ object AdSdk {
         }
     }
 
-    private fun loadBannerAdManager(
+    internal fun loadBannerAdManager(
         activity: Activity,
         id: Long,
         lifecycle: Lifecycle,
@@ -1420,7 +1441,7 @@ object AdSdk {
         }
     }
 
-    private fun loadBannerAdRefresh(
+    internal fun loadBannerAdRefresh(
         activity: Activity,
         id: Long,
         lifecycle: Lifecycle,
@@ -1437,114 +1458,119 @@ object AdSdk {
         showLoadingMessage: Boolean = true,
         isAdmanager: Boolean
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            if (application != null) {
-                if (adUnit.isBlank()) return
-                val inflate = View.inflate(application, R.layout.shimmer_banner, null)
-                when (adSize) {
-                    AdSize.BANNER -> {
-                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+        if (isInitialized){
+            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                if (application != null) {
+                    if (adUnit.isBlank()) return
+                    val inflate = View.inflate(application, R.layout.shimmer_banner, null)
+                    when (adSize) {
+                        AdSize.BANNER -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                        }
+                        AdSize.LARGE_BANNER -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                        }
+                        AdSize.MEDIUM_RECTANGLE -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                        }
+                        else -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                        }
                     }
-                    AdSize.LARGE_BANNER -> {
-                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
-                    }
-                    AdSize.MEDIUM_RECTANGLE -> {
-                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
-                    }
-                    else -> {
-                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
-                    }
-                }
 //                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
 //                val cardView = inflate.findViewById<CardView>(R.id.cardView)
 //                val tv = inflate.findViewById<TextView>(R.id.tv)
 //                tv.textSize = loadingTextSize.toFloat()
 //                tv.setTextColor(textColor1)
 //                cardView.setCardBackgroundColor(background)
-                viewGroup.removeAllViews()
+                    viewGroup.removeAllViews()
 
-                if (showLoadingMessage) {
-                    viewGroup.addView(inflate)
-                }
-
-                if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
-                    AdUtilConstants.bannerAdLifeCycleHashMap[id] =
-                        BannerAdItem(
-                            activity,
-                            id,
-                            lifecycle,
-                            viewGroup,
-                            adUnit,
-                            adSize,
-                            adName,
-                            showLoadingMessage,
-                            bannerAdLoadCallback,
-                            contentURL, neighbourContentURL,
-                            isAdmanager
-                        )
-                }
-                lifecycle.addObserver(object : LifecycleObserver {
-                    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-                    fun onDestroy() {
-                        AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
-                    }
-                })
-                var adRequest: AdRequest? = null
-                if (!isAdmanager){
-                    val builder = AdRequest.Builder()
-                        .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
-                    contentURL?.let { builder.setContentUrl(it) }
-                    neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
-                    adRequest = builder
-                        .build()
-                }
-                else {
-                    val builder = AdManagerAdRequest.Builder()
-                        .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
-                    contentURL?.let { builder.setContentUrl(it) }
-                    neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
-                    adRequest = builder
-                        .build()
-                }
-
-                val mAdView = AdView(viewGroup.context)
-                mAdView.setAdSize(adSize)
-                mAdView.adUnitId = adUnit
-                if (adRequest != null) {
-                    mAdView.loadAd(adRequest)
-                }
-
-                mAdView.adListener = object : AdListener() {
-                    // Code to be executed when an ad finishes loading.
-                    override fun onAdLoaded() {
-                        viewGroup.removeAllViews()
-                        viewGroup.addView(mAdView)
-                        bannerAdLoadCallback?.onAdLoaded()
+                    if (showLoadingMessage) {
+                        viewGroup.addView(inflate)
                     }
 
-                    // Code to be executed when an ad request fails.
-                    override fun onAdFailedToLoad(adError: LoadAdError) {
-                        bannerAdLoadCallback?.onAdFailedToLoad(adError)
+                    if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
+                        AdUtilConstants.bannerAdLifeCycleHashMap[id] =
+                            BannerAdItem(
+                                activity,
+                                id,
+                                lifecycle,
+                                viewGroup,
+                                adUnit,
+                                adSize,
+                                adName,
+                                showLoadingMessage,
+                                bannerAdLoadCallback,
+                                contentURL, neighbourContentURL,
+                                isAdmanager
+                            )
+                    }
+                    lifecycle.addObserver(object : LifecycleObserver {
+                        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                        fun onDestroy() {
+                            AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
+                        }
+                    })
+                    var adRequest: AdRequest? = null
+                    if (!isAdmanager){
+                        val builder = AdRequest.Builder()
+                            .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                        contentURL?.let { builder.setContentUrl(it) }
+                        neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                        adRequest = builder
+                            .build()
+                    }
+                    else {
+                        val builder = AdManagerAdRequest.Builder()
+                            .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                        contentURL?.let { builder.setContentUrl(it) }
+                        neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                        adRequest = builder
+                            .build()
                     }
 
-                    // Code to be executed when an ad opens an overlay that
-                    // covers the screen.
-                    override fun onAdOpened() {
-                        bannerAdLoadCallback?.onAdOpened()
+                    val mAdView = AdView(viewGroup.context)
+                    mAdView.setAdSize(adSize)
+                    mAdView.adUnitId = adUnit
+                    if (adRequest != null) {
+                        mAdView.loadAd(adRequest)
                     }
 
-                    // Code to be executed when the user clicks on an ad.
-                    override fun onAdClicked() {
-                        bannerAdLoadCallback?.onAdClicked()
-                    }
+                    mAdView.adListener = object : AdListener() {
+                        // Code to be executed when an ad finishes loading.
+                        override fun onAdLoaded() {
+                            viewGroup.removeAllViews()
+                            viewGroup.addView(mAdView)
+                            bannerAdLoadCallback?.onAdLoaded()
+                        }
 
-                    // Code to be executed when the user is about to return
-                    // to the app after tapping on an ad.
-                    override fun onAdClosed() {
-                        bannerAdLoadCallback?.onAdClosed()
+                        // Code to be executed when an ad request fails.
+                        override fun onAdFailedToLoad(adError: LoadAdError) {
+                            bannerAdLoadCallback?.onAdFailedToLoad(adError)
+                        }
+
+                        // Code to be executed when an ad opens an overlay that
+                        // covers the screen.
+                        override fun onAdOpened() {
+                            bannerAdLoadCallback?.onAdOpened()
+                        }
+
+                        // Code to be executed when the user clicks on an ad.
+                        override fun onAdClicked() {
+                            bannerAdLoadCallback?.onAdClicked()
+                        }
+
+                        // Code to be executed when the user is about to return
+                        // to the app after tapping on an ad.
+                        override fun onAdClosed() {
+                            bannerAdLoadCallback?.onAdClosed()
+                        }
                     }
                 }
             }
+        }
+        else{
+            bannerAdLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
         }
     }
 
@@ -1565,72 +1591,107 @@ object AdSdk {
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
         isAdmanager:Boolean = false
     ) {
-        if (application != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            var mInterstitialAd: InterstitialAd? = null
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
-            if (fetchedTimer == 0){
-                fetchedTimer = 3500
-            }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
-            Log.d("main_interstitial","OnStart:" + System.currentTimeMillis()/1000)
-            if (!isAdmanager){
-                if (primaryIds.size > 0){
-                    loadInterstitialAd(
+        if (isInitialized){
+            if (application != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var mInterstitialAd: InterstitialAd? = null
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = 3500
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                Log.d("main_interstitial","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager){
+                    if (primaryIds.size > 0){
+                        loadInterstitialAd(
                             adName,
-                        fetchedTimer.toLong(),
-                        primaryIds,
-                        interstitialAdUtilLoadCallback,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
-                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                if (secondaryIds.size > 0){
-                                    loadInterstitialAd(
-                                        adName,
-                                        fetchedTimer.toLong(),
-                                        secondaryIds,
-                                        interstitialAdUtilLoadCallback,
-                                        object :InterstitialInternalCallback{
-                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
-                                            }
-
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                loadInterstitialAd(
-                                                    adName,
-                                                    fetchedTimer.toLong(),
-                                                    listOf(adUnit),
-                                                    interstitialAdUtilLoadCallback,
-                                                    object :InterstitialInternalCallback{
-                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                            Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
-                                                        }
-
-                                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    )
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                 }
-                                else{
-                                    loadInterstitialAd(
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0){
+                                        loadInterstitialAd(
                                             adName,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadInterstitialAd(
+                                                        adName,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        interstitialAdUtilLoadCallback,
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                    else{
+                                        loadInterstitialAd(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0){
+                        loadInterstitialAd(
+                            adName,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadInterstitialAd(
+                                        adName,
                                         fetchedTimer.toLong(),
                                         listOf(adUnit),
                                         interstitialAdUtilLoadCallback,
                                         object :InterstitialInternalCallback{
                                             override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                                 interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                             }
 
@@ -1641,110 +1702,110 @@ object AdSdk {
                                     )
                                 }
                             }
-                        }
-                    )
-                }
-                else if (secondaryIds.size > 0){
-                    loadInterstitialAd(
+                        )
+                    }
+                    else{
+                        loadInterstitialAd(
                             adName,
-                        fetchedTimer.toLong(),
-                        secondaryIds,
-                        interstitialAdUtilLoadCallback,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                loadInterstitialAd(
-                                    adName,
-                                    fetchedTimer.toLong(),
-                                    listOf(adUnit),
-                                    interstitialAdUtilLoadCallback,
-                                    object :InterstitialInternalCallback{
-                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                            Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
-                                            interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
-                                        }
-
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    )
-                }
-                else{
-                    loadInterstitialAd(
-                        adName,
-                        fetchedTimer.toLong(),
-                        listOf(adUnit),
-                        interstitialAdUtilLoadCallback,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
-                            }
-                        }
-                    )
-                }
-            }
-            else {
-                if (primaryIds.size > 0){
-                    loadInterstitialAdManager(
-                            adName,
-                        fetchedTimer.toLong(),
-                        primaryIds,
-                        interstitialAdUtilLoadCallback,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-
-                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                if (secondaryIds.size > 0){
-                                    loadInterstitialAdManager(
-                                        adName,
-                                        fetchedTimer.toLong(),
-                                        secondaryIds,
-                                        interstitialAdUtilLoadCallback,
-                                        object :InterstitialInternalCallback{
-                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
-                                            }
-
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                loadInterstitialAdManager(
-                                                    adName,
-                                                    fetchedTimer.toLong(),
-                                                    listOf(adUnit),
-                                                    interstitialAdUtilLoadCallback,
-                                                    object :InterstitialInternalCallback{
-                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                            Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                            interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
-                                                        }
-
-                                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    )
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
                                 }
-                                else{
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                }
+                            }
+                        )
+                    }
+                }
+                else {
+                    if (primaryIds.size > 0){
+                        loadInterstitialAdManager(
+                            adName,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0){
+                                        loadInterstitialAdManager(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadInterstitialAdManager(
+                                                        adName,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        interstitialAdUtilLoadCallback,
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                    else{
+                                        loadInterstitialAdManager(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0){
+                        loadInterstitialAdManager(
+                            adName,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
                                     loadInterstitialAdManager(
                                         adName,
                                         fetchedTimer.toLong(),
@@ -1752,7 +1813,7 @@ object AdSdk {
                                         interstitialAdUtilLoadCallback,
                                         object :InterstitialInternalCallback{
                                             override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                                 interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
                                             }
 
@@ -1763,65 +1824,35 @@ object AdSdk {
                                     )
                                 }
                             }
-                        }
-                    )
-                }
-                else if (secondaryIds.size > 0){
-                    loadInterstitialAdManager(
-                        adName,
-                        fetchedTimer.toLong(),
-                        secondaryIds,
-                        interstitialAdUtilLoadCallback,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
-                            }
+                        )
+                    }
+                    else{
+                        loadInterstitialAdManager(
+                            adName,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                }
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                loadInterstitialAdManager(
-                                    adName,
-                                    fetchedTimer.toLong(),
-                                    listOf(adUnit),
-                                    interstitialAdUtilLoadCallback,
-                                    object :InterstitialInternalCallback{
-                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                            Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
-                                            interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
-                                        }
-
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
-                                        }
-                                    }
-                                )
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                }
                             }
-                        }
-                    )
-                }
-                else{
-                    loadInterstitialAdManager(
-                        adName,
-                        fetchedTimer.toLong(),
-                        listOf(adUnit),
-                        interstitialAdUtilLoadCallback,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
+        else {
+            interstitialAdUtilLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null),null)
+        }
     }
 
-    private fun loadInterstitialAd(
+    internal fun loadInterstitialAd(
         adName: String,
         timer: Long = 5000L,
         primaryIds: List<String>,
@@ -1895,7 +1926,7 @@ object AdSdk {
 
     }
 
-    private fun loadInterstitialAdManager(
+    internal fun loadInterstitialAdManager(
         adName: String,
         timer: Long = 5000L,
         primaryIds: List<String>,
@@ -1971,195 +2002,108 @@ object AdSdk {
         timer: Long = 5000L,
         isAdmanager:Boolean = false
     ) {
-        if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (isInitialized){
+            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
 
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
-            if (fetchedTimer == 0){
-                fetchedTimer = timer.toInt()
-            }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
-
-
-            if (!isAdmanager){
-                 Log.d("interstitial","OnStart:" + System.currentTimeMillis()/1000)
-                if (primaryIds.size > 0){
-                    loadSplashAd(
-                        adName,
-                        activity,
-                        callback,
-                        fetchedTimer,
-                        primaryIds,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                if (secondaryIds.size > 0)
-                                    loadSplashAd(
-                                        adName,
-                                        activity,
-                                        callback,
-                                        fetchedTimer,
-                                        secondaryIds,
-                                        object :InterstitialInternalCallback{
-                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                            }
-
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                loadSplashAd(
-                                                    adName,
-                                                    activity,
-                                                    callback,
-                                                    fetchedTimer,
-                                                    listOf(adUnit),
-                                                    object :InterstitialInternalCallback{
-                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                            Log.d("interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                        }
-
-                                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                                            callback.moveNext()
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    )
-                                else
-                                    loadSplashAd(
-                                        adName,
-                                        activity,
-                                        callback,
-                                        fetchedTimer,
-                                        listOf(adUnit),
-                                        object :InterstitialInternalCallback{
-                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
-                                            }
-
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                callback.moveNext()
-                                            }
-                                        }
-                                    )
-                            }
-                        }
-                    )
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = timer.toInt()
                 }
-                else if (secondaryIds.size > 0) {
-                    loadSplashAd(
-                        adName,
-                        activity,
-                        callback,
-                        fetchedTimer,
-                        secondaryIds,
-                        object : InterstitialInternalCallback {
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                            }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                loadSplashAd(
-                                    adName,
-                                    activity,
-                                    callback,
-                                    fetchedTimer,
-                                    listOf(adUnit),
-                                    object : InterstitialInternalCallback {
-                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                            Log.d("interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
-                                        }
 
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            callback.moveNext()
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    )
-                }
-                else {
-                    loadSplashAd(
-                        adName,
-                        activity,
-                        callback,
-                        fetchedTimer,
-                        listOf(adUnit),
-                        object : InterstitialInternalCallback {
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                callback.moveNext()
-                            }
-                        }
-                    )
-                }
-            }
-            else{
-                 Log.d("interstitial-admanager","OnStart:" + System.currentTimeMillis()/1000)
-                if (primaryIds.size > 0){
-                    loadSplashAdManager(
+                if (!isAdmanager){
+                    Log.d("interstitial","OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadSplashAd(
                             adName,
-                        activity,
-                        callback,
-                        fetchedTimer,
-                        primaryIds,
-                        object :InterstitialInternalCallback{
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("interstitial-admanager", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            primaryIds,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
 
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0)
+                                        loadSplashAd(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            secondaryIds,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadSplashAd(
+                                                        adName,
+                                                        activity,
+                                                        callback,
+                                                        fetchedTimer,
+                                                        listOf(adUnit),
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                callback.moveNext()
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadSplashAd(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            listOf(adUnit),
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    callback.moveNext()
+                                                }
+                                            }
+                                        )
+                                }
                             }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadSplashAd(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            secondaryIds,
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                }
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                if (secondaryIds.size > 0)
-                                    loadSplashAdManager(
-                                        adName,
-                                        activity,
-                                        callback,
-                                        fetchedTimer,
-                                        secondaryIds,
-                                        object :InterstitialInternalCallback{
-                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("interstitial-admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                            }
-
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                loadSplashAdManager(
-                                                    adName,
-                                                    activity,
-                                                    callback,
-                                                    fetchedTimer,
-                                                    listOf(adUnit),
-                                                    object :InterstitialInternalCallback{
-                                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                            Log.d("interstitial-admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                        }
-
-                                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                                            callback.moveNext()
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    )
-                                else
-                                    loadSplashAdManager(
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadSplashAd(
                                         adName,
                                         activity,
                                         callback,
                                         fetchedTimer,
                                         listOf(adUnit),
-                                        object :InterstitialInternalCallback{
+                                        object : InterstitialInternalCallback {
                                             override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                                Log.d("interstitial-admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                Log.d("interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
                                             }
 
                                             override fun onFailed(loadAdError: LoadAdError?) {
@@ -2167,69 +2111,161 @@ object AdSdk {
                                             }
                                         }
                                     )
+                                }
                             }
-                        }
-                    )
-                }
-                else if (secondaryIds.size > 0) {
-                    loadSplashAdManager(
-                        adName,
-                        activity,
-                        callback,
-                        fetchedTimer,
-                        secondaryIds,
-                        object : InterstitialInternalCallback {
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("interstitial-admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
-                            }
+                        )
+                    }
+                    else {
+                        loadSplashAd(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            listOf(adUnit),
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                }
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                loadSplashAdManager(
-                                    adName,
-                                    activity,
-                                    callback,
-                                    fetchedTimer,
-                                    listOf(adUnit),
-                                    object : InterstitialInternalCallback {
-                                        override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                            Log.d("interstitial-admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    callback.moveNext()
+                                }
+                            }
+                        )
+                    }
+                }
+                else{
+                    Log.d("interstitial-admanager","OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadSplashAdManager(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            primaryIds,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial-admanager", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0)
+                                        loadSplashAdManager(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            secondaryIds,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial-admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadSplashAdManager(
+                                                        adName,
+                                                        activity,
+                                                        callback,
+                                                        fetchedTimer,
+                                                        listOf(adUnit),
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("interstitial-admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                callback.moveNext()
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadSplashAdManager(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            listOf(adUnit),
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial-admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    callback.moveNext()
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadSplashAdManager(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            secondaryIds,
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial-admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadSplashAdManager(
+                                        adName,
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object : InterstitialInternalCallback {
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial-admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                callback.moveNext()
+                                            }
                                         }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else {
+                        loadSplashAdManager(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            listOf(adUnit),
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial-admanager", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                }
 
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            callback.moveNext()
-                                        }
-                                    }
-                                )
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    callback.moveNext()
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-                else {
-                    loadSplashAdManager(
-                        adName,
-                        activity,
-                        callback,
-                        fetchedTimer,
-                        listOf(adUnit),
-                        object : InterstitialInternalCallback {
-                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
-                                Log.d("interstitial-admanager", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
-                            }
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                callback.moveNext()
-                            }
-                        }
-                    )
-                }
+            } else {
+                callback.moveNext()
             }
-
-        } else {
-            callback.moveNext()
+        }
+        else {
+            callback.OnError("Ads SDK not (initialized / properly initial). Try initializing again.")
         }
     }
 
-    private fun loadSplashAd(
+    internal fun loadSplashAd(
         adName: String,
         activity: Activity,
         callback: SplashInterstitialCallback,
@@ -2293,7 +2329,7 @@ object AdSdk {
 
     }
 
-    private fun loadSplashAdManager(
+    internal fun loadSplashAdManager(
         adName: String,
         activity: Activity,
         callback: SplashInterstitialCallback,
@@ -2371,217 +2407,144 @@ object AdSdk {
         showLoaderScreen: Boolean = false,
         isAdmanager:Boolean = false,
     ) {
-        if (activity != null && adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName))
-        {
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
-            if (fetchedTimer == 0){
-                fetchedTimer = 3500
-            }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
-            if (showLoaderScreen)
-                showAdLoaderLayout(activity)
-            Log.d("rewarded","OnStart:" + System.currentTimeMillis()/1000)
-            if (!isAdmanager){
-                if (primaryIds.size > 0){
-                    loadRewardedAd(
-                        adName,
-                        activity,
-                        rewardedAdUtilLoadCallback,
-                        fetchedTimer.toLong(),
-                        primaryIds,
-                        object :RewardInternalCallback{
-                            override fun onSuccess(rewardAds: RewardedAd) {
-                                Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-                                if (showLoaderScreen)
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                            }
-
-                            override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
-                                if (secondaryIds.size > 0)
-                                    loadRewardedAd(
-                                        adName,
-                                        activity,
-                                        rewardedAdUtilLoadCallback,
-                                        fetchedTimer.toLong(),
-                                        secondaryIds,
-                                        object :RewardInternalCallback{
-                                            override fun onSuccess(rewardAds: RewardedAd) {
-                                                Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                                if (showLoaderScreen)
-                                                dismissAdLoaderLayout(activity)
-                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                            }
-
-                                            override fun onFailed(
-                                                adError: LoadAdError?,
-                                                ad: RewardedAd?
-                                            ) {
-                                                loadRewardedAd(
-                                                    adName,
-                                                    activity,
-                                                    rewardedAdUtilLoadCallback,
-                                                    fetchedTimer.toLong(),
-                                                    listOf(adUnit),
-                                                    object :RewardInternalCallback{
-                                                        override fun onSuccess(rewardAds: RewardedAd) {
-                                                            Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                            if (showLoaderScreen)
-                                                            dismissAdLoaderLayout(activity)
-                                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                                        }
-
-                                                        override fun onFailed(
-                                                            adError: LoadAdError?,
-                                                            ad: RewardedAd?
-                                                        ) {
-                                                            dismissAdLoaderLayout(activity)
-                                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    )
-                                else
-                                    loadRewardedAd(
-                                        adName,
-                                        activity,
-                                        rewardedAdUtilLoadCallback,
-                                        fetchedTimer.toLong(),
-                                        listOf(adUnit),
-                                        object :RewardInternalCallback{
-                                            override fun onSuccess(rewardAds: RewardedAd) {
-                                                Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
-                                                if (showLoaderScreen)
-                                                dismissAdLoaderLayout(activity)
-                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                            }
-
-                                            override fun onFailed(
-                                                adError: LoadAdError?,
-                                                ad: RewardedAd?
-                                            ) {
-                                                dismissAdLoaderLayout(activity)
-                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
-                                            }
-                                        }
-                                    )
-                            }
-                        }
-                    )
+        if (isInitialized){
+            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName))
+            {
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = 3500
                 }
-                else if (secondaryIds.size > 0) {
-                    loadRewardedAd(
-                        adName,
-                        activity,
-                        rewardedAdUtilLoadCallback,
-                        fetchedTimer.toLong(),
-                        secondaryIds,
-                        object : RewardInternalCallback {
-                            override fun onSuccess(rewardAds: RewardedAd) {
-                                Log.d(
-                                    "rewarded",
-                                    "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (showLoaderScreen)
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                            }
-
-                            override fun onFailed(
-                                adError: LoadAdError?,
-                                ad: RewardedAd?
-                            ) {
-                                loadRewardedAd(
-                                    adName,
-                                    activity,
-                                    rewardedAdUtilLoadCallback,
-                                    fetchedTimer.toLong(),
-                                    listOf(adUnit),
-                                    object : RewardInternalCallback {
-                                        override fun onSuccess(rewardAds: RewardedAd) {
-                                            Log.d(
-                                                "rewarded",
-                                                "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
-                                            )
-                                            if (showLoaderScreen)
-                                            dismissAdLoaderLayout(activity)
-                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                        }
-
-                                        override fun onFailed(
-                                            adError: LoadAdError?,
-                                            ad: RewardedAd?
-                                        ) {
-                                            dismissAdLoaderLayout(activity)
-                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    )
-                }
-                else {
-                    loadRewardedAd(
-                        adName,
-                        activity,
-                        rewardedAdUtilLoadCallback,
-                        fetchedTimer.toLong(),
-                        listOf(adUnit),
-                        object : RewardInternalCallback {
-                            override fun onSuccess(rewardAds: RewardedAd) {
-                                Log.d(
-                                    "rewarded",
-                                    "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (showLoaderScreen)
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                            }
-
-                            override fun onFailed(
-                                adError: LoadAdError?,
-                                ad: RewardedAd?
-                            ) {
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
-                            }
-                        }
-                    )
-                }
-            }
-            else {
-                if (primaryIds.size > 0){
-                    loadRewardedAdManager(
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                if (showLoaderScreen)
+                    showAdLoaderLayout(activity)
+                Log.d("rewarded","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager){
+                    if (primaryIds.size > 0){
+                        loadRewardedAd(
                             adName,
-                        activity,
-                        rewardedAdUtilLoadCallback,
-                        fetchedTimer.toLong(),
-                        primaryIds,
-                        object :RewardInternalCallback{
-                            override fun onSuccess(rewardAds: RewardedAd) {
-                                Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-                                if (showLoaderScreen)
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                            }
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            object :RewardInternalCallback{
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
 
-                            override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
-                                if (secondaryIds.size > 0)
-                                    loadRewardedAdManager(
+                                override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
+                                    if (secondaryIds.size > 0)
+                                        loadRewardedAd(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    loadRewardedAd(
+                                                        adName,
+                                                        activity,
+                                                        rewardedAdUtilLoadCallback,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        object :RewardInternalCallback{
+                                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                                Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                if (showLoaderScreen)
+                                                                    dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                            }
+
+                                                            override fun onFailed(
+                                                                adError: LoadAdError?,
+                                                                ad: RewardedAd?
+                                                            ) {
+                                                                dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadRewardedAd(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadRewardedAd(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    loadRewardedAd(
                                         adName,
                                         activity,
                                         rewardedAdUtilLoadCallback,
                                         fetchedTimer.toLong(),
-                                        secondaryIds,
-                                        object :RewardInternalCallback{
+                                        listOf(adUnit),
+                                        object : RewardInternalCallback {
                                             override fun onSuccess(rewardAds: RewardedAd) {
-                                                Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                Log.d(
+                                                    "rewarded",
+                                                    "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                                )
                                                 if (showLoaderScreen)
-                                                dismissAdLoaderLayout(activity)
+                                                    dismissAdLoaderLayout(activity)
                                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                             }
 
@@ -2589,44 +2552,170 @@ object AdSdk {
                                                 adError: LoadAdError?,
                                                 ad: RewardedAd?
                                             ) {
-                                                loadRewardedAdManager(
-                                                    adName,
-                                                    activity,
-                                                    rewardedAdUtilLoadCallback,
-                                                    fetchedTimer.toLong(),
-                                                    listOf(adUnit),
-                                                    object :RewardInternalCallback{
-                                                        override fun onSuccess(rewardAds: RewardedAd) {
-                                                            Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                            if (showLoaderScreen)
-                                                            dismissAdLoaderLayout(activity)
-                                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                                        }
-
-                                                        override fun onFailed(
-                                                            adError: LoadAdError?,
-                                                            ad: RewardedAd?
-                                                        ) {
-                                                            dismissAdLoaderLayout(activity)
-                                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
-                                                        }
-                                                    }
-                                                )
+                                                dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                                             }
                                         }
                                     )
-                                else
+                                }
+                            }
+                        )
+                    }
+                    else {
+                        loadRewardedAd(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                                }
+                            }
+                        )
+                    }
+                }
+                else {
+                    if (primaryIds.size > 0){
+                        loadRewardedAdManager(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            object :RewardInternalCallback{
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
+                                    if (secondaryIds.size > 0)
+                                        loadRewardedAdManager(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    loadRewardedAdManager(
+                                                        adName,
+                                                        activity,
+                                                        rewardedAdUtilLoadCallback,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        object :RewardInternalCallback{
+                                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                                Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                if (showLoaderScreen)
+                                                                    dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                            }
+
+                                                            override fun onFailed(
+                                                                adError: LoadAdError?,
+                                                                ad: RewardedAd?
+                                                            ) {
+                                                                dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadRewardedAdManager(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadRewardedAdManager(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
                                     loadRewardedAdManager(
                                         adName,
                                         activity,
                                         rewardedAdUtilLoadCallback,
                                         fetchedTimer.toLong(),
                                         listOf(adUnit),
-                                        object :RewardInternalCallback{
+                                        object : RewardInternalCallback {
                                             override fun onSuccess(rewardAds: RewardedAd) {
-                                                Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                Log.d(
+                                                    "rewarded",
+                                                    "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                                )
                                                 if (showLoaderScreen)
-                                                dismissAdLoaderLayout(activity)
+                                                    dismissAdLoaderLayout(activity)
                                                 rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
                                             }
 
@@ -2635,100 +2724,53 @@ object AdSdk {
                                                 ad: RewardedAd?
                                             ) {
                                                 dismissAdLoaderLayout(activity)
-                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
                                             }
                                         }
                                     )
+                                }
                             }
-                        }
-                    )
-                }
-                else if (secondaryIds.size > 0) {
-                    loadRewardedAdManager(
-                        adName,
-                        activity,
-                        rewardedAdUtilLoadCallback,
-                        fetchedTimer.toLong(),
-                        secondaryIds,
-                        object : RewardInternalCallback {
-                            override fun onSuccess(rewardAds: RewardedAd) {
-                                Log.d(
-                                    "rewarded",
-                                    "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (showLoaderScreen)
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                            }
+                        )
+                    }
+                    else {
+                        loadRewardedAdManager(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
 
-                            override fun onFailed(
-                                adError: LoadAdError?,
-                                ad: RewardedAd?
-                            ) {
-                                loadRewardedAdManager(
-                                    adName,
-                                    activity,
-                                    rewardedAdUtilLoadCallback,
-                                    fetchedTimer.toLong(),
-                                    listOf(adUnit),
-                                    object : RewardInternalCallback {
-                                        override fun onSuccess(rewardAds: RewardedAd) {
-                                            Log.d(
-                                                "rewarded",
-                                                "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
-                                            )
-                                            if (showLoaderScreen)
-                                            dismissAdLoaderLayout(activity)
-                                            rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                                        }
-
-                                        override fun onFailed(
-                                            adError: LoadAdError?,
-                                            ad: RewardedAd?
-                                        ) {
-                                            dismissAdLoaderLayout(activity)
-                                            rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
-                                        }
-                                    }
-                                )
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-                else {
-                    loadRewardedAdManager(
-                        adName,
-                        activity,
-                        rewardedAdUtilLoadCallback,
-                        fetchedTimer.toLong(),
-                        listOf(adUnit),
-                        object : RewardInternalCallback {
-                            override fun onSuccess(rewardAds: RewardedAd) {
-                                Log.d(
-                                    "rewarded",
-                                    "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (showLoaderScreen)
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
-                            }
 
-                            override fun onFailed(
-                                adError: LoadAdError?,
-                                ad: RewardedAd?
-                            ) {
-                                dismissAdLoaderLayout(activity)
-                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
-                            }
-                        }
-                    )
-                }
             }
-
         }
+        else {
+            rewardedAdUtilLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null),null)
+        }
+
     }
 
-    private fun loadRewardedAd(
+    internal fun loadRewardedAd(
         adName: String,
         activity: Activity,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
@@ -2796,7 +2838,7 @@ object AdSdk {
         }
     }
 
-    private fun loadRewardedAdManager(
+    internal fun loadRewardedAdManager(
         adName: String,
         activity: Activity,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
@@ -2921,31 +2963,36 @@ object AdSdk {
             else -> R.layout.native_admob_ad_t1
         }
 
-        if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            loadNativeAd(
-                lifecycle,
-                adUnit,
-                adName,
-                viewGroup,
-                callback,
-                layoutId,
-                null,
-                newAdSize,
-                background = background,
-                textColor1,
-                textColor2,
-                mediaMaxHeight1,
-                loadingTextSize,
-                contentURL,
-                neighbourContentURL,
-                showLoadingMessage = showLoadingMessage,
-                isAdmanager = isAdmanager
-            )
+        if (isInitialized){
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                loadNativeAd(
+                    lifecycle,
+                    adUnit,
+                    adName,
+                    viewGroup,
+                    callback,
+                    layoutId,
+                    null,
+                    newAdSize,
+                    background = background,
+                    textColor1,
+                    textColor2,
+                    mediaMaxHeight1,
+                    loadingTextSize,
+                    contentURL,
+                    neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage,
+                    isAdmanager = isAdmanager
+                )
+            }
+            else {
+                viewGroup.visibility = GONE
+            }
         }
         else {
             viewGroup.visibility = GONE
+            callback?.onAdFailed(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
         }
-
     }
 
     /**
@@ -2959,7 +3006,7 @@ object AdSdk {
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
      * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView?) as params
      */
-    private fun loadNativeAd(
+    internal fun loadNativeAd(
         lifecycle: Lifecycle,
         adUnit: String,
         adName: String,
@@ -3009,7 +3056,7 @@ object AdSdk {
      * @param nativeAdLoadCallback -> nullable callback to register native ad load events
      * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView) as params
      */
-    private fun loadNativeAd(
+    internal fun loadNativeAd(
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adUnit: String,
@@ -3029,7 +3076,7 @@ object AdSdk {
         showLoadingMessage: Boolean,
         isAdmanager:Boolean = false
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (application != null) {
                 if (adUnit.isBlank()) return
@@ -4290,7 +4337,7 @@ object AdSdk {
         }
     }
 
-    private fun loadNativeAd(
+    internal fun loadNativeAd(
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adName: String,
@@ -4410,7 +4457,7 @@ object AdSdk {
 
     }
 
-    private fun loadNativeAdManager(
+    internal fun loadNativeAdManager(
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adName: String,
@@ -4527,7 +4574,7 @@ object AdSdk {
 
     }
 
-    private fun loadNativeAdRefresh(
+    internal fun loadNativeAdRefresh(
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adUnit: String,
@@ -4547,7 +4594,7 @@ object AdSdk {
         showLoadingMessage: Boolean,
         isAdmanager: Boolean,
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (application != null) {
                 val inflate = View.inflate(application, R.layout.shimmer, null)
@@ -4799,37 +4846,44 @@ object AdSdk {
         showLoadingMessage: Boolean = true,
         isAdmanager:Boolean = false
     ){
-        if (AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            loadNativeAdFromService(
-                layoutInflater,
-                context,
-                lifecycle,
-                adUnit,
-                adName,
-                viewGroup,
-                nativeAdLoadCallback,
-                background = background,
-                textColor1 = textColor1,
-                textColor2 = textColor2,
-                mediaMaxHeight = mediaMaxHeight,
-                loadingTextSize = loadingTextSize,
-                id = id,
-                populator = populator,
-                adType = adType,
-                preloadAds = preloadAds,
-                autoRefresh = preloadAds,
-                contentURL = contentURL,
-                neighbourContentURL = neighbourContentURL,
-                showLoadingMessage = showLoadingMessage,
-                isAdmanager = isAdmanager
-            )
+        if (isInitialized){
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                loadNativeAdFromService(
+                    layoutInflater,
+                    context,
+                    lifecycle,
+                    adUnit,
+                    adName,
+                    viewGroup,
+                    nativeAdLoadCallback,
+                    background = background,
+                    textColor1 = textColor1,
+                    textColor2 = textColor2,
+                    mediaMaxHeight = mediaMaxHeight,
+                    loadingTextSize = loadingTextSize,
+                    id = id,
+                    populator = populator,
+                    adType = adType,
+                    preloadAds = preloadAds,
+                    autoRefresh = preloadAds,
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage,
+                    isAdmanager = isAdmanager
+                )
+            }
+            else {
+                viewGroup.visibility = GONE
+            }
         }
         else {
             viewGroup.visibility = GONE
+            nativeAdLoadCallback?.onAdFailed(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
         }
+
     }
 
-    private fun loadNativeAdFromServiceRefresh(
+    internal fun loadNativeAdFromServiceRefresh(
         layoutInflater: LayoutInflater,
         context: Context,
         lifecycle: Lifecycle,
@@ -4852,54 +4906,55 @@ object AdSdk {
         showLoadingMessage: Boolean = true,
         isAdmanager: Boolean
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
-            @LayoutRes val layoutId = when (newAdSize) {
-                "6" -> { R.layout.native_admob_ad_t6
-                }/*DEFAULT_AD*/
-                "3" -> R.layout.native_admob_ad_t3/*SMALL*/
-                "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
-                "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
-                "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
-                "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
-                "7" -> R.layout.native_admob_ad_t7
-                else -> R.layout.native_admob_ad_t1
-            }
-            viewGroup.visibility = VISIBLE
-            val inflate = View.inflate(application, R.layout.shimmer, null)
-            when (newAdSize) {
-                "6" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
-                }/*DEFAULT_AD*/
-                "3" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+        if (isInitialized){
+            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+                @LayoutRes val layoutId = when (newAdSize) {
+                    "6" -> { R.layout.native_admob_ad_t6
+                    }/*DEFAULT_AD*/
+                    "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+                    "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+                    "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+                    "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+                    "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+                    "7" -> R.layout.native_admob_ad_t7
+                    else -> R.layout.native_admob_ad_t1
                 }
-                /*SMALL*/
-                "4" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
-                }
-                /*MEDIUM*/
-                "1" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
-                }
-                /*BIGV1*/
-                "5" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
-                }
-                /*BIGV2*/
-                "2" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
-                }
-                /*BIGV3*/
-                "7" -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
-                }
-                /*GRID_AD*/
-                else -> {
-                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
-                }
+                viewGroup.visibility = VISIBLE
+                val inflate = View.inflate(application, R.layout.shimmer, null)
+                when (newAdSize) {
+                    "6" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }/*DEFAULT_AD*/
+                    "3" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    /*SMALL*/
+                    "4" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                    }
+                    /*MEDIUM*/
+                    "1" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    /*BIGV1*/
+                    "5" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                    }
+                    /*BIGV2*/
+                    "2" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                    }
+                    /*BIGV3*/
+                    "7" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    /*GRID_AD*/
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
 
-            }
+                }
 //            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
 //            val id1 = inflate.findViewById<View>(R.id.cardView)
 //            val tv = inflate.findViewById<TextView>(R.id.tv)
@@ -4918,144 +4973,149 @@ object AdSdk {
 //                    id1.setBackgroundColor(background)
 //                }
 //            }
-            viewGroup.removeAllViews()
-            if (showLoadingMessage)
-                viewGroup.addView(inflate)
-            if (adUnit.isBlank()) return
-            if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null) {
-                AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
-                    layoutInflater,
-                    context,
-                    lifecycle,
-                    id,
-                    adUnit,
-                    adName,
-                    viewGroup,
-                    nativeAdLoadCallback,
-                    populator,
-                    newAdSize,
-                    background,
-                    textColor1,
-                    textColor2,
-                    mediaMaxHeight,
-                    loadingTextSize,
-                    preloadAds,
-                    autoRefresh,
-                    contentURL,
-                    neighbourContentURL,
-                    showLoadingMessage = showLoadingMessage,
-                    isAdmanager = isAdmanager
-                )
-            }
-            var nativeAd: NativeAd? = null
-            val adLoader: AdLoader = AdLoader.Builder(context, adUnit)
-                .forNativeAd { ad: NativeAd ->
-                    nativeAd = ad
-                }
-                .withAdListener(object : AdListener() {
-
-                    override fun onAdClicked() {
-                        super.onAdClicked()
-                        nativeAdLoadCallback?.onAdClicked()
-                    }
-
-                    override fun onAdFailedToLoad(adError: LoadAdError) {
-                        nativeAdLoadCallback?.onAdFailed(adError)
-                    }
-
-                    override fun onAdLoaded() {
-                        super.onAdLoaded()
-                        nativeAdLoadCallback?.onAdLoaded()
-                        if (nativeAd != null) {
-                            val adView = layoutInflater.inflate(layoutId, null)
-                                    as NativeAdView
-                            if (background != null) {
-                                when (background) {
-                                    is String -> {
-                                        adView.setBackgroundColor(Color.parseColor(background))
-                                    }
-                                    is Drawable -> {
-                                        adView.background = background
-                                    }
-                                    is Int -> {
-                                        adView.setBackgroundColor(background)
-                                    }
-                                }
-                                if (layoutId == R.layout.native_admob_ad_t6){
-                                    when (background) {
-                                        is String -> {
-                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                        }
-                                        is Drawable -> {
-                                            adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                        }
-                                        is Int -> {
-                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                        }
-                                    }
-                                }
-                            }
-                            if (populator != null) {
-                                populator.invoke(nativeAd!!, adView)
-                            } else {
-                                populateUnifiedNativeAdView(
-                                    nativeAd!!,
-                                    adView,
-                                    newAdSize,
-                                    textColor1,
-                                    textColor2,
-                                    AdMobUtil.fetchColor(adName),
-                                    mediaMaxHeight
-                                )
-                            }
-                            viewGroup.removeAllViews()
-                            viewGroup.addView(adView)
-                        }
-                    }
-                })
-                .withNativeAdOptions(
-                    NativeAdOptions.Builder()
-                        .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
-                        .setRequestCustomMuteThisAd(true)
-                        .build()
-                ).build()
-            if (preloadNativeAdList != null) {
-                val preloadNativeAds = preloadNativeAdList!![adName]
-                val ad = preloadNativeAds?.ad
-                if (ad != null) {
-                    viewGroup.removeAllViews()
-                    viewGroup.addView(ad)
-                    preloadNativeAds.ad = null
-                    if (preloadAds) {
-                        preloadAds(layoutInflater, context)
-                    }
-                    Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad exist")
-                } else {
-                    if (preloadAds) {
-                        preloadAds(layoutInflater, context)
-                    }
-                    Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad not exist")
-                    loadAd(
-                        adLoader,
+                viewGroup.removeAllViews()
+                if (showLoadingMessage)
+                    viewGroup.addView(inflate)
+                if (adUnit.isBlank()) return
+                if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null) {
+                    AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
+                        layoutInflater,
+                        context,
+                        lifecycle,
+                        id,
+                        adUnit,
+                        adName,
+                        viewGroup,
+                        nativeAdLoadCallback,
+                        populator,
+                        newAdSize,
+                        background,
+                        textColor1,
+                        textColor2,
+                        mediaMaxHeight,
+                        loadingTextSize,
+                        preloadAds,
+                        autoRefresh,
                         contentURL,
                         neighbourContentURL,
-                        isAdmanager
+                        showLoadingMessage = showLoadingMessage,
+                        isAdmanager = isAdmanager
                     )
-                    /*The Extra Parameters are just for logging*/
+                }
+                var nativeAd: NativeAd? = null
+                val adLoader: AdLoader = AdLoader.Builder(context, adUnit)
+                    .forNativeAd { ad: NativeAd ->
+                        nativeAd = ad
+                    }
+                    .withAdListener(object : AdListener() {
+
+                        override fun onAdClicked() {
+                            super.onAdClicked()
+                            nativeAdLoadCallback?.onAdClicked()
+                        }
+
+                        override fun onAdFailedToLoad(adError: LoadAdError) {
+                            nativeAdLoadCallback?.onAdFailed(adError)
+                        }
+
+                        override fun onAdLoaded() {
+                            super.onAdLoaded()
+                            nativeAdLoadCallback?.onAdLoaded()
+                            if (nativeAd != null) {
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        newAdSize,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight
+                                    )
+                                }
+                                viewGroup.removeAllViews()
+                                viewGroup.addView(adView)
+                            }
+                        }
+                    })
+                    .withNativeAdOptions(
+                        NativeAdOptions.Builder()
+                            .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                            .setRequestCustomMuteThisAd(true)
+                            .build()
+                    ).build()
+                if (preloadNativeAdList != null) {
+                    val preloadNativeAds = preloadNativeAdList!![adName]
+                    val ad = preloadNativeAds?.ad
+                    if (ad != null) {
+                        viewGroup.removeAllViews()
+                        viewGroup.addView(ad)
+                        preloadNativeAds.ad = null
+                        if (preloadAds) {
+                            preloadAds(layoutInflater, context)
+                        }
+                        Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad exist")
+                    } else {
+                        if (preloadAds) {
+                            preloadAds(layoutInflater, context)
+                        }
+                        Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad not exist")
+                        loadAd(
+                            adLoader,
+                            contentURL,
+                            neighbourContentURL,
+                            isAdmanager
+                        )
+                        /*The Extra Parameters are just for logging*/
+                    }
+                } else {
+                    Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad exist else")
+                    if (preloadAds) {
+                        preloadAds(layoutInflater, context)
+                    }
+                    loadAd(adLoader, contentURL, neighbourContentURL,isAdmanager)
                 }
             } else {
-                Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad exist else")
-                if (preloadAds) {
-                    preloadAds(layoutInflater, context)
-                }
-                loadAd(adLoader, contentURL, neighbourContentURL,isAdmanager)
+                viewGroup.visibility = GONE
             }
-        } else {
+        }
+        else {
             viewGroup.visibility = GONE
+            nativeAdLoadCallback?.onAdFailed(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
         }
     }
 
-    private fun loadNativeAdFromService(
+    internal fun loadNativeAdFromService(
         layoutInflater: LayoutInflater,
         context: Context,
         lifecycle: Lifecycle,
@@ -5078,7 +5138,7 @@ object AdSdk {
         showLoadingMessage: Boolean = true,
         isAdmanager:Boolean = false
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
             @LayoutRes val layoutId = when (newAdSize) {
                 "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
@@ -6364,7 +6424,7 @@ object AdSdk {
         }
     }
 
-    private fun loadNativeAdFromService(
+    internal fun loadNativeAdFromService(
         layoutInflater: LayoutInflater,
         context: Context,
         lifecycle: Lifecycle,
@@ -6483,7 +6543,7 @@ object AdSdk {
 
 
 
-    private fun preLoadNativeAd(
+    internal fun preLoadNativeAd(
         layoutInflater: LayoutInflater,
         context: Context,
         adUnit: String,
@@ -6499,7 +6559,7 @@ object AdSdk {
         neighbourContentURL: List<String>? = null,
         isAdmanager: Boolean
     ) {
-        if (adUnit != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var mediaMaxHeight1 = mediaMaxHeight
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
             @LayoutRes val layoutId = when (newAdSize) {
@@ -7047,7 +7107,7 @@ object AdSdk {
         }
     }
 
-    private fun preLoadNativeAd(
+    internal fun preLoadNativeAd(
         adName: String,
         context: Context,
         contentURL: String? = null,
@@ -7108,7 +7168,7 @@ object AdSdk {
 
     }
 
-    private fun loadAd(
+    internal fun loadAd(
         adLoader: AdLoader?,
         contentURL: String?,
         neighbourContentURL: List<String>?,
@@ -7272,93 +7332,145 @@ object AdSdk {
         interstitialCallback: InterstitialCallback,
         isAdmanager:Boolean = false,
     ) {
-        if (adId != "STOP" && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
-            if (fetchedTimer == 0){
-                fetchedTimer = 3500
-            }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+        if (isInitialized){
+            if (adId != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = 3500
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
 
-            showAdLoaderLayout(activity)
+                showAdLoaderLayout(activity)
 
-            Log.d("rewardedInterstitial","OnStart:" + System.currentTimeMillis()/1000)
-            if (!isAdmanager) {
-                if (primaryIds.size > 0) {
-                    showRewardedIntersAd(
+                Log.d("rewardedInterstitial","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager) {
+                    if (primaryIds.size > 0) {
+                        showRewardedIntersAd(
                             adName,
-                        activity,
-                        fetchedTimer.toLong(),
-                        primaryIds,
-                        interstitialCallback,
-                        object : RewardInterstitialInternalCallback {
-                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                Log.d(
-                                    "rewardedInterstitial",
-                                    "onSuccess: Primary Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (ad != null) {
-                                    dismissAdLoaderLayout(activity)
-                                    ad!!.show(activity, {
+                            activity,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialCallback,
+                            object : RewardInterstitialInternalCallback {
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d(
+                                        "rewardedInterstitial",
+                                        "onSuccess: Primary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (ad != null) {
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity, {
 
-                                    })
+                                        })
+                                    }
                                 }
-                            }
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                if (secondaryIds.size > 0) {
-                                    showRewardedIntersAd(
-                                        adName,
-                                        activity,
-                                        fetchedTimer.toLong(),
-                                        secondaryIds,
-                                        interstitialCallback,
-                                        object : RewardInterstitialInternalCallback {
-                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                                Log.d(
-                                                    "rewardedInterstitial",
-                                                    "onSuccess: First Secondary Shown" + System.currentTimeMillis() / 1000
-                                                )
-                                                if (ad != null) {
-                                                    dismissAdLoaderLayout(activity)
-                                                    ad!!.show(activity, {
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0) {
+                                        showRewardedIntersAd(
+                                            adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialCallback,
+                                            object : RewardInterstitialInternalCallback {
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d(
+                                                        "rewardedInterstitial",
+                                                        "onSuccess: First Secondary Shown" + System.currentTimeMillis() / 1000
+                                                    )
+                                                    if (ad != null) {
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity, {
 
-                                                    })
+                                                        })
+                                                    }
                                                 }
-                                            }
 
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                showRewardedIntersAd(
-                                                    adName,
-                                                    activity,
-                                                    fetchedTimer.toLong(),
-                                                    listOf(adId),
-                                                    interstitialCallback,
-                                                    object : RewardInterstitialInternalCallback {
-                                                        override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                                            Log.d(
-                                                                "rewardedInterstitial",
-                                                                "onSuccess: First Fallback Shown" + System.currentTimeMillis() / 1000
-                                                            )
-                                                            if (ad != null) {
-                                                                dismissAdLoaderLayout(activity)
-                                                                ad!!.show(activity, {
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    showRewardedIntersAd(
+                                                        adName,
+                                                        activity,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adId),
+                                                        interstitialCallback,
+                                                        object : RewardInterstitialInternalCallback {
+                                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                                Log.d(
+                                                                    "rewardedInterstitial",
+                                                                    "onSuccess: First Fallback Shown" + System.currentTimeMillis() / 1000
+                                                                )
+                                                                if (ad != null) {
+                                                                    dismissAdLoaderLayout(activity)
+                                                                    ad!!.show(activity, {
 
-                                                                })
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialCallback.moveNext()
                                                             }
                                                         }
-
-                                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                                            interstitialCallback.moveNext()
-                                                        }
-                                                    }
-                                                )
+                                                    )
+                                                }
                                             }
-                                        }
-                                    )
-                                } else {
-                                    showRewardedIntersAd(
+                                        )
+                                    } else {
+                                        showRewardedIntersAd(
                                             adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            listOf(adId),
+                                            interstitialCallback,
+                                            object : RewardInterstitialInternalCallback {
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d(
+                                                        "rewardedInterstitial",
+                                                        "onSuccess: First else Fallback Shown" + System.currentTimeMillis() / 1000
+                                                    )
+                                                    if (ad != null) {
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity, {
+
+                                                        })
+                                                    }
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialCallback.moveNext()
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    } else if (secondaryIds.size > 0) {
+                        showRewardedIntersAd(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialCallback,
+                            object : RewardInterstitialInternalCallback {
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d(
+                                        "rewardedInterstitial",
+                                        "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (ad != null) {
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity, {
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    showRewardedIntersAd(
+                                        adName,
                                         activity,
                                         fetchedTimer.toLong(),
                                         listOf(adId),
@@ -7367,7 +7479,7 @@ object AdSdk {
                                             override fun onSuccess(ad: RewardedInterstitialAd?) {
                                                 Log.d(
                                                     "rewardedInterstitial",
-                                                    "onSuccess: First else Fallback Shown" + System.currentTimeMillis() / 1000
+                                                    "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
                                                 )
                                                 if (ad != null) {
                                                     dismissAdLoaderLayout(activity)
@@ -7384,161 +7496,156 @@ object AdSdk {
                                     )
                                 }
                             }
-                        }
-                    )
-                } else if (secondaryIds.size > 0) {
-                    showRewardedIntersAd(
+                        )
+                    } else {
+                        showRewardedIntersAd(
                             adName,
-                        activity,
-                        fetchedTimer.toLong(),
-                        secondaryIds,
-                        interstitialCallback,
-                        object : RewardInterstitialInternalCallback {
-                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                Log.d(
-                                    "rewardedInterstitial",
-                                    "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (ad != null) {
-                                    dismissAdLoaderLayout(activity)
-                                    ad!!.show(activity, {
+                            activity,
+                            fetchedTimer.toLong(),
+                            listOf(adId),
+                            interstitialCallback,
+                            object : RewardInterstitialInternalCallback {
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d(
+                                        "rewardedInterstitial",
+                                        "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (ad != null) {
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity, {
 
-                                    })
-                                }
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                showRewardedIntersAd(
-                                    adName,
-                                    activity,
-                                    fetchedTimer.toLong(),
-                                    listOf(adId),
-                                    interstitialCallback,
-                                    object : RewardInterstitialInternalCallback {
-                                        override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                            Log.d(
-                                                "rewardedInterstitial",
-                                                "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
-                                            )
-                                            if (ad != null) {
-                                                dismissAdLoaderLayout(activity)
-                                                ad!!.show(activity, {
-
-                                                })
-                                            }
-                                        }
-
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            interstitialCallback.moveNext()
-                                        }
+                                        })
                                     }
-                                )
-                            }
-                        }
-                    )
-                } else {
-                    showRewardedIntersAd(
-                        adName,
-                        activity,
-                        fetchedTimer.toLong(),
-                        listOf(adId),
-                        interstitialCallback,
-                        object : RewardInterstitialInternalCallback {
-                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                Log.d(
-                                    "rewardedInterstitial",
-                                    "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
-                                )
-                                if (ad != null) {
-                                    dismissAdLoaderLayout(activity)
-                                    ad!!.show(activity, {
+                                }
 
-                                    })
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialCallback.moveNext()
                                 }
                             }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                interstitialCallback.moveNext()
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
-            }
-            else {
-                if (primaryIds.size >0){
-                    showRewardedIntersAdManager(
+                else {
+                    if (primaryIds.size >0){
+                        showRewardedIntersAdManager(
                             adName,
-                        activity,
-                        fetchedTimer.toLong(),
-                        primaryIds,
-                        interstitialCallback,
-                        object :RewardInterstitialInternalCallback{
-                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                Log.d("rewardedInterstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-                                if (ad != null){
-                                    dismissAdLoaderLayout(activity)
-                                    ad!!.show(activity,{
+                            activity,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialCallback,
+                            object :RewardInterstitialInternalCallback{
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d("rewardedInterstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    if (ad != null){
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity,{
 
-                                    })
+                                        })
+                                    }
                                 }
-                            }
 
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                if (secondaryIds.size > 0){
-                                    showRewardedIntersAdManager(
-                                        adName,
-                                        activity,
-                                        fetchedTimer.toLong(),
-                                        secondaryIds,
-                                        interstitialCallback,
-                                        object :RewardInterstitialInternalCallback{
-                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                                Log.d("rewardedInterstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-                                                if (ad != null){
-                                                    dismissAdLoaderLayout(activity)
-                                                    ad!!.show(activity,{
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0){
+                                        showRewardedIntersAdManager(
+                                            adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialCallback,
+                                            object :RewardInterstitialInternalCallback{
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d("rewardedInterstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    if (ad != null){
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity,{
 
-                                                    })
+                                                        })
+                                                    }
                                                 }
-                                            }
 
-                                            override fun onFailed(loadAdError: LoadAdError?) {
-                                                showRewardedIntersAdManager(
-                                                    adName,
-                                                    activity,
-                                                    fetchedTimer.toLong(),
-                                                    listOf(adId),
-                                                    interstitialCallback,
-                                                    object :RewardInterstitialInternalCallback{
-                                                        override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                                            Log.d("rewardedInterstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-                                                            if (ad != null){
-                                                                dismissAdLoaderLayout(activity)
-                                                                ad!!.show(activity,{
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    showRewardedIntersAdManager(
+                                                        adName,
+                                                        activity,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adId),
+                                                        interstitialCallback,
+                                                        object :RewardInterstitialInternalCallback{
+                                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                                Log.d("rewardedInterstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                if (ad != null){
+                                                                    dismissAdLoaderLayout(activity)
+                                                                    ad!!.show(activity,{
 
-                                                                })
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialCallback.moveNext()
                                                             }
                                                         }
-
-                                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                                            interstitialCallback.moveNext()
-                                                        }
-                                                    }
-                                                )
+                                                    )
+                                                }
                                             }
-                                        }
-                                    )
-                                }
-                                else{
-                                    showRewardedIntersAdManager(
+                                        )
+                                    }
+                                    else{
+                                        showRewardedIntersAdManager(
                                             adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            listOf(adId),
+                                            interstitialCallback,
+                                            object :RewardInterstitialInternalCallback{
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d("rewardedInterstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    if (ad != null){
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity,{
+
+                                                        })
+                                                    }
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialCallback.moveNext()
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0){
+                        showRewardedIntersAdManager(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialCallback,
+                            object :RewardInterstitialInternalCallback{
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d("rewardedInterstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
+                                    if (ad != null){
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity,{
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    showRewardedIntersAdManager(
+                                        adName,
                                         activity,
                                         fetchedTimer.toLong(),
                                         listOf(adId),
                                         interstitialCallback,
                                         object :RewardInterstitialInternalCallback{
                                             override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                                Log.d("rewardedInterstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                Log.d("rewardedInterstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
                                                 if (ad != null){
                                                     dismissAdLoaderLayout(activity)
                                                     ad!!.show(activity,{
@@ -7554,85 +7661,44 @@ object AdSdk {
                                     )
                                 }
                             }
-                        }
-                    )
-                }
-                else if (secondaryIds.size > 0){
-                    showRewardedIntersAdManager(
+                        )
+                    }
+                    else{
+                        showRewardedIntersAdManager(
                             adName,
-                        activity,
-                        fetchedTimer.toLong(),
-                        secondaryIds,
-                        interstitialCallback,
-                        object :RewardInterstitialInternalCallback{
-                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                Log.d("rewardedInterstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
-                                if (ad != null){
-                                    dismissAdLoaderLayout(activity)
-                                    ad!!.show(activity,{
+                            activity,
+                            fetchedTimer.toLong(),
+                            listOf(adId),
+                            interstitialCallback,
+                            object :RewardInterstitialInternalCallback{
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d("rewardedInterstitial", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
+                                    if (ad != null){
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity,{
 
-                                    })
-                                }
-                            }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                showRewardedIntersAdManager(
-                                    adName,
-                                    activity,
-                                    fetchedTimer.toLong(),
-                                    listOf(adId),
-                                    interstitialCallback,
-                                    object :RewardInterstitialInternalCallback{
-                                        override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                            Log.d("rewardedInterstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
-                                            if (ad != null){
-                                                dismissAdLoaderLayout(activity)
-                                                ad!!.show(activity,{
-
-                                                })
-                                            }
-                                        }
-
-                                        override fun onFailed(loadAdError: LoadAdError?) {
-                                            interstitialCallback.moveNext()
-                                        }
+                                        })
                                     }
-                                )
-                            }
-                        }
-                    )
-                }
-                else{
-                    showRewardedIntersAdManager(
-                        adName,
-                        activity,
-                        fetchedTimer.toLong(),
-                        listOf(adId),
-                        interstitialCallback,
-                        object :RewardInterstitialInternalCallback{
-                            override fun onSuccess(ad: RewardedInterstitialAd?) {
-                                Log.d("rewardedInterstitial", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
-                                if (ad != null){
-                                    dismissAdLoaderLayout(activity)
-                                    ad!!.show(activity,{
+                                }
 
-                                    })
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialCallback.moveNext()
                                 }
                             }
-
-                            override fun onFailed(loadAdError: LoadAdError?) {
-                                interstitialCallback.moveNext()
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
+            } else {
+                interstitialCallback.moveNext(AdError(404, "AD BLOCKED", ""))
             }
-        } else {
-            interstitialCallback.moveNext(AdError(404, "AD BLOCKED", ""))
         }
+        else {
+            interstitialCallback.moveNext(AdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", ""))
+        }
+
     }
 
-    private  fun showRewardedIntersAd(
+    internal  fun showRewardedIntersAd(
         adName:String,
         activity: Activity,
         timer: Long = 5000L,
@@ -7698,7 +7764,7 @@ object AdSdk {
         }
     }
 
-    private  fun showRewardedIntersAdManager(
+    internal  fun showRewardedIntersAdManager(
         adName: String,
         activity: Activity,
         timer: Long = 5000L,
@@ -7764,7 +7830,7 @@ object AdSdk {
         }
     }
 
-    private fun showAdLoaderLayout(activity: Activity) {
+    internal fun showAdLoaderLayout(activity: Activity) {
         dismissAdLoaderLayout(activity)//Added This So that The alertDialog Variable is never used twice which will lead to no closing of the dialog
         builder = AlertDialog.Builder(activity, R.style.DialogTheme)
         builder?.setView(
@@ -7786,7 +7852,7 @@ object AdSdk {
         adName: String
     ) {
         EmptyAdList(adUnit)
-        if (activity != null && AppPrefs.showAppAds.get() && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (activity != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
@@ -7820,68 +7886,74 @@ object AdSdk {
         adName: String,
         callback: RewardedCallback
     ) {
-        if (activity != null && adId != "STOP") {
-            showAdLoaderLayout(activity)
-            if (preloadedRewardedAdList.containsKey(adId)) {
-                var rewardedAd: RewardedAd? = null
-                var ctd: CountDownTimer? = null
-                ctd = object : CountDownTimer(timeToWait, 500) {
-                    override fun onTick(millisUntilFinished: Long) {
-                        rewardedAd = preloadedRewardedAdList[adId]
-                        if (rewardedAd != null) {
-                            ctd?.cancel()
-                            ctd = null
-                            rewardedAd?.fullScreenContentCallback =
-                                object : FullScreenContentCallback() {
-                                    override fun onAdDismissedFullScreenContent() {
-                                        super.onAdDismissedFullScreenContent()
-                                        callback.moveNext(AdRewardedList[adId] ?: false)
-                                        dismissAdLoaderLayout(activity)
-                                    }
+        if (isInitialized){
+            if (activity != null && adId != "STOP") {
+                showAdLoaderLayout(activity)
+                if (preloadedRewardedAdList.containsKey(adId)) {
+                    var rewardedAd: RewardedAd? = null
+                    var ctd: CountDownTimer? = null
+                    ctd = object : CountDownTimer(timeToWait, 500) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            rewardedAd = preloadedRewardedAdList[adId]
+                            if (rewardedAd != null) {
+                                ctd?.cancel()
+                                ctd = null
+                                rewardedAd?.fullScreenContentCallback =
+                                    object : FullScreenContentCallback() {
+                                        override fun onAdDismissedFullScreenContent() {
+                                            super.onAdDismissedFullScreenContent()
+                                            callback.moveNext(AdRewardedList[adId] ?: false)
+                                            dismissAdLoaderLayout(activity)
+                                        }
 
-                                    override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                                        super.onAdFailedToShowFullScreenContent(p0)
-                                        callback.moveNext(p0)
-                                        dismissAdLoaderLayout(activity)
-                                    }
+                                        override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                            super.onAdFailedToShowFullScreenContent(p0)
+                                            callback.moveNext(p0)
+                                            dismissAdLoaderLayout(activity)
+                                        }
 
-                                    override fun onAdShowedFullScreenContent() {
-                                        super.onAdShowedFullScreenContent()
-                                        preloadedRewardedAdList.remove(adId)
-                                        AdRewardedList[adId] = false
-                                        dismissAdLoaderLayout(activity)
+                                        override fun onAdShowedFullScreenContent() {
+                                            super.onAdShowedFullScreenContent()
+                                            preloadedRewardedAdList.remove(adId)
+                                            AdRewardedList[adId] = false
+                                            dismissAdLoaderLayout(activity)
+                                        }
                                     }
-                                }
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                rewardedAd?.show(
-                                    activity
-                                ) { AdRewardedList[adId] = true }
-                            }, 1500)
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    rewardedAd?.show(
+                                        activity
+                                    ) { AdRewardedList[adId] = true }
+                                }, 1500)
+                            }
+                        }
+
+                        override fun onFinish() {
+                            EmptyAdList(adId)
+                            preloadedRewardedAdList.remove(adId)
+                            AdRewardedList[adId] = false
+                            dismissAdLoaderLayout(activity)
+                            callback.adNotLoaded()
                         }
                     }
-
-                    override fun onFinish() {
-                        EmptyAdList(adId)
-                        preloadedRewardedAdList.remove(adId)
-                        AdRewardedList[adId] = false
-                        dismissAdLoaderLayout(activity)
-                        callback.adNotLoaded()
-                    }
+                    ctd?.start()
+                } else {
+                    preLoadRewardedAd(activity, adId,adName)
+                    showRewardedAdsAfterWait(
+                        activity,
+                        timeToWait,
+                        adId,
+                        adName,
+                        callback
+                    )
                 }
-                ctd?.start()
             } else {
-                preLoadRewardedAd(activity, adId,adName)
-                showRewardedAdsAfterWait(
-                    activity,
-                    timeToWait,
-                    adId,
-                    adName,
-                    callback
-                )
+                callback.moveNext(AdError(404, "AD BLOCKED", ""))
             }
-        } else {
-            callback.moveNext(AdError(404, "AD BLOCKED", ""))
         }
+        else {
+            callback.moveNext(AdError(404,"Ads SDK not (initialized / properly initial). Try initializing again.",""))
+        }
+
     }
 
     private fun dismissAdLoaderLayout(activity: Activity) {
