@@ -27,7 +27,8 @@ class BannerAdActivity : AppCompatActivity() {
             background = Color.DKGRAY,
             textColor1 = Color.WHITE,
             loadingTextSize = 32,
-            showLoadingMessage = true
+            showLoadingMessage = true,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadBannerAd(
@@ -41,7 +42,8 @@ class BannerAdActivity : AppCompatActivity() {
             background = Color.DKGRAY,
             textColor1 = Color.WHITE,
             loadingTextSize = 32,
-            showLoadingMessage = true
+            showLoadingMessage = true,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadBannerAd(
@@ -55,7 +57,8 @@ class BannerAdActivity : AppCompatActivity() {
             background = Color.DKGRAY,
             textColor1 = Color.WHITE,
             loadingTextSize = 32,
-            showLoadingMessage = true
+            showLoadingMessage = true,
+            loadTimeOut = 4000
         )
     }
 

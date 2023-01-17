@@ -58,7 +58,8 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.GRID_AD,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
-            mediaMaxHeight = 200
+            mediaMaxHeight = 200,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadNativeAd(
@@ -69,7 +70,8 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.GRID_AD,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
-            mediaMaxHeight = 200
+            mediaMaxHeight = 200,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadNativeAd(
@@ -80,6 +82,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.DEFAULT_AD,
             callback = nativeAdLoadCallback("3"),
             background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 4000
         )
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
@@ -89,6 +92,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.SMALL,
             callback = nativeAdLoadCallback("4"),
             background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 4000
         )
         AdSdk.loadNativeAd(
             lifecycle = lifecycle,
@@ -98,6 +102,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.MEDIUM,
             callback = nativeAdLoadCallback("5"),
             background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadNativeAd(
@@ -108,6 +113,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.BIGV1,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 4000,
             mediaMaxHeight = 500
         )
 
@@ -119,7 +125,8 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.BIGV2,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
-            mediaMaxHeight = 500
+            loadTimeOut = 4000,
+            mediaMaxHeight = 500,
         )
 
         AdSdk.loadNativeAd(
@@ -130,6 +137,7 @@ class NativeAdActivity : AppCompatActivity() {
             adType = AdSdk.ADType.BIGV3,
             callback = nativeAdLoadCallback("6"),
             background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 4000
         )
 
 
@@ -146,7 +154,8 @@ class NativeAdActivity : AppCompatActivity() {
                 background = null, textColor1 = null, textColor2 = null,
                 nativeAdLoadCallback = null,
                 preloadAds = true,
-                autoRefresh = true
+                autoRefresh = true,
+                loadTimeOut = 4000
             )
 
             AdSdk.loadNativeAdFromSrvs(
@@ -160,7 +169,8 @@ class NativeAdActivity : AppCompatActivity() {
                 background = null, textColor1 = null, textColor2 = null,
                 nativeAdLoadCallback = null,
                 preloadAds = true,
-                autoRefresh = true
+                autoRefresh = true,
+                loadTimeOut = 4000
             )
         }
 

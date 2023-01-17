@@ -159,13 +159,17 @@ object AdSdk {
 
     fun initialize(
         app: Application,
+        activity: Activity,
+        version: Int,
+        anyview:View,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
-        fetchingCallback: FetchingCallback? = null
+        fetchingCallback: FetchingCallback? = null,
+        listener:VersionCallback?
     ) {
         this.app = app
         application = app
@@ -204,6 +208,12 @@ object AdSdk {
                     fetchingCallback
                 )
             }
+            initVersionController(
+                activity,
+                version,
+                anyview,
+                listener
+            )
             fetchingCallback?.OnInitialized()
         }
 
@@ -387,7 +397,8 @@ object AdSdk {
                     background = null,
                     textColor1 = null,
                     textColor2 = null,
-                    isAdmanager = preloadNativeAds.isAdmanager
+                    isAdmanager = preloadNativeAds.isAdmanager,
+                    loadTimeOut = preloadNativeAds.loadTimeOut
                 )
             }
         }
@@ -422,7 +433,8 @@ object AdSdk {
          appOpenAdCallback: AppOpenAdCallback? = null,
         backgroundThreshold: Int = 30000,
         isShownOnlyOnce: Boolean = false,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (isInitialized){
             if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -461,13 +473,14 @@ object AdSdk {
         adName:String,
         showWhenLoaded: Boolean,
         appOpenAdCallback: AppOpenAdLoadCallback? = null,
-        isAdmanager: Boolean = false
+        isAdmanager: Boolean = false,
+        loadTimeOut:Int
     ) {
         if (isInitialized){
             if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = 3500
+                    fetchedTimer = loadTimeOut
                 }
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -738,7 +751,8 @@ object AdSdk {
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (isInitialized){
             if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -757,7 +771,8 @@ object AdSdk {
                     textColor1,
                     background,
                     showLoadingMessage,
-                    isAdmanager
+                    isAdmanager,
+                    loadTimeOut
                 )
             }
             else {
@@ -785,7 +800,8 @@ object AdSdk {
         textColor1: Int = Color.BLACK,
         background: Int = Color.LTGRAY,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
@@ -794,7 +810,7 @@ object AdSdk {
 
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = 3500
+                    fetchedTimer = loadTimeOut
                 }
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -1589,14 +1605,15 @@ object AdSdk {
         adName: String,
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (isInitialized){
             if (application != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
                 var mInterstitialAd: InterstitialAd? = null
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = 3500
+                    fetchedTimer = loadTimeOut
                 }
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -1854,7 +1871,7 @@ object AdSdk {
 
     internal fun loadInterstitialAd(
         adName: String,
-        timer: Long = 5000L,
+        timer: Long,
         primaryIds: List<String>,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
         interstitialInternalCallback: InterstitialInternalCallback
@@ -1928,7 +1945,7 @@ object AdSdk {
 
     internal fun loadInterstitialAdManager(
         adName: String,
-        timer: Long = 5000L,
+        timer: Long,
         primaryIds: List<String>,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
         interstitialInternalCallback: InterstitialInternalCallback
@@ -2406,13 +2423,14 @@ object AdSdk {
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
         showLoaderScreen: Boolean = false,
         isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (isInitialized){
             if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName))
             {
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = 3500
+                    fetchedTimer = loadTimeOut
                 }
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -2774,7 +2792,7 @@ object AdSdk {
         adName: String,
         activity: Activity,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
-        timer: Long = 5000L,
+        timer: Long,
         primaryIds: List<String>,
         rewardInternalCallback: RewardInternalCallback
     ){
@@ -2842,7 +2860,7 @@ object AdSdk {
         adName: String,
         activity: Activity,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
-        timer: Long = 5000L,
+        timer: Long,
         primaryIds: List<String>,
         rewardInternalCallback: RewardInternalCallback
     ){
@@ -2945,7 +2963,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
         var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
@@ -2982,7 +3001,8 @@ object AdSdk {
                     contentURL,
                     neighbourContentURL,
                     showLoadingMessage = showLoadingMessage,
-                    isAdmanager = isAdmanager
+                    isAdmanager = isAdmanager,
+                    loadTimeOut = loadTimeOut
                 )
             }
             else {
@@ -3023,7 +3043,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
@@ -3043,7 +3064,8 @@ object AdSdk {
             contentURL,
             neighbourContentURL,
             showLoadingMessage,
-            isAdmanager = isAdmanager
+            isAdmanager = isAdmanager,
+            loadTimeOut
         )
     }
 
@@ -3074,7 +3096,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
@@ -3083,7 +3106,7 @@ object AdSdk {
 
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = 3500
+                    fetchedTimer = loadTimeOut
                 }
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -4844,7 +4867,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ){
         if (isInitialized){
             if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -4869,7 +4893,8 @@ object AdSdk {
                     contentURL = contentURL,
                     neighbourContentURL = neighbourContentURL,
                     showLoadingMessage = showLoadingMessage,
-                    isAdmanager = isAdmanager
+                    isAdmanager = isAdmanager,
+                    loadTimeOut = loadTimeOut
                 )
             }
             else {
@@ -5136,7 +5161,8 @@ object AdSdk {
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
         showLoadingMessage: Boolean = true,
-        isAdmanager:Boolean = false
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
@@ -5154,7 +5180,7 @@ object AdSdk {
 
             var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
             if (fetchedTimer == 0){
-                fetchedTimer = 3500
+                fetchedTimer = loadTimeOut
             }
             var primaryIds = AdMobUtil.fetchPrimaryById(adName)
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -6557,7 +6583,8 @@ object AdSdk {
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
         contentURL: String? = null,
         neighbourContentURL: List<String>? = null,
-        isAdmanager: Boolean
+        isAdmanager: Boolean,
+        loadTimeOut:Int
     ) {
         if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var mediaMaxHeight1 = mediaMaxHeight
@@ -6579,7 +6606,7 @@ object AdSdk {
 
             var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
             if (fetchedTimer == 0){
-                fetchedTimer = 3500
+                fetchedTimer = loadTimeOut
             }
             var primaryIds = AdMobUtil.fetchPrimaryById(adName)
             var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -7331,12 +7358,13 @@ object AdSdk {
         adName: String,
         interstitialCallback: InterstitialCallback,
         isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         if (isInitialized){
             if (adId != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
                 var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = 3500
+                    fetchedTimer = loadTimeOut
                 }
                 var primaryIds = AdMobUtil.fetchPrimaryById(adName)
                 var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -7701,7 +7729,7 @@ object AdSdk {
     internal  fun showRewardedIntersAd(
         adName:String,
         activity: Activity,
-        timer: Long = 5000L,
+        timer: Long,
         primaryIds: List<String>,
         interstitialCallback: InterstitialCallback,
         rewardInternalCallback: RewardInterstitialInternalCallback
@@ -7767,7 +7795,7 @@ object AdSdk {
     internal  fun showRewardedIntersAdManager(
         adName: String,
         activity: Activity,
-        timer: Long = 5000L,
+        timer: Long,
         primaryIds: List<String>,
         interstitialCallback: InterstitialCallback,
         rewardInternalCallback: RewardInterstitialInternalCallback
@@ -7881,7 +7909,7 @@ object AdSdk {
 
     fun showRewardedAdsAfterWait(
         activity: Activity?,
-        timeToWait: Long = 5000,
+        timeToWait: Long,
         adId: String,
         adName: String,
         callback: RewardedCallback

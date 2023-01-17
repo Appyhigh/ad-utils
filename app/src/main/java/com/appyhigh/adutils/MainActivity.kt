@@ -54,18 +54,32 @@ class MainActivity : AppCompatActivity(), VersionCallback {
             binding.root,
             this
         )
-        AdSdk.loadAppOpenAd(
-            this@MainActivity,
+        if (BuildConfig.DEBUG) {
+            AdSdk.attachAppOpenAdManager(
                 DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
                 "util_appopen",
-            true,
-            object : AppOpenAdLoadCallback() {
-                override fun onAdLoaded(ad: AppOpenAd) {
-                    super.onAdLoaded(ad)
-                }
-            },
-            true
+                object : AppOpenAdCallback() {
+                    override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
+                        super.onAdFailedToLoad(loadAdError)
+                        Log.d("Appopen", "onAdFailedToLoad: "+loadAdError?.message)
+                    }
+                                         },
+                1000,
+                false,
+                loadTimeOut = 4000
             )
+        } else {
+            AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                "util_appopen",
+                object : AppOpenAdCallback() {
+                    override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
+                        super.onAdFailedToLoad(loadAdError)
+                        Log.d("Appopen", "onAdFailedToLoad: "+loadAdError?.message)
+                    }
+                },
+            loadTimeOut = 4000)
+        }
+
         binding.btnBannerAd.setOnClickListener {
             startActivity(Intent(this, BannerAdActivity::class.java))
         }
@@ -74,11 +88,6 @@ class MainActivity : AppCompatActivity(), VersionCallback {
         }
 
         binding.btnRewardedInterstitialAd.setOnClickListener {
-//            rewardedAd?.show(this,object :OnUserEarnedRewardListener{
-//                override fun onUserEarnedReward(p0: RewardItem) {
-//                    TODO("Not yet implemented")
-//                }
-//            })
             AdSdk.showRewardedIntersAd(this, "ca-app-pub-3940256099942544/5354046379","util_reward_interstitial", object : InterstitialCallback {
                 override fun moveNext() {
                     Log.d("AdSDK", "moveNext: ")
@@ -91,62 +100,8 @@ class MainActivity : AppCompatActivity(), VersionCallback {
                 override fun moveNext(error: AdError) {
                     Log.d("AdSDK", "moveNext: 2 " + error.message)
                 }
-            })
-
-            /*   //Load Rewarded Ads and Use it whatever way....
-               AdSdk.loadRewardedAd(
-                   this,
-                   "ca-app-pub-3940256099942544/5224354917",
-                   object : RewardedAdUtilLoadCallback {
-                       override fun onAdFailedToLoad(adError: LoadAdError, ad: RewardedAd?) {
-                           Log.d("AdSdk", "onAdFailedToLoad: " + adError?.message)
-                       }
-
-                       override fun onAdLoaded(ad: RewardedAd?) {
-                           Log.d("AdSdk", "onAdLoaded: ")
-                           ad?.show(this@MainActivity) {
-
-                           }
-                       }
-
-                       override fun onAdDismissedFullScreenContent() {
-                           Log.d("AdSdk", "onAdDismissedFullScreenContent: ")
-                       }
-
-                       override fun onAdFailedToShowFullScreenContent(adError: AdError?) {
-                           Log.d("AdSdk", "onAdFailedToShowFullScreenContent: " + adError?.message)
-                       }
-
-                       override fun onAdShowedFullScreenContent() {
-                           Log.d("AdSdk", "onAdShowedFullScreenContent: ")
-                       }
-                   }
-               )
-   *//*
-            AdSdk.showRewardedAdsAfterWait(
-                this,
-                4000,
-                "ca-app-pub-3940256099942544/5224354917",
-                object : RewardedCallback {
-                    override fun moveNext(rewarded: Boolean) {
-                        Log.d("ADSDK", "moveNext: " + rewarded)
-                    }
-
-                    override fun moveNext(error: LoadAdError) {
-
-                    }
-
-                    override fun moveNext(error: AdError) {
-
-                    }
-
-                    override fun adNotLoaded() {
-
-                    }
-                }
-            )
-*//*
-*/
+            },
+            loadTimeOut = 4000)
         }
 
         binding.btnRewardedAd.setOnClickListener {
@@ -233,7 +188,8 @@ class MainActivity : AppCompatActivity(), VersionCallback {
         AdSdk.loadInterstitialAd(
             "util_interstitial",
             "ca-app-pub-3940256099942544/1033173712",
-            mInterstitialAdUtilCallback
+            mInterstitialAdUtilCallback,
+            loadTimeOut = 4000
         )
     }
 
@@ -243,7 +199,8 @@ class MainActivity : AppCompatActivity(), VersionCallback {
             "ca-app-pub-3940256099942544/5224354917",
             "util_rewarded",
             mRewardedAdUtilCallback,
-            false
+            false,
+            loadTimeOut = 4000
         )
     }
 

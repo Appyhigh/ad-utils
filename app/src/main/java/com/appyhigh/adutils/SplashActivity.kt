@@ -8,9 +8,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.callbacks.AppOpenAdLoadCallback
 import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
+import com.appyhigh.adutils.callbacks.VersionCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 
 class SplashActivity : AppCompatActivity() {
@@ -26,7 +28,8 @@ class SplashActivity : AppCompatActivity() {
             PreloadNativeAds(
                 "ca-app-pub-3940256099942544/2247696110",
                 "util_native_preload",
-                AdSdk.ADType.MEDIUM
+                AdSdk.ADType.MEDIUM,
+                loadTimeOut = 4000
             )
         )
         preloadingNativeAdList.put(
@@ -34,7 +37,8 @@ class SplashActivity : AppCompatActivity() {
             PreloadNativeAds(
                 "ca-app-pub-3940256099942544/2247696110",
                 "util_native_preload1",
-                AdSdk.ADType.MEDIUM
+                AdSdk.ADType.MEDIUM,
+                loadTimeOut = 4000
             )
         )
 
@@ -42,38 +46,46 @@ class SplashActivity : AppCompatActivity() {
 
         AdSdk.initialize(
             applicationContext as MyApp,
+            this@SplashActivity,
+            BuildConfig.VERSION_CODE,
+            binding.root.rootView,
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
-            preloadingNativeAdList = null,
+            preloadingNativeAdList = preloadingNativeAdList,
             fetchingCallback = object : AdSdk.FetchingCallback {
                 override fun OnComplete(app: AppsData?) {
-                    if (app == null){
-                        runOnUiThread {
-
+//                    if (app == null){
+//                        runOnUiThread {
+//
                             AdSdk.preloadAds(
                                 applicationContext as MyApp,
                                 preloadingNativeAdList
                             )
-                        }
-                    }
-                    else {
-                        Toast.makeText(applicationContext,"Failed",Toast.LENGTH_LONG).show()
-                    }
+//                        }
+//                    }
+//                    else {
+//                        Toast.makeText(applicationContext,"Failed",Toast.LENGTH_LONG).show()
+//                    }
                 }
 
                 override fun OnInitialized() {
-                    if (BuildConfig.DEBUG) {
-                        AdSdk.attachAppOpenAdManager(
-                            DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-                            "util_appopen",
-                            null,
-                            1000,
-                            false
-                        )
-                    } else {
-                        AdSdk.attachAppOpenAdManager(DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
-                            "util_appopen",
-                            null)
-                    }
+                    AdSdk.loadAppOpenAd(
+                        this@SplashActivity,
+                        DynamicsAds.getDynamicAdsId("ca-app-pub-3940256099942544/3419835294", "util_appopen"),
+                        "util_appopen",
+                        true,
+                        object : AppOpenAdLoadCallback() {
+                            override fun onAdLoaded(ad: AppOpenAd) {
+                                super.onAdLoaded(ad)
+                            }
+
+                            override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
+                                super.onAdFailedToLoad(loadAdError)
+                                Log.d("Appopen", "onAdFailedToLoad: "+loadAdError?.message)
+                            }
+                        },
+                        true,
+                        loadTimeOut = 4000
+                    )
 
                     AdSdk.loadSplashAd(
                         "ca-app-pub-3940256099942544/1033173712",
@@ -86,10 +98,19 @@ class SplashActivity : AppCompatActivity() {
                             }
 
                             override fun OnError(msg: String) {
-                                Log.d("Splashinterstial", "OnError: "+msg)
+                                Log.d("Splashinterstial", "onAdFailedToLoad: "+msg)
                             }
                         }, 6000
                     )
+                }
+            },
+            listener = object : VersionCallback {
+                override fun OnSoftUpdate() {
+                    TODO("Not yet implemented")
+                }
+
+                override fun OnHardUpdate() {
+                    TODO("Not yet implemented")
                 }
             }
         )

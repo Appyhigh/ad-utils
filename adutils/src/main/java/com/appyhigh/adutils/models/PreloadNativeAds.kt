@@ -10,5 +10,6 @@ data class PreloadNativeAds(
     var ad: NativeAdView? = null,
     val mediaMaxHeight: Int = 300,
     val loadingTextSize: Int = 24,
-    val isAdmanager: Boolean = true
+    val isAdmanager: Boolean = true,
+    val loadTimeOut:Int
 )
