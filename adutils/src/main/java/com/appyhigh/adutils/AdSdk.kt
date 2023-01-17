@@ -17,7 +17,6 @@ import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.*
 import androidx.annotation.LayoutRes
-import androidx.cardview.widget.CardView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -35,7 +34,6 @@ import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.utils.AdMobUtil
 import com.appyhigh.adutils.utils.AdMobUtil.fetchBannerAdSize
 import com.appyhigh.adutils.utils.container.AppPref
-import com.example.speakinenglish.container.AppPrefs
 import com.google.ads.consent.*
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.*
@@ -161,7 +159,7 @@ object AdSdk {
         app: Application,
         activity: Activity,
         version: Int,
-        anyview:View,
+        anyView:View,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
@@ -169,7 +167,7 @@ object AdSdk {
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
         fetchingCallback: FetchingCallback? = null,
-        listener:VersionCallback?
+        versionControlCallback:VersionControlCallback?
     ) {
         this.app = app
         application = app
@@ -182,10 +180,6 @@ object AdSdk {
         if (consentInformation?.consentStatus == ConsentStatus.NON_PERSONALIZED) {
             extras.putString("npa", "1")
         }
-//        val string = AppPrefs.ads.get()
-//        if (string != null) {
-//            DynamicsAds.adMobNew = JSONObject(string)
-//        }
         if (testDevice != null) {
             val build = RequestConfiguration.Builder()
                 .setTestDeviceIds(listOf(testDevice)).build()
@@ -211,8 +205,8 @@ object AdSdk {
             initVersionController(
                 activity,
                 version,
-                anyview,
-                listener
+                anyView,
+                versionControlCallback
             )
             fetchingCallback?.OnInitialized()
         }
@@ -229,7 +223,7 @@ object AdSdk {
     }
 
     fun preloadAds(application: Application,preloadingNativeAdList: HashMap<String, PreloadNativeAds>){
-        val context = application?.applicationContext
+        val context = application.applicationContext
         val inflater = LayoutInflater.from(app)
         preloadNativeAdList = preloadingNativeAdList
         if (preloadNativeAdList != null && inflater != null) {
@@ -350,7 +344,7 @@ object AdSdk {
         fun OnInitialized()
     }
 
-    lateinit var listener: VersionCallback
+    lateinit var listener: VersionControlCallback
     var versionControlListener = object : VersionControlListener {
         override fun onUpdateDetectionSuccess(updateType: VersionControlConstants.UpdateType) {
             when (updateType) {
@@ -369,7 +363,7 @@ object AdSdk {
     fun initVersionController(activity: Activity,
                               version:Int,
                               view:View,
-                              listener:VersionCallback?){
+                              listener:VersionControlCallback?){
         if (listener == null)
             throw NullPointerException()
         this.listener = listener

@@ -1,5 +1,6 @@
 package com.appyhigh.adutils.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.appyhigh.adutils.AdSdk
@@ -14,9 +15,19 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 
 
+@SuppressLint("StaticFieldLeak")
 object AdMobUtil {
 
     lateinit var context: Context
+
+    fun printData(){
+        try {
+            var ads = AppPref.getString(context,AppPref.appdata)
+            Log.d("printData: ",ads)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
 
     fun fetchAllAds():List<AdMod>{
         var ads = AppPref.getString(context,AppPref.ads)

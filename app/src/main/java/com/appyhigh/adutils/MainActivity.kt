@@ -13,12 +13,11 @@ import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.OnUserEarnedRewardListener
 import com.google.android.gms.ads.admanager.AdManagerInterstitialAd
-import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewarded.RewardedAd
 
-class MainActivity : AppCompatActivity(), VersionCallback {
+class MainActivity : AppCompatActivity(), VersionControlCallback {
     private lateinit var binding: ActivityMainBinding
     private var interstitialAd: InterstitialAd? = null
     private var adManagerAd: AdManagerInterstitialAd? = null

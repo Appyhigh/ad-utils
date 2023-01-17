@@ -1,6 +1,6 @@
 package com.appyhigh.adutils.callbacks
 
-interface VersionCallback {
+interface VersionControlCallback {
     fun OnSoftUpdate()
     fun OnHardUpdate()
 

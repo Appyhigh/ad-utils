@@ -1,17 +1,16 @@
 package com.appyhigh.adutils
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.callbacks.AppOpenAdLoadCallback
 import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
-import com.appyhigh.adutils.callbacks.VersionCallback
+import com.appyhigh.adutils.callbacks.VersionControlCallback
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
+import com.appyhigh.adutils.utils.AdMobUtil
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 
@@ -22,6 +21,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         val preloadingNativeAdList = hashMapOf<String, PreloadNativeAds>()
         preloadingNativeAdList.put(
             "util_native_preload",
@@ -42,32 +42,18 @@ class SplashActivity : AppCompatActivity() {
             )
         )
 
-
-
         AdSdk.initialize(
-            applicationContext as MyApp,
-            this@SplashActivity,
-            BuildConfig.VERSION_CODE,
-            binding.root.rootView,
+            app = applicationContext as MyApp,
+            activity = this@SplashActivity,
+            version = BuildConfig.VERSION_CODE,
+            anyView = binding.root.rootView,
             testDevice = "B3EEABB8EE11C2BE770B684D95219ECB",
             preloadingNativeAdList = preloadingNativeAdList,
             fetchingCallback = object : AdSdk.FetchingCallback {
                 override fun OnComplete(app: AppsData?) {
-//                    if (app == null){
-//                        runOnUiThread {
-//
-                            AdSdk.preloadAds(
-                                applicationContext as MyApp,
-                                preloadingNativeAdList
-                            )
-//                        }
-//                    }
-//                    else {
-//                        Toast.makeText(applicationContext,"Failed",Toast.LENGTH_LONG).show()
-//                    }
                 }
-
                 override fun OnInitialized() {
+                    AdMobUtil.printData()
                     AdSdk.loadAppOpenAd(
                         this@SplashActivity,
                         "ca-app-pub-3940256099942544/3419835294",
@@ -80,7 +66,7 @@ class SplashActivity : AppCompatActivity() {
 
                             override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
                                 super.onAdFailedToLoad(loadAdError)
-                                Log.d("Appopen", "onAdFailedToLoad: "+loadAdError?.message)
+                                Log.d("Appopen", "onAdFailedToLoad: " + loadAdError?.message)
                             }
                         },
                         true,
@@ -98,49 +84,19 @@ class SplashActivity : AppCompatActivity() {
                             }
 
                             override fun OnError(msg: String) {
-                                Log.d("Splashinterstial", "onAdFailedToLoad: "+msg)
+                                Log.d("Splashinterstial", "onAdFailedToLoad: " + msg)
                             }
                         }, 6000
                     )
                 }
             },
-            listener = object : VersionCallback {
+            versionControlCallback = object : VersionControlCallback {
                 override fun OnSoftUpdate() {
-                    TODO("Not yet implemented")
                 }
 
                 override fun OnHardUpdate() {
-                    TODO("Not yet implemented")
                 }
             }
         )
-
-
-
-        /*Handler(Looper.getMainLooper()).postDelayed({
-            if (appOpenManager == null) {
-                startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-                finish()
-            }
-        }, 4000)*/
     }
-
-/*
-    private val appOpenAdCallback = object : AppOpenAdCallback() {
-        override fun onInitSuccess(manager: AppOpenManager) {
-            appOpenManager = manager
-        }
-
-        override fun onAdLoaded() {
-            if (appOpenManager != null) {
-                appOpenManager?.showIfAdLoaded(this@SplashActivity)
-            }
-        }
-
-        override fun onAdClosed() {
-            startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-            finish()
-        }
-    }
-*/
 }

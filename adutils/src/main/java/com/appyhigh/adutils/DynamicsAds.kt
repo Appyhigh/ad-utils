@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
@@ -28,36 +29,7 @@ class DynamicsAds {
         val updateJSON = JSONObject()
         var adMobNew: List<AdMod> = ArrayList()
 
-//        fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
-//            return try {
-//                if (!AdMobUtil.fetchPrimaryById(adName).isEmpty()) {
-//                    val string = AdMobUtil.fetchPrimaryById(adName)?.get(0)
-//                    string
-//                }
-//                else{
-//                    fallBackAdId
-//                }
-//            } catch (e: Exception) {
-//                fallBackAdId
-//            }
-//        }
-//
-//        //TODO : we can pass the for logging the ad names
-//        fun listAllAds(applicationContext: Context, logTag: String) {
-//            //TODO : List all the ads along with key names for checking
-//            val string = AppPref.getString(applicationContext,AppPref.ads)
-//            if (string != null) {
-//                adMobNew = AdMobUtil.fetchAllAds()!!
-//            }
-//            if (adMobNew.size > 0) {
-//                adMobNew.forEach {
-//                    Log.d(logTag, "listAllAds: " + it + " -> " + it.primary_ids)
-//                }
-//            } else {
-//                Log.d(logTag, "No Dynamic Ads Found")
-//            }
-//        }
-
+        @SuppressLint("CheckResult")
         fun getDynamicAds(
             applicationContext: Context,
             appPackageName: String,
@@ -73,8 +45,8 @@ class DynamicsAds {
                         val appRequest = AppRequest(appPackageName,"ANDROID")
                         AdmobInstance.ApiBuilder(applicationContext)
                             .getAppInfo(appRequest)
-                            ?.doOnSuccess { response ->
-                                if (response.status.equals("success")){
+                            .doOnSuccess { response ->
+                                if (response.status == "success"){
                                     val item = response.app
                                     var added = 0
                                     if (item?.packageId.equals(appPackageName)){
@@ -107,7 +79,7 @@ class DynamicsAds {
                             ?.subscribe({
                             }, {
                                 fetchingCallback?.OnComplete(null)
-                                Log.d("DunamicAds", "getDynamicAds: "+it.localizedMessage)
+                                Log.d("Dynamicads", "getDynamicAds: "+it.localizedMessage)
                             })
 //                    }
                 }
