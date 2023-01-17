@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity(), VersionCallback {
                                          },
                 1000,
                 false,
-                loadTimeOut = 4000
+                loadTimeOut = 4000,
             )
         } else {
             AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294",
@@ -77,7 +77,8 @@ class MainActivity : AppCompatActivity(), VersionCallback {
                         Log.d("Appopen", "onAdFailedToLoad: "+loadAdError?.message)
                     }
                 },
-            loadTimeOut = 4000)
+            loadTimeOut = 4000
+            )
         }
 
         binding.btnBannerAd.setOnClickListener {

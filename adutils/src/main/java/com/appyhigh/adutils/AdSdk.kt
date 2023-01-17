@@ -434,7 +434,8 @@ object AdSdk {
         backgroundThreshold: Int = 30000,
         isShownOnlyOnce: Boolean = false,
         isAdmanager:Boolean = false,
-        loadTimeOut:Int
+        loadTimeOut:Int,
+        isPremium:Boolean = false
     ) {
         if (isInitialized){
             if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
@@ -447,7 +448,9 @@ object AdSdk {
                             isShownOnlyOnce,
                             backgroundThreshold,
                             appOpenAdCallback,
-                            isAdmanager
+                            isAdmanager,
+                            loadTimeOut,
+                            isPremium
                         )
                     appOpenAdCallback?.onInitSuccess(appOpenManager)
                 }

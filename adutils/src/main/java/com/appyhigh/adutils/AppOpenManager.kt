@@ -34,7 +34,9 @@ class AppOpenManager(
     private val isShownOnlyOnce: Boolean,
     private var backgroundThreshold: Int = 30000,
     private var appOpenAdCallback: AppOpenAdCallback?,
-    private var isAdmanager:Boolean
+    private var isAdmanager:Boolean,
+    private var loadTimeOut:Int,
+    private var isPremium:Boolean
 ) :
     LifecycleObserver,
     ActivityLifecycleCallbacks {
@@ -77,7 +79,7 @@ class AppOpenManager(
 //        }
         var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
         if (fetchedTimer == 0){
-            fetchedTimer = 3500
+            fetchedTimer = loadTimeOut
         }
         var primaryIds = AdMobUtil.fetchPrimaryById(adName)
         var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
@@ -321,7 +323,7 @@ class AppOpenManager(
                 backgroundThreshold = 1000
             }
             Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
-            if (appBackgroundTime > backgroundThreshold)
+            if (appBackgroundTime > backgroundThreshold && !isPremium)
                 showAdIfAvailable()
         }
         appCount++
@@ -418,7 +420,8 @@ class AppOpenManager(
 */
         initialized = true
         myApplication.registerActivityLifecycleCallbacks(this)
-        fetchAd()
+        if (!isPremium)
+            fetchAd()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 }
