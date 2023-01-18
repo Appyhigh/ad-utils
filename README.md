@@ -5,6 +5,14 @@
 
 An ad util library to facilitate easy and standardized implementation of latest Admob SDK
 
+##Proguard
+
+```proguard
+-keep class io.jsonwebtoken.*.* { *; }
+-keepnames class io.jsonwebtoken.* { *; }
+-keepnames interface io.jsonwebtoken.* { *; }
+```
+
 ## Initialization
 
 In your  `build.gradle`:
