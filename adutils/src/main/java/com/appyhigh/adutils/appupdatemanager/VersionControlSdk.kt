@@ -40,7 +40,7 @@ object VersionControlSdk {
         context: Activity,
         view: View,
         buildVersion: Int,
-        versionControlListener: VersionControlListener?
+        versionControlListener: VersionControlListener?,
     ) {
         try {
             currentVersion =
@@ -61,6 +61,54 @@ object VersionControlSdk {
                             firstRequest = false
                         }
                     }
+                    buildVersion < criticalVersion.toFloat().toInt() -> {
+                        Log.d("initializeSdk", "HARD_UPDATE")
+                        checkUpdate(context, IMMEDIATE, versionControlListener)
+                    }
+                    else -> {
+                        Log.d("initializeSdk", "NO_UPDATE")
+                        versionControlListener?.onUpdateDetectionSuccess(
+                            VersionControlConstants.UpdateType.NO_UPDATE
+                        )
+
+                    }
+                }
+            } else {
+                Log.d("initializeSdk", "NO_UPDATE")
+                versionControlListener?.onUpdateDetectionSuccess(
+                    VersionControlConstants.UpdateType.NO_UPDATE
+                )
+            }
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
+
+    fun initializeSdkWithoutSoftUpdate(
+        context: Activity,
+        view: View,
+        buildVersion: Int,
+        versionControlListener: VersionControlListener?,
+    ) {
+        try {
+            currentVersion =
+                AdMobUtil.fetchLatestVersion()
+            criticalVersion =
+                AdMobUtil.fetchCriticalVersion()
+            appUpdateManager = AppUpdateManagerFactory.create(context)
+            this.view = view
+            if (buildVersion < currentVersion.toFloat().toInt()) {
+                when {
+//                    buildVersion >= criticalVersion.toFloat().toInt() -> {
+//                        Log.d("initializeSdk", "SOFT_UPDATE")
+//                        if (firstRequest) {
+//                            checkUpdate(
+//                                context,
+//                                AppUpdateType.FLEXIBLE, versionControlListener
+//                            )
+//                            firstRequest = false
+//                        }
+//                    }
                     buildVersion < criticalVersion.toFloat().toInt() -> {
                         Log.d("initializeSdk", "HARD_UPDATE")
                         checkUpdate(context, IMMEDIATE, versionControlListener)

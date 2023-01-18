@@ -167,7 +167,7 @@ object AdSdk {
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
         fetchingCallback: FetchingCallback? = null,
-        versionControlCallback:VersionControlCallback?
+        versionControlCallback:VersionControllCallbackForced?
     ) {
         this.app = app
         application = app
@@ -202,7 +202,7 @@ object AdSdk {
                     fetchingCallback
                 )
             }
-            initVersionController(
+            initVersionControllerMain(
                 activity,
                 version,
                 anyView,
@@ -415,6 +415,34 @@ object AdSdk {
                 }
             }
         }
+    }
+
+    lateinit var listenerNew: VersionControllCallbackForced
+    var versionControlListenerNew = object : VersionControlListener {
+        override fun onUpdateDetectionSuccess(updateType: VersionControlConstants.UpdateType) {
+            when (updateType) {
+                VersionControlConstants.UpdateType.HARD_UPDATE -> {
+                    listenerNew.OnHardUpdate()
+                }
+                else -> {
+                }
+            }
+        }
+    }
+
+    fun initVersionControllerMain(activity: Activity,
+                              version:Int,
+                              view:View,
+                              listenerNew:VersionControllCallbackForced?){
+        if (listenerNew == null)
+            throw NullPointerException()
+        this.listenerNew = listenerNew
+        VersionControlSdk.initializeSdkWithoutSoftUpdate(
+            activity,
+            view,
+            version,
+            versionControlListenerNew
+        )
     }
 
     fun initVersionController(activity: Activity,

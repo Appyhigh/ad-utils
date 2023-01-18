@@ -5,3 +5,7 @@ interface VersionControlCallback {
     fun OnHardUpdate()
 
 }
+
+interface VersionControllCallbackForced {
+    fun OnHardUpdate()
+}
