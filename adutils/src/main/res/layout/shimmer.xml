@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.facebook.shimmer.ShimmerFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:shimmer_auto_start="true"
+    app:shimmer_repeat_mode="restart"
+    android:orientation="vertical"
+    android:layout_gravity="center"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:id="@+id/shim_default"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_default" />
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/shim_small"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_small" />
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/shim_medium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_medium" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/shim_bigv1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_bigv1" />
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/shim_bigv2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_bigv2" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/shim_bigv3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_bigv3" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/shim_gridad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <include
+            layout="@layout/shimmer_gridad" />
+    </LinearLayout>
+
+
+</com.facebook.shimmer.ShimmerFrameLayout>

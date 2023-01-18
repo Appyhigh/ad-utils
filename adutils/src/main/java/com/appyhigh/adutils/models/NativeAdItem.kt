@@ -11,6 +11,7 @@ data class NativeAdItem(
     val id: Long,
     val lifecycle: Lifecycle,
     val adUnit: String,
+    val adName:String,
     val viewGroup: ViewGroup,
     val nativeAdLoadCallback: NativeAdLoadCallback?,
     val layoutId: Int,
@@ -23,7 +24,9 @@ data class NativeAdItem(
     var textSize: Int = 48,
     var buttonColor: Int = Color.parseColor("#000000"),
     var contentURL: String? = null,
-    var neighbourContentURL: List<String>? = null
+    var neighbourContentURL: List<String>? = null,
+    var showLoadingMessage: Boolean,
+    var isAdManager:Boolean
 
 
 )

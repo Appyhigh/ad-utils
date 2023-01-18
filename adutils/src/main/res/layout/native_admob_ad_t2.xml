@@ -5,7 +5,7 @@
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:layout_margin="5dp"
-    android:background="@drawable/nad_bg"
+    android:background="@drawable/nad_bg_empty"
     android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
@@ -145,7 +145,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <Button
+                <TextView
                     android:id="@+id/call_to_action"
                     android:layout_width="match_parent"
                     android:layout_height="40dip"

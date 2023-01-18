@@ -4,12 +4,14 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.*
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -19,15 +21,25 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import com.appyhigh.adutils.AdUtilConstants.preloadNativeAdList
-import com.appyhigh.adutils.DynamicsAds.Companion.ADMODELPREF
+import com.appyhigh.adutils.appupdatemanager.VersionControlConstants
+import com.appyhigh.adutils.appupdatemanager.VersionControlListener
+import com.appyhigh.adutils.appupdatemanager.VersionControlSdk
 import com.appyhigh.adutils.callbacks.*
+import com.appyhigh.adutils.interfaces.*
 import com.appyhigh.adutils.models.BannerAdItem
 import com.appyhigh.adutils.models.NativeAdItem
 import com.appyhigh.adutils.models.NativeAdItemService
 import com.appyhigh.adutils.models.PreloadNativeAds
+import com.appyhigh.adutils.models.apimodels.AppsData
+import com.appyhigh.adutils.utils.AdMobUtil
+import com.appyhigh.adutils.utils.AdMobUtil.fetchBannerAdSize
+import com.appyhigh.adutils.utils.container.AppPref
 import com.google.ads.consent.*
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.gms.ads.*
+import com.google.android.gms.ads.admanager.AdManagerAdRequest
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAd
+import com.google.android.gms.ads.admanager.AdManagerInterstitialAdLoadCallback
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -39,7 +51,6 @@ import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoa
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.GoogleApiAvailability.GOOGLE_PLAY_SERVICES_VERSION_CODE
-import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
 import java.util.*
@@ -142,28 +153,32 @@ object AdSdk {
      */
 
     fun isInitialised(): Boolean = isInitialized
+    lateinit var app:Application
 
     fun initialize(
         app: Application,
+        activity: Activity,
+        version: Int,
+        anyView:View,
         bannerRefreshTimer: Long = 45000L,
         nativeRefreshTimer: Long = 45000L,
         testDevice: String? = null,
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
         packageName: String = app.packageName,
-        dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60
+        dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
+        fetchingCallback: FetchingCallback? = null,
+        versionControlCallback:VersionControlCallback?
     ) {
+        this.app = app
         application = app
         val inflater = LayoutInflater.from(app)
+        AppPref.getInstance(app.applicationContext)
+        AdMobUtil.context = app.applicationContext
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
         if (consentInformation?.consentStatus == ConsentStatus.NON_PERSONALIZED) {
             extras.putString("npa", "1")
-        }
-        ADMODELPREF = app.getSharedPreferences("ADMODEL", 0)
-        val string = ADMODELPREF.getString("ads", null)
-        if (string != null) {
-            DynamicsAds.adMobNew = JSONObject(string)
         }
         if (testDevice != null) {
             val build = RequestConfiguration.Builder()
@@ -182,89 +197,140 @@ object AdSdk {
                 DynamicsAds.getDynamicAds(
                     context,
                     packageName,
-                    dynamicAdsFetchThresholdInSecs
+                    dynamicAdsFetchThresholdInSecs,
+                    preloadingNativeAdList,
+                    fetchingCallback
                 )
             }
+            initVersionController(
+                activity,
+                version,
+                anyView,
+                versionControlCallback
+            )
+            fetchingCallback?.OnInitialized()
         }
 
         if (isGooglePlayServicesAvailable(app)) {
             if (application == null) {
                 bannerAdRefreshTimer = bannerRefreshTimer
                 nativeAdRefreshTimer = nativeRefreshTimer
-                if (bannerAdRefreshTimer != 0L) {
-                    fixedRateTimer("bannerAdTimer", false, 0L, bannerAdRefreshTimer) {
-                        if (bannerRefresh == REFRESH_STATE.REFRESH_ON) {
-                            for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
-                                if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                                    Handler(Looper.getMainLooper()).post {
-                                        loadBannerAd(
-                                            item.value.activity,
-                                            item.value.id,
-                                            item.value.lifecycle,
-                                            item.value.viewGroup,
-                                            item.value.adUnit,
-                                            item.value.adSize,
-                                            item.value.bannerAdLoadCallback
-                                        )
-                                    }
-                                }
+                refreshBanner(null)
+                refreshNative(null)
+                refreshNativeService(null)
+            }
+        }
+    }
+
+    fun preloadAds(application: Application,preloadingNativeAdList: HashMap<String, PreloadNativeAds>){
+        val context = application.applicationContext
+        val inflater = LayoutInflater.from(app)
+        preloadNativeAdList = preloadingNativeAdList
+        if (preloadNativeAdList != null && inflater != null) {
+            preloadAds(inflater, context)
+        }
+    }
+
+    internal fun refreshBanner(adName:String?){
+        if (isGooglePlayServicesAvailable(app)) {
+            for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
+                if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
+                    fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
+                        if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && bannerRefresh == REFRESH_STATE.REFRESH_ON &&
+                            AdMobUtil.fetchAdStatusFromAdId(item.value.adName))
+                            Handler(Looper.getMainLooper()).post {
+                                loadBannerAdRefresh(
+                                    item.value.activity,
+                                    item.value.id,
+                                    item.value.lifecycle,
+                                    item.value.viewGroup,
+                                    item.value.adUnit,
+                                    item.value.adName,
+                                    item.value.adSize,
+                                    item.value.bannerAdLoadCallback,
+                                    showLoadingMessage = item.value.showLoadingMessage,
+                                    isAdmanager = item.value.isAdManager
+                                )
+                                Log.d(TAG, "refreshBanner: "+"${item.value.adName}:"+ System.currentTimeMillis()/1000)
+                            }
+                    }
+                }
+            }
+        }
+    }
+
+    internal fun refreshNative(adName:String?){
+        if (isGooglePlayServicesAvailable(app)) {
+            for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
+                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
+                    fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
+                        val value = item.value
+                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
+                            AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
+                            Handler(Looper.getMainLooper()).post {
+                                loadNativeAdRefresh(
+                                    value.id,
+                                    value.lifecycle,
+                                    value.adUnit,
+                                    value.adName,
+                                    value.viewGroup,
+                                    value.nativeAdLoadCallback,
+                                    value.layoutId,
+                                    value.populator,
+                                    adType = value.viewId,
+                                    background = value.background,
+                                    textColor1 = value.textColor1,
+                                    textColor2 = value.textColor2,
+                                    mediaMaxHeight = value.mediaMaxHeight,
+                                    loadingTextSize = value.textSize,
+                                    contentURL = value.contentURL,
+                                    showLoadingMessage = value.showLoadingMessage,
+                                    neighbourContentURL = value.neighbourContentURL,
+                                    isAdmanager = value.isAdManager
+                                )
+                                Log.d(TAG, "refreshNative: "+"${value.adName}:"+ System.currentTimeMillis()/1000)
                             }
                         }
                     }
                 }
+            }
+        }
 
-                if (nativeAdRefreshTimer != 0L) {
-                    fixedRateTimer("nativeAdTimer", false, 0L, nativeAdRefreshTimer) {
-                        if (nativeRefresh == REFRESH_STATE.REFRESH_ON) {
-                            for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                                val value = item.value
-                                if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                                    Handler(Looper.getMainLooper()).post {
-                                        loadNativeAd(
-                                            value.id,
-                                            value.lifecycle,
-                                            value.adUnit,
-                                            value.viewGroup,
-                                            value.nativeAdLoadCallback,
-                                            value.layoutId,
-                                            value.populator,
-                                            background = value.background,
-                                            textColor1 = value.textColor1,
-                                            textColor2 = value.textColor2,
-                                            mediaMaxHeight = value.mediaMaxHeight,
-                                            loadingTextSize = value.textSize,
-                                            contentURL = value.contentURL,
-                                            neighbourContentURL = value.neighbourContentURL
-                                        )
-                                    }
-                                }
-                            }
+    }
 
-                            for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
-                                val value = item.value
-                                if (value.autoRefresh) {
-                                    Handler(Looper.getMainLooper()).post {
-                                        loadNativeAdFromService(
-                                            value.layoutInflater,
-                                            value.context,
-                                            value.adUnit,
-                                            value.viewGroup,
-                                            value.nativeAdLoadCallback,
-                                            background = value.background,
-                                            textColor1 = value.textColor1,
-                                            textColor2 = value.textColor2,
-                                            mediaMaxHeight = value.mediaMaxHeight,
-                                            loadingTextSize = value.textSize,
-                                            id = value.id,
-                                            populator = value.populator,
-                                            adType = value.viewId,
-                                            preloadAds = value.preloadAds,
-                                            autoRefresh = value.preloadAds,
-                                            contentURL = value.contentURL,
-                                            neighbourContentURL = value.neighbourContentURL
-                                        )
-                                    }
-                                }
+    internal fun refreshNativeService(adName:String?){
+        if (isGooglePlayServicesAvailable(app)) {
+            for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
+                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
+                    fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
+                        val value = item.value
+                        if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
+                            value.autoRefresh && AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
+                            Handler(Looper.getMainLooper()).post {
+                                loadNativeAdFromServiceRefresh(
+                                    value.layoutInflater,
+                                    value.context,
+                                    value.lifecycle,
+                                    value.adUnit,
+                                    value.adName,
+                                    value.viewGroup,
+                                    value.nativeAdLoadCallback,
+                                    background = value.background,
+                                    textColor1 = value.textColor1,
+                                    textColor2 = value.textColor2,
+                                    mediaMaxHeight = value.mediaMaxHeight,
+                                    loadingTextSize = value.textSize,
+                                    id = value.id,
+                                    populator = value.populator,
+                                    adType = value.viewId,
+                                    preloadAds = value.preloadAds,
+                                    autoRefresh = value.preloadAds,
+                                    contentURL = value.contentURL,
+                                    neighbourContentURL = value.neighbourContentURL,
+                                    showLoadingMessage = value.showLoadingMessage,
+                                    isAdmanager = value.isAdmanager
+                                )
+                                Log.d(TAG, "refreshNativeService: "+"${value.adName}:"+ System.currentTimeMillis()/1000)
                             }
                         }
                     }
@@ -272,6 +338,43 @@ object AdSdk {
             }
         }
     }
+
+    interface FetchingCallback{
+        fun OnComplete(app: AppsData?)
+        fun OnInitialized()
+    }
+
+    lateinit var listener: VersionControlCallback
+    var versionControlListener = object : VersionControlListener {
+        override fun onUpdateDetectionSuccess(updateType: VersionControlConstants.UpdateType) {
+            when (updateType) {
+                VersionControlConstants.UpdateType.SOFT_UPDATE -> {
+                    listener.OnSoftUpdate()
+                }
+                VersionControlConstants.UpdateType.HARD_UPDATE -> {
+                    listener.OnHardUpdate()
+                }
+                else -> {
+                }
+            }
+        }
+    }
+
+    fun initVersionController(activity: Activity,
+                              version:Int,
+                              view:View,
+                              listener:VersionControlCallback?){
+        if (listener == null)
+            throw NullPointerException()
+        this.listener = listener
+        VersionControlSdk.initializeSdk(
+            activity,
+            view,
+            version,
+            versionControlListener
+        )
+    }
+
 
     fun preloadAds(layoutInflater: LayoutInflater, context: Context) {
         preloadNativeAdList?.keys?.iterator()?.forEach {
@@ -280,6 +383,7 @@ object AdSdk {
                 preLoadNativeAd(
                     layoutInflater,
                     context,
+                    adName = preloadNativeAds.adName,
                     adType = preloadNativeAds.adSize,
                     mediaMaxHeight = preloadNativeAds.mediaMaxHeight,
                     loadingTextSize = preloadNativeAds.loadingTextSize,
@@ -287,12 +391,14 @@ object AdSdk {
                     background = null,
                     textColor1 = null,
                     textColor2 = null,
+                    isAdmanager = preloadNativeAds.isAdmanager,
+                    loadTimeOut = preloadNativeAds.loadTimeOut
                 )
             }
         }
     }
 
-    private fun isGooglePlayServicesAvailable(application: Application): Boolean {
+    internal fun isGooglePlayServicesAvailable(application: Application): Boolean {
         try {
             val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
             val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(
@@ -317,25 +423,37 @@ object AdSdk {
      **/
     fun attachAppOpenAdManager(
         appOpenAdUnit: String,
-        appOpenAdCallback: AppOpenAdCallback? = null,
+        adName: String,
+         appOpenAdCallback: AppOpenAdCallback? = null,
         backgroundThreshold: Int = 30000,
-        isShownOnlyOnce: Boolean = false
+        isShownOnlyOnce: Boolean = false,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int,
+        isPremium:Boolean = false
     ) {
-        if (application != null) {
-            if (!AppOpenManager.initialized) {
-                val appOpenManager =
-                    AppOpenManager(
-                        application!!,
-                        appOpenAdUnit,
-                        isShownOnlyOnce,
-                        backgroundThreshold,
-                        appOpenAdCallback
-                    )
-                appOpenAdCallback?.onInitSuccess(appOpenManager)
+        if (isInitialized){
+            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                if (!AppOpenManager.initialized) {
+                    val appOpenManager =
+                        AppOpenManager(
+                            application!!,
+                            appOpenAdUnit,
+                            adName,
+                            isShownOnlyOnce,
+                            backgroundThreshold,
+                            appOpenAdCallback,
+                            isAdmanager,
+                            loadTimeOut,
+                            isPremium
+                        )
+                    appOpenAdCallback?.onInitSuccess(appOpenManager)
+                }
             }
-        } else {
-            throw Exception("Please make sure that you have initialized the AdSdk using AdSdk.initialize?!")
         }
+        else{
+            appOpenAdCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
+
     }
 
     /**
@@ -349,13 +467,209 @@ object AdSdk {
     fun loadAppOpenAd(
         activity: Activity,
         appOpenAdUnit: String,
+        adName:String,
         showWhenLoaded: Boolean,
-        appOpenAdCallback: AppOpenAdLoadCallback? = null
+        appOpenAdCallback: AppOpenAdLoadCallback? = null,
+        isAdmanager: Boolean = false,
+        loadTimeOut:Int
     ) {
-        if (application != null) {
+        if (isInitialized){
+            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+                Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
+                if (primaryIds.size > 0){
+                    loadAppOpenAd(
+                        adName,
+                        fetchedTimer,
+                        primaryIds,
+                        appOpenAdCallback,
+                        object: AppOpenInternalCallback{
+                            override fun onSuccess(ad: AppOpenAd) {
+                                Log.d("appopen_new", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                appOpenAdCallback?.onAdLoaded(ad)
+                                if (showWhenLoaded)
+                                    ad.show(activity)
+                            }
+
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                if (secondaryIds.size > 0){
+                                    loadAppOpenAd(
+                                        adName,
+                                        fetchedTimer,
+                                        secondaryIds,
+                                        appOpenAdCallback,
+                                        object: AppOpenInternalCallback{
+                                            override fun onSuccess(ad: AppOpenAd) {
+                                                Log.d("appopen_new", adName+"onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                appOpenAdCallback?.onAdLoaded(ad)
+                                                if (showWhenLoaded)
+                                                    ad.show(activity)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                loadAppOpenAd(
+                                                    adName,
+                                                    fetchedTimer,
+                                                    listOf(appOpenAdUnit),
+                                                    appOpenAdCallback,
+                                                    object: AppOpenInternalCallback{
+                                                        override fun onSuccess(ad: AppOpenAd) {
+                                                            Log.d("appopen_new", adName+"onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            appOpenAdCallback?.onAdLoaded(ad)
+                                                            if (showWhenLoaded)
+                                                                ad.show(activity)
+                                                        }
+
+                                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                                            appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                                                        }
+
+                                                    },
+                                                    isAdmanager
+                                                )
+                                            }
+
+                                        },
+                                        isAdmanager
+                                    )
+                                }
+                                else {
+                                    loadAppOpenAd(
+                                        adName,
+                                        fetchedTimer,
+                                        listOf(appOpenAdUnit),
+                                        appOpenAdCallback,
+                                        object: AppOpenInternalCallback{
+                                            override fun onSuccess(ad: AppOpenAd) {
+                                                Log.d("appopen_new", adName+"onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                appOpenAdCallback?.onAdLoaded(ad)
+                                                if (showWhenLoaded)
+                                                    ad.show(activity)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                                            }
+
+                                        },
+                                        isAdmanager
+                                    )
+                                }
+                            }
+
+                        },
+                        isAdmanager
+                    )
+                }
+                else if (secondaryIds.size > 0){
+                    loadAppOpenAd(
+                        adName,
+                        fetchedTimer,
+                        secondaryIds,
+                        appOpenAdCallback,
+                        object: AppOpenInternalCallback{
+                            override fun onSuccess(ad: AppOpenAd) {
+                                Log.d("appopen_new", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                appOpenAdCallback?.onAdLoaded(ad)
+                                if (showWhenLoaded)
+                                    ad.show(activity)
+                            }
+
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                loadAppOpenAd(
+                                    adName,
+                                    fetchedTimer,
+                                    listOf(appOpenAdUnit),
+                                    appOpenAdCallback,
+                                    object: AppOpenInternalCallback{
+                                        override fun onSuccess(ad: AppOpenAd) {
+                                            Log.d("appopen_new", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                            appOpenAdCallback?.onAdLoaded(ad)
+                                            if (showWhenLoaded)
+                                                ad.show(activity)
+                                        }
+
+                                        override fun onFailed(loadAdError: LoadAdError?) {
+                                            appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                                        }
+
+                                    },
+                                    isAdmanager
+                                )
+                            }
+
+                        },
+                        isAdmanager
+                    )
+                }
+                else {
+                    loadAppOpenAd(
+                        adName,
+                        fetchedTimer,
+                        listOf(appOpenAdUnit),
+                        appOpenAdCallback,
+                        object: AppOpenInternalCallback{
+                            override fun onSuccess(ad: AppOpenAd) {
+                                Log.d("appopen_new", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                appOpenAdCallback?.onAdLoaded(ad)
+                                if (showWhenLoaded)
+                                    ad.show(activity)
+                            }
+
+                            override fun onFailed(loadAdError: LoadAdError?) {
+                                appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                            }
+
+                        },
+                        isAdmanager
+                    )
+                }
+            }
+        }
+        else {
+            appOpenAdCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
+    }
+
+    internal fun loadAppOpenAd(
+        adName:String,
+        fetchedTimer:Int,
+        primaryIds:List<String>,
+        appOpenAdCallback: AppOpenAdLoadCallback? = null,
+        appOpenInternalCallback: AppOpenInternalCallback? = null,
+        isAdmanager: Boolean = false
+    ){
+        var appOpenAd: AppOpenAd? = null
+        var AdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (appOpenAd != null) {
+                    appOpenInternalCallback?.onSuccess(appOpenAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (appOpenAd != null) {
+                    appOpenInternalCallback?.onSuccess(appOpenAd!!)
+                }
+                else
+                    appOpenInternalCallback?.onFailed(AdError)
+            }
+        }.start()
+        for (appOpenAdUnit in primaryIds){
             val loadCallback = object : AppOpenAd.AppOpenAdLoadCallback() {
 
                 override fun onAdLoaded(ad: AppOpenAd) {
+                    if (appOpenAd == null)
+                        appOpenAd = ad
                     ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                         override fun onAdDismissedFullScreenContent() {
                             appOpenAdCallback?.onAdClosed()
@@ -365,18 +679,23 @@ object AdSdk {
                             appOpenAdCallback?.onAdFailedToShow(adError)
                         }
                     }
-                    appOpenAdCallback?.onAdLoaded(ad)
-                    if (showWhenLoaded)
-                        ad.show(activity)
+//                    appOpenAdCallback?.onAdLoaded(ad)
+//                    if (showWhenLoaded)
+//                        ad.show(activity)
                 }
 
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                     Log.d(TAG, loadAdError.message)
-                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
+                    if (appOpenAd == null)
+                        appOpenAd = null
+                    AdError = loadAdError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+appOpenAdUnit+" : "+loadAdError.message)
+//                    appOpenAdCallback?.onAdFailedToLoad(loadAdError)
                 }
 
             }
-            AppOpenAd.load(
+            if (!isAdmanager){
+                AppOpenAd.load(
                 application!!, appOpenAdUnit,
                 AdRequest.Builder()
                     .addNetworkExtrasBundle(
@@ -386,7 +705,17 @@ object AdSdk {
                     .build(),
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
             )
+            }
+            else {
+                AppOpenAd.load(
+                application!!, appOpenAdUnit,
+                AdManagerAdRequest.Builder()
+                    .build(),
+                AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
+            )
+            }
         }
+
     }
 
     val extras = Bundle()
@@ -410,50 +739,546 @@ object AdSdk {
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
         adUnit: String,
+        adName: String,
         adSize: AdSize,
         bannerAdLoadCallback: BannerAdLoadCallback?,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        loadingTextSize: Int = 24,
+        textColor1: Int = Color.BLACK,
+        background: Int = Color.LTGRAY,
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
-        loadBannerAd(
-            activity,
-            System.currentTimeMillis(),
-            lifecycle,
-            viewGroup,
-            adUnit,
-            adSize,
-            bannerAdLoadCallback,
-            contentURL,
-            neighbourContentURL
-        )
+        if (isInitialized){
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                loadBannerAd(
+                    activity,
+                    System.currentTimeMillis(),
+                    lifecycle,
+                    viewGroup,
+                    adUnit,
+                    adName,
+                    fetchBannerAdSize(adName,adSize),
+                    bannerAdLoadCallback,
+                    contentURL,
+                    neighbourContentURL,
+                    loadingTextSize,
+                    textColor1,
+                    background,
+                    showLoadingMessage,
+                    isAdmanager,
+                    loadTimeOut
+                )
+            }
+            else {
+                viewGroup.visibility = GONE
+            }
+        }
+        else{
+            viewGroup.visibility = GONE
+            bannerAdLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
     }
 
-    private fun loadBannerAd(
+    internal fun loadBannerAd(
         activity: Activity,
         id: Long,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
         adUnit: String,
+        adName: String,
         adSize: AdSize,
         bannerAdLoadCallback: BannerAdLoadCallback?,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        loadingTextSize: Int = 24,
+        textColor1: Int = Color.BLACK,
+        background: Int = Color.LTGRAY,
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
-        if (application != null) {
-            if (adUnit.isBlank()) return
-            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
-                AdUtilConstants.bannerAdLifeCycleHashMap[id] =
-                    BannerAdItem(
-                        activity,
-                        id,
-                        lifecycle,
-                        viewGroup,
-                        adUnit,
-                        adSize,
-                        bannerAdLoadCallback,
-                        contentURL, neighbourContentURL
-                    )
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (application != null) {
+                viewGroup.visibility = VISIBLE
+                if (adUnit.isBlank()) return
+
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+
+                val inflate = View.inflate(application, R.layout.shimmer_banner, null)
+                when (adSize) {
+                    AdSize.BANNER -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+                    AdSize.LARGE_BANNER -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    AdSize.MEDIUM_RECTANGLE -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+                }
+//                val cardView = inflate.findViewById<CardView>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                tv.setTextColor(textColor1)
+//                cardView.setCardBackgroundColor(background)
+                viewGroup.removeAllViews()
+
+                if (showLoadingMessage) {
+                    viewGroup.addView(inflate)
+                }
+
+                if (!isAdmanager){
+                    Log.d("banner",adName+"OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadBannerAd(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            showLoadingMessage,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            primaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if(secondaryIds.size > 0){
+                                        loadBannerAd(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            showLoadingMessage,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadBannerAd(
+                                                        activity,
+                                                        id,
+                                                        lifecycle,
+                                                        viewGroup,
+                                                        adName,
+                                                        adSize,
+                                                        showLoadingMessage,
+                                                        bannerAdLoadCallback,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        isAdmanager,
+                                                        object :BannerInternalCallback{
+                                                            override fun onSuccess() {
+                                                                refreshBanner(adName)
+                                                                Log.d("banner", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                                bannerAdLoadCallback?.onAdLoaded()
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                                            }
+
+                                                        }
+                                                    )
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                    else {
+                                        loadBannerAd(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            showLoadingMessage,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                }
+
+                            }
+                        )
+                    }
+                    else if(secondaryIds.size > 0){
+                        loadBannerAd(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            showLoadingMessage,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            secondaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadBannerAd(
+                                        activity,
+                                        id,
+                                        lifecycle,
+                                        viewGroup,
+                                        adName,
+                                        adSize,
+                                        showLoadingMessage,
+                                        bannerAdLoadCallback,
+                                        contentURL,
+                                        neighbourContentURL,
+                                        listOf(adUnit),
+                                        fetchedTimer,
+                                        isAdmanager,
+                                        object :BannerInternalCallback{
+                                            override fun onSuccess() {
+                                                refreshBanner(adName)
+                                                Log.d("banner", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                bannerAdLoadCallback?.onAdLoaded()
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                            }
+
+                                        }
+                                    )
+                                }
+
+                            }
+                        )
+                    }
+                    else {
+                        loadBannerAd(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            showLoadingMessage,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                }
+
+                            }
+                        )
+                    }
+                }
+                else {
+                    Log.d("banner_admanager",adName+"OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadBannerAdManager(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            showLoadingMessage,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            primaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner_admanager", adName+"onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if(secondaryIds.size > 0){
+                                        loadBannerAdManager(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            showLoadingMessage,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner_admanager", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadBannerAdManager(
+                                                        activity,
+                                                        id,
+                                                        lifecycle,
+                                                        viewGroup,
+                                                        adName,
+                                                        adSize,
+                                                        showLoadingMessage,
+                                                        bannerAdLoadCallback,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        isAdmanager,
+                                                        object :BannerInternalCallback{
+                                                            override fun onSuccess() {
+                                                                refreshBanner(adName)
+                                                                Log.d("banner_admanager", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                                bannerAdLoadCallback?.onAdLoaded()
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                                            }
+
+                                                        }
+                                                    )
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                    else {
+                                        loadBannerAdManager(
+                                            activity,
+                                            id,
+                                            lifecycle,
+                                            viewGroup,
+                                            adName,
+                                            adSize,
+                                            showLoadingMessage,
+                                            bannerAdLoadCallback,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            isAdmanager,
+                                            object :BannerInternalCallback{
+                                                override fun onSuccess() {
+                                                    refreshBanner(adName)
+                                                    Log.d("banner_admanager", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                    bannerAdLoadCallback?.onAdLoaded()
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                                }
+
+                                            }
+                                        )
+                                    }
+                                }
+
+                            }
+                        )
+                    }
+                    else if(secondaryIds.size > 0){
+                        loadBannerAdManager(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            showLoadingMessage,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            secondaryIds,
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner_admanager", adName+"onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadBannerAdManager(
+                                        activity,
+                                        id,
+                                        lifecycle,
+                                        viewGroup,
+                                        adName,
+                                        adSize,
+                                        showLoadingMessage,
+                                        bannerAdLoadCallback,
+                                        contentURL,
+                                        neighbourContentURL,
+                                        listOf(adUnit),
+                                        fetchedTimer,
+                                        isAdmanager,
+                                        object :BannerInternalCallback{
+                                            override fun onSuccess() {
+                                                refreshBanner(adName)
+                                                Log.d("banner_admanager", adName+"onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                bannerAdLoadCallback?.onAdLoaded()
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                            }
+
+                                        }
+                                    )
+                                }
+
+                            }
+                        )
+                    }
+                    else {
+                        loadBannerAdManager(
+                            activity,
+                            id,
+                            lifecycle,
+                            viewGroup,
+                            adName,
+                            adSize,
+                            showLoadingMessage,
+                            bannerAdLoadCallback,
+                            contentURL,
+                            neighbourContentURL,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            isAdmanager,
+                            object :BannerInternalCallback{
+                                override fun onSuccess() {
+                                    refreshBanner(adName)
+                                    Log.d("banner_admanager", adName+"onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    bannerAdLoadCallback?.onAdLoaded()
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    bannerAdLoadCallback?.onAdFailedToLoad(loadAdError)
+                                }
+
+                            }
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    internal fun loadBannerAd(
+        activity: Activity,
+        id: Long,
+        lifecycle: Lifecycle,
+        viewGroup: ViewGroup,
+        adName: String,
+        adSize: AdSize,
+        showLoadingMessage: Boolean,
+        bannerAdLoadCallback: BannerAdLoadCallback?,
+        contentURL: String?,
+        neighbourContentURL: List<String>?,
+        primaryIds: List<String>,
+        fetchedTimer: Int,
+        isAdmanager:Boolean,
+        bannerInternalCallback: BannerInternalCallback
+    ) {
+        var isShown = false
+        var AdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (isShown) {
+                    bannerInternalCallback.onSuccess()
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (isShown) {
+                    bannerInternalCallback.onSuccess()
+                }
+                else
+                    bannerInternalCallback.onFailed(AdError)
+            }
+        }.start()
+        for (adUnit in primaryIds){
+
             lifecycle.addObserver(object : LifecycleObserver {
                 @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 fun onDestroy() {
@@ -470,18 +1295,37 @@ object AdSdk {
             mAdView.setAdSize(adSize)
             mAdView.adUnitId = adUnit
             mAdView.loadAd(adRequest)
-            viewGroup.removeAllViews()
-            viewGroup.addView(mAdView)
 
             mAdView.adListener = object : AdListener() {
                 // Code to be executed when an ad finishes loading.
                 override fun onAdLoaded() {
-                    bannerAdLoadCallback?.onAdLoaded()
+                    if (!isShown){
+                        viewGroup.removeAllViews()
+                        viewGroup.addView(mAdView)
+                        if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
+                            AdUtilConstants.bannerAdLifeCycleHashMap[id] =
+                                BannerAdItem(
+                                    activity,
+                                    id,
+                                    lifecycle,
+                                    viewGroup,
+                                    mAdView.adUnitId,
+                                    adSize,
+                                    adName,
+                                    showLoadingMessage,
+                                    bannerAdLoadCallback,
+                                    contentURL, neighbourContentURL,
+                                    isAdmanager
+                                )
+                        }
+                        isShown = true
+                    }
                 }
 
                 // Code to be executed when an ad request fails.
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    bannerAdLoadCallback?.onAdFailedToLoad(adError)
+                    AdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                 }
 
                 // Code to be executed when an ad opens an overlay that
@@ -504,6 +1348,248 @@ object AdSdk {
         }
     }
 
+    internal fun loadBannerAdManager(
+        activity: Activity,
+        id: Long,
+        lifecycle: Lifecycle,
+        viewGroup: ViewGroup,
+        adName: String,
+        adSize: AdSize,
+        showLoadingMessage: Boolean,
+        bannerAdLoadCallback: BannerAdLoadCallback?,
+        contentURL: String?,
+        neighbourContentURL: List<String>?,
+        primaryIds: List<String>,
+        fetchedTimer: Int,
+        isAdmanager: Boolean,
+        bannerInternalCallback: BannerInternalCallback
+    ) {
+
+        var isShown = false
+        var AdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (isShown) {
+                    bannerInternalCallback.onSuccess()
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (isShown) {
+                    bannerInternalCallback.onSuccess()
+                }
+                else
+                    bannerInternalCallback.onFailed(AdError)
+            }
+        }.start()
+        for (adUnit in primaryIds){
+
+            lifecycle.addObserver(object : LifecycleObserver {
+                @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                fun onDestroy() {
+                    AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
+                }
+            })
+            val builder = AdManagerAdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            val adRequest = builder
+                .build()
+            val mAdView = AdView(viewGroup.context)
+            mAdView.setAdSize(adSize)
+            mAdView.adUnitId = adUnit
+            mAdView.loadAd(adRequest)
+
+            mAdView.adListener = object : AdListener() {
+                // Code to be executed when an ad finishes loading.
+                override fun onAdLoaded() {
+                    if (!isShown){
+                        viewGroup.removeAllViews()
+                        viewGroup.addView(mAdView)
+                        if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
+                            AdUtilConstants.bannerAdLifeCycleHashMap[id] =
+                                BannerAdItem(
+                                    activity,
+                                    id,
+                                    lifecycle,
+                                    viewGroup,
+                                    mAdView.adUnitId,
+                                    adSize,
+                                    adName,
+                                    showLoadingMessage,
+                                    bannerAdLoadCallback,
+                                    contentURL, neighbourContentURL,
+                                    isAdmanager
+                                )
+                        }
+                        isShown = true
+                    }
+                }
+
+                // Code to be executed when an ad request fails.
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    AdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+                }
+
+                // Code to be executed when an ad opens an overlay that
+                // covers the screen.
+                override fun onAdOpened() {
+                    bannerAdLoadCallback?.onAdOpened()
+                }
+
+                // Code to be executed when the user clicks on an ad.
+                override fun onAdClicked() {
+                    bannerAdLoadCallback?.onAdClicked()
+                }
+
+                // Code to be executed when the user is about to return
+                // to the app after tapping on an ad.
+                override fun onAdClosed() {
+                    bannerAdLoadCallback?.onAdClosed()
+                }
+            }
+        }
+    }
+
+    internal fun loadBannerAdRefresh(
+        activity: Activity,
+        id: Long,
+        lifecycle: Lifecycle,
+        viewGroup: ViewGroup,
+        adUnit: String,
+        adName: String,
+        adSize: AdSize,
+        bannerAdLoadCallback: BannerAdLoadCallback?,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        loadingTextSize: Int = 24,
+        textColor1: Int = Color.BLACK,
+        background: Int = Color.LTGRAY,
+        showLoadingMessage: Boolean = true,
+        isAdmanager: Boolean
+    ) {
+        if (isInitialized){
+            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                if (application != null) {
+                    if (adUnit.isBlank()) return
+                    val inflate = View.inflate(application, R.layout.shimmer_banner, null)
+                    when (adSize) {
+                        AdSize.BANNER -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                        }
+                        AdSize.LARGE_BANNER -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                        }
+                        AdSize.MEDIUM_RECTANGLE -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                        }
+                        else -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                        }
+                    }
+//                val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
+//                val cardView = inflate.findViewById<CardView>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                tv.setTextColor(textColor1)
+//                cardView.setCardBackgroundColor(background)
+                    viewGroup.removeAllViews()
+
+                    if (showLoadingMessage) {
+                        viewGroup.addView(inflate)
+                    }
+
+                    if (AdUtilConstants.bannerAdLifeCycleHashMap[id] == null) {
+                        AdUtilConstants.bannerAdLifeCycleHashMap[id] =
+                            BannerAdItem(
+                                activity,
+                                id,
+                                lifecycle,
+                                viewGroup,
+                                adUnit,
+                                adSize,
+                                adName,
+                                showLoadingMessage,
+                                bannerAdLoadCallback,
+                                contentURL, neighbourContentURL,
+                                isAdmanager
+                            )
+                    }
+                    lifecycle.addObserver(object : LifecycleObserver {
+                        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                        fun onDestroy() {
+                            AdUtilConstants.bannerAdLifeCycleHashMap.remove(id)
+                        }
+                    })
+                    var adRequest: AdRequest? = null
+                    if (!isAdmanager){
+                        val builder = AdRequest.Builder()
+                            .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                        contentURL?.let { builder.setContentUrl(it) }
+                        neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                        adRequest = builder
+                            .build()
+                    }
+                    else {
+                        val builder = AdManagerAdRequest.Builder()
+                            .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                        contentURL?.let { builder.setContentUrl(it) }
+                        neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                        adRequest = builder
+                            .build()
+                    }
+
+                    val mAdView = AdView(viewGroup.context)
+                    mAdView.setAdSize(adSize)
+                    mAdView.adUnitId = adUnit
+                    if (adRequest != null) {
+                        mAdView.loadAd(adRequest)
+                    }
+
+                    mAdView.adListener = object : AdListener() {
+                        // Code to be executed when an ad finishes loading.
+                        override fun onAdLoaded() {
+                            viewGroup.removeAllViews()
+                            viewGroup.addView(mAdView)
+                            bannerAdLoadCallback?.onAdLoaded()
+                        }
+
+                        // Code to be executed when an ad request fails.
+                        override fun onAdFailedToLoad(adError: LoadAdError) {
+                            bannerAdLoadCallback?.onAdFailedToLoad(adError)
+                        }
+
+                        // Code to be executed when an ad opens an overlay that
+                        // covers the screen.
+                        override fun onAdOpened() {
+                            bannerAdLoadCallback?.onAdOpened()
+                        }
+
+                        // Code to be executed when the user clicks on an ad.
+                        override fun onAdClicked() {
+                            bannerAdLoadCallback?.onAdClicked()
+                        }
+
+                        // Code to be executed when the user is about to return
+                        // to the app after tapping on an ad.
+                        override fun onAdClosed() {
+                            bannerAdLoadCallback?.onAdClosed()
+                        }
+                    }
+                }
+            }
+        }
+        else{
+            bannerAdLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
+    }
+
+
+
+
     /**
      * Call loadInterstitialAd with following params to load an interstitial ad
      *
@@ -513,11 +1599,299 @@ object AdSdk {
      * IMPORTANT: You wont be able to show ad if you pass a null callback
      */
     fun loadInterstitialAd(
+        adName: String,
         adUnit: String,
-        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?
+        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
-        if (application != null) {
-            var mInterstitialAd: InterstitialAd?
+        if (isInitialized){
+            if (application != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var mInterstitialAd: InterstitialAd? = null
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                Log.d("main_interstitial","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager){
+                    if (primaryIds.size > 0){
+                        loadInterstitialAd(
+                            adName,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0){
+                                        loadInterstitialAd(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadInterstitialAd(
+                                                        adName,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        interstitialAdUtilLoadCallback,
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                    else{
+                                        loadInterstitialAd(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0){
+                        loadInterstitialAd(
+                            adName,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadInterstitialAd(
+                                        adName,
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        interstitialAdUtilLoadCallback,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else{
+                        loadInterstitialAd(
+                            adName,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd = interstitialAd)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                }
+                            }
+                        )
+                    }
+                }
+                else {
+                    if (primaryIds.size > 0){
+                        loadInterstitialAdManager(
+                            adName,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0){
+                                        loadInterstitialAdManager(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadInterstitialAdManager(
+                                                        adName,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        interstitialAdUtilLoadCallback,
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("main_interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                    else{
+                                        loadInterstitialAdManager(
+                                            adName,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            interstitialAdUtilLoadCallback,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("main_interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0){
+                        loadInterstitialAdManager(
+                            adName,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadInterstitialAdManager(
+                                        adName,
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        interstitialAdUtilLoadCallback,
+                                        object :InterstitialInternalCallback{
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("main_interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                                interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else{
+                        loadInterstitialAdManager(
+                            adName,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            interstitialAdUtilLoadCallback,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("main_interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                    interstitialAdUtilLoadCallback?.onAdLoaded(adManagerInterstitialAd = ad)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialAdUtilLoadCallback?.onAdFailedToLoad(loadAdError, mInterstitialAd)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        else {
+            interstitialAdUtilLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null),null)
+        }
+    }
+
+    internal fun loadInterstitialAd(
+        adName: String,
+        timer: Long,
+        primaryIds: List<String>,
+        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
+        interstitialInternalCallback: InterstitialInternalCallback
+    ){
+        var mInterstitialAd: InterstitialAd? = null
+        var AdError: LoadAdError? = null
+        object : CountDownTimer(timer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mInterstitialAd != null) {
+                    interstitialInternalCallback.onSuccess(interstitialAd = mInterstitialAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mInterstitialAd != null) {
+                    interstitialInternalCallback.onSuccess(interstitialAd = mInterstitialAd!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed(AdError)
+            }
+        }.start()
+        for (adUnit in primaryIds){
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
@@ -527,13 +1901,14 @@ object AdSdk {
                 adRequest,
                 object : InterstitialAdLoadCallback() {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        mInterstitialAd = null
-                        interstitialAdUtilLoadCallback?.onAdFailedToLoad(adError, mInterstitialAd)
+                        if (mInterstitialAd == null)
+                            mInterstitialAd = null
+                        AdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                     }
 
                     override fun onAdLoaded(interstitialAd: InterstitialAd) {
                         mInterstitialAd = interstitialAd
-                        interstitialAdUtilLoadCallback?.onAdLoaded(interstitialAd)
 
                         mInterstitialAd?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
@@ -562,38 +1937,387 @@ object AdSdk {
                 },
             )
         }
+
+    }
+
+    internal fun loadInterstitialAdManager(
+        adName: String,
+        timer: Long,
+        primaryIds: List<String>,
+        interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
+        interstitialInternalCallback: InterstitialInternalCallback
+    ){
+        var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(timer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mAdManagerInterstitialAd != null) {
+                    interstitialInternalCallback.onSuccess(adManagerInterstitialAd = mAdManagerInterstitialAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mAdManagerInterstitialAd != null) {
+                    interstitialInternalCallback.onSuccess(adManagerInterstitialAd = mAdManagerInterstitialAd!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed(loadAdError)
+            }
+        }.start()
+        for (adUnit in primaryIds){
+            var adRequest = AdManagerAdRequest.Builder()
+                            .build()
+
+            AdManagerInterstitialAd.load(application!!.applicationContext,adUnit, adRequest, object : AdManagerInterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (mAdManagerInterstitialAd == null)
+                        mAdManagerInterstitialAd = null
+                    loadAdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+                }
+
+                override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
+                    if (mAdManagerInterstitialAd == null){
+                        mAdManagerInterstitialAd = interstitialAd
+                        mAdManagerInterstitialAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdImpression() {
+                                    super.onAdImpression()
+                                    interstitialAdUtilLoadCallback?.onAdImpression()
+                                }
+
+                                override fun onAdShowedFullScreenContent() {
+                                    mAdManagerInterstitialAd = null
+                                    interstitialAdUtilLoadCallback?.onAdShowedFullScreenContent()
+                                }
+
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    interstitialAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
+                                        p0,
+                                    )
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    interstitialAdUtilLoadCallback?.onAdDismissedFullScreenContent()
+                                }
+                            }
+                    }
+                }
+            })
+        }
     }
 
     fun loadSplashAd(
         adUnit: String,
+        adName: String,
         activity: Activity?,
         callback: SplashInterstitialCallback,
-        timer: Long = 5000L
+        timer: Long = 5000L,
+        isAdmanager:Boolean = false
     ) {
-        if (activity != null) {
-            var splash: InterstitialAd? = null
-            object : CountDownTimer(timer, 1000) {
-                override fun onTick(millisUntilFinished: Long) {
-                    if (splash != null) {
-                        splash?.show(activity)
-                        this.cancel()
+        if (isInitialized){
+            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = timer.toInt()
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+
+                if (!isAdmanager){
+                    Log.d("interstitial","OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadSplashAd(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            primaryIds,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0)
+                                        loadSplashAd(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            secondaryIds,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadSplashAd(
+                                                        adName,
+                                                        activity,
+                                                        callback,
+                                                        fetchedTimer,
+                                                        listOf(adUnit),
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("interstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                callback.moveNext()
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadSplashAd(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            listOf(adUnit),
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    callback.moveNext()
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadSplashAd(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            secondaryIds,
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadSplashAd(
+                                        adName,
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object : InterstitialInternalCallback {
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                callback.moveNext()
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else {
+                        loadSplashAd(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            listOf(adUnit),
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    callback.moveNext()
+                                }
+                            }
+                        )
+                    }
+                }
+                else{
+                    Log.d("interstitial-admanager","OnStart:" + System.currentTimeMillis()/1000)
+                    if (primaryIds.size > 0){
+                        loadSplashAdManager(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            primaryIds,
+                            object :InterstitialInternalCallback{
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial-admanager", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0)
+                                        loadSplashAdManager(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            secondaryIds,
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial-admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    loadSplashAdManager(
+                                                        adName,
+                                                        activity,
+                                                        callback,
+                                                        fetchedTimer,
+                                                        listOf(adUnit),
+                                                        object :InterstitialInternalCallback{
+                                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                                Log.d("interstitial-admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                callback.moveNext()
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadSplashAdManager(
+                                            adName,
+                                            activity,
+                                            callback,
+                                            fetchedTimer,
+                                            listOf(adUnit),
+                                            object :InterstitialInternalCallback{
+                                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                    Log.d("interstitial-admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    callback.moveNext()
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadSplashAdManager(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            secondaryIds,
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial-admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    loadSplashAdManager(
+                                        adName,
+                                        activity,
+                                        callback,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object : InterstitialInternalCallback {
+                                            override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                                Log.d("interstitial-admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000)
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                callback.moveNext()
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else {
+                        loadSplashAdManager(
+                            adName,
+                            activity,
+                            callback,
+                            fetchedTimer,
+                            listOf(adUnit),
+                            object : InterstitialInternalCallback {
+                                override fun onSuccess(interstitialAd: InterstitialAd?,ad: AdManagerInterstitialAd?) {
+                                    Log.d("interstitial-admanager", "onSuccess: Else Fallback Shown" + System.currentTimeMillis() / 1000)
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    callback.moveNext()
+                                }
+                            }
+                        )
                     }
                 }
 
-                override fun onFinish() {
-                    callback.moveNext()
+            } else {
+                callback.moveNext()
+            }
+        }
+        else {
+            callback.OnError("Ads SDK not (initialized / properly initial). Try initializing again.")
+        }
+    }
+
+    internal fun loadSplashAd(
+        adName: String,
+        activity: Activity,
+        callback: SplashInterstitialCallback,
+        fetchedTimer: Int,
+        primaryIds: List<String>,
+        interstitialInternalCallback: InterstitialInternalCallback) {
+
+        var splash: InterstitialAd? = null
+        var AdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (splash != null) {
+                    splash?.show(activity)
+                    interstitialInternalCallback.onSuccess(splash!!)
+                    this.cancel()
                 }
-            }.start()
+            }
+
+            override fun onFinish() {
+                if (splash != null) {
+                    splash?.show(activity)
+                    interstitialInternalCallback.onSuccess(splash!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed(AdError)
+            }
+        }.start()
+        for (adUnit in primaryIds){
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
-            application?.let {
-                InterstitialAd.load(
-                    it,
-                    adUnit,
-                    adRequest, object : InterstitialAdLoadCallback() {
-                        override fun onAdLoaded(splashInters: InterstitialAd) {
-                            super.onAdLoaded(splashInters)
+            InterstitialAd.load(
+                activity,
+                adUnit,
+                adRequest, object : InterstitialAdLoadCallback() {
+                    override fun onAdLoaded(splashInters: InterstitialAd) {
+                        super.onAdLoaded(splashInters)
+                        if (splash == null){
                             splash = splashInters
                             splash?.fullScreenContentCallback =
                                 object : FullScreenContentCallback() {
@@ -606,17 +2330,78 @@ object AdSdk {
                                     }
                                 }
                         }
-
-                        override fun onAdFailedToLoad(p0: LoadAdError) {
-                            super.onAdFailedToLoad(p0)
-                            callback.moveNext()
-                        }
                     }
-                )
-            }
-        } else {
-            callback.moveNext()
+
+                    override fun onAdFailedToLoad(p0: LoadAdError) {
+                        super.onAdFailedToLoad(p0)
+                        AdError = p0
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+p0.message)
+                    }
+                }
+            )
         }
+
+    }
+
+    internal fun loadSplashAdManager(
+        adName: String,
+        activity: Activity,
+        callback: SplashInterstitialCallback,
+        fetchedTimer: Int,
+        primaryIds: List<String>,
+        interstitialInternalCallback: InterstitialInternalCallback
+    ) {
+
+        var mAdManagerInterstitialAd: AdManagerInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mAdManagerInterstitialAd != null) {
+                    mAdManagerInterstitialAd?.show(activity)
+                    interstitialInternalCallback.onSuccess(mAdManagerInterstitialAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mAdManagerInterstitialAd != null) {
+                    mAdManagerInterstitialAd?.show(activity)
+                    interstitialInternalCallback.onSuccess(mAdManagerInterstitialAd!!)
+                }
+                else
+                    interstitialInternalCallback.onFailed(loadAdError)
+            }
+        }.start()
+        for (adUnit in primaryIds){
+
+            var adRequest = AdManagerAdRequest.Builder().build()
+
+            AdManagerInterstitialAd.load(activity.applicationContext,adUnit, adRequest, object : AdManagerInterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (mAdManagerInterstitialAd == null)
+                        mAdManagerInterstitialAd = null
+                    loadAdError = adError
+                    Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+                }
+
+                override fun onAdLoaded(interstitialAd: AdManagerInterstitialAd) {
+                    if (mAdManagerInterstitialAd == null){
+                        mAdManagerInterstitialAd = interstitialAd
+                        mAdManagerInterstitialAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    callback.moveNext()
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    callback.moveNext()
+                                }
+                            }
+                    }
+                }
+            })
+        }
+
     }
 
     /**
@@ -629,28 +2414,421 @@ object AdSdk {
      */
 
     fun loadRewardedAd(
-        activity: Activity,
+        activity: Activity?,
         adUnit: String,
-        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?
+        adName: String,
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
+        showLoaderScreen: Boolean = false,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
-        if (application != null) {
-            var mRewardedAd: RewardedAd?
+        if (isInitialized){
+            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName))
+            {
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                if (showLoaderScreen)
+                    showAdLoaderLayout(activity)
+                Log.d("rewarded","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager){
+                    if (primaryIds.size > 0){
+                        loadRewardedAd(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            object :RewardInternalCallback{
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
+                                    if (secondaryIds.size > 0)
+                                        loadRewardedAd(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    loadRewardedAd(
+                                                        adName,
+                                                        activity,
+                                                        rewardedAdUtilLoadCallback,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        object :RewardInternalCallback{
+                                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                                Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                if (showLoaderScreen)
+                                                                    dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                            }
+
+                                                            override fun onFailed(
+                                                                adError: LoadAdError?,
+                                                                ad: RewardedAd?
+                                                            ) {
+                                                                dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadRewardedAd(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadRewardedAd(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    loadRewardedAd(
+                                        adName,
+                                        activity,
+                                        rewardedAdUtilLoadCallback,
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        object : RewardInternalCallback {
+                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                Log.d(
+                                                    "rewarded",
+                                                    "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                                )
+                                                if (showLoaderScreen)
+                                                    dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                            }
+
+                                            override fun onFailed(
+                                                adError: LoadAdError?,
+                                                ad: RewardedAd?
+                                            ) {
+                                                dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else {
+                        loadRewardedAd(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                                }
+                            }
+                        )
+                    }
+                }
+                else {
+                    if (primaryIds.size > 0){
+                        loadRewardedAdManager(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            object :RewardInternalCallback{
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d("rewarded", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(adError: LoadAdError?, ad: RewardedAd?) {
+                                    if (secondaryIds.size > 0)
+                                        loadRewardedAdManager(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    loadRewardedAdManager(
+                                                        adName,
+                                                        activity,
+                                                        rewardedAdUtilLoadCallback,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adUnit),
+                                                        object :RewardInternalCallback{
+                                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                                Log.d("rewarded", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                if (showLoaderScreen)
+                                                                    dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                            }
+
+                                                            override fun onFailed(
+                                                                adError: LoadAdError?,
+                                                                ad: RewardedAd?
+                                                            ) {
+                                                                dismissAdLoaderLayout(activity)
+                                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    else
+                                        loadRewardedAdManager(
+                                            adName,
+                                            activity,
+                                            rewardedAdUtilLoadCallback,
+                                            fetchedTimer.toLong(),
+                                            listOf(adUnit),
+                                            object :RewardInternalCallback{
+                                                override fun onSuccess(rewardAds: RewardedAd) {
+                                                    Log.d("rewarded", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    if (showLoaderScreen)
+                                                        dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                                }
+
+                                                override fun onFailed(
+                                                    adError: LoadAdError?,
+                                                    ad: RewardedAd?
+                                                ) {
+                                                    dismissAdLoaderLayout(activity)
+                                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError,ad)
+                                                }
+                                            }
+                                        )
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0) {
+                        loadRewardedAdManager(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    loadRewardedAdManager(
+                                        adName,
+                                        activity,
+                                        rewardedAdUtilLoadCallback,
+                                        fetchedTimer.toLong(),
+                                        listOf(adUnit),
+                                        object : RewardInternalCallback {
+                                            override fun onSuccess(rewardAds: RewardedAd) {
+                                                Log.d(
+                                                    "rewarded",
+                                                    "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                                )
+                                                if (showLoaderScreen)
+                                                    dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                            }
+
+                                            override fun onFailed(
+                                                adError: LoadAdError?,
+                                                ad: RewardedAd?
+                                            ) {
+                                                dismissAdLoaderLayout(activity)
+                                                rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else {
+                        loadRewardedAdManager(
+                            adName,
+                            activity,
+                            rewardedAdUtilLoadCallback,
+                            fetchedTimer.toLong(),
+                            listOf(adUnit),
+                            object : RewardInternalCallback {
+                                override fun onSuccess(rewardAds: RewardedAd) {
+                                    Log.d(
+                                        "rewarded",
+                                        "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (showLoaderScreen)
+                                        dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdLoaded(rewardAds)
+                                }
+
+                                override fun onFailed(
+                                    adError: LoadAdError?,
+                                    ad: RewardedAd?
+                                ) {
+                                    dismissAdLoaderLayout(activity)
+                                    rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, ad)
+                                }
+                            }
+                        )
+                    }
+                }
+
+            }
+        }
+        else {
+            rewardedAdUtilLoadCallback?.onAdFailedToLoad(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null),null)
+        }
+
+    }
+
+    internal fun loadRewardedAd(
+        adName: String,
+        activity: Activity,
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
+        timer: Long,
+        primaryIds: List<String>,
+        rewardInternalCallback: RewardInternalCallback
+    ){
+        var mRewardedAd: RewardedAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(timer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mRewardedAd != null) {
+                    rewardInternalCallback.onSuccess(mRewardedAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mRewardedAd != null) {
+                    rewardInternalCallback.onSuccess(mRewardedAd!!)
+                }
+                else
+                    rewardInternalCallback.onFailed(loadAdError,mRewardedAd)
+            }
+        }.start()
+        for (adUnit in primaryIds){
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             RewardedAd.load(
-                application!!,
+                activity,
                 adUnit,
                 adRequest,
                 object : RewardedAdLoadCallback() {
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        mRewardedAd = null
-                        rewardedAdUtilLoadCallback?.onAdFailedToLoad(adError, mRewardedAd)
+                        if (mRewardedAd == null)
+                            mRewardedAd = null
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
                     }
 
                     override fun onAdLoaded(rewardedAd: RewardedAd) {
                         mRewardedAd = rewardedAd
-                        rewardedAdUtilLoadCallback?.onAdLoaded(rewardedAd)
 
                         mRewardedAd?.fullScreenContentCallback =
                             object : FullScreenContentCallback() {
@@ -675,6 +2853,74 @@ object AdSdk {
         }
     }
 
+    internal fun loadRewardedAdManager(
+        adName: String,
+        activity: Activity,
+        rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
+        timer: Long,
+        primaryIds: List<String>,
+        rewardInternalCallback: RewardInternalCallback
+    ){
+        var mRewardedAd: RewardedAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(timer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (mRewardedAd != null) {
+                    rewardInternalCallback.onSuccess(mRewardedAd!!)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (mRewardedAd != null) {
+                    rewardInternalCallback.onSuccess(mRewardedAd!!)
+                }
+                else
+                    rewardInternalCallback.onFailed(loadAdError,mRewardedAd)
+            }
+        }.start()
+        for (adUnit in primaryIds){
+            var adRequest = AdManagerAdRequest.Builder().build()
+            RewardedAd.load(
+                activity,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        if (mRewardedAd == null)
+                            mRewardedAd = null
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        mRewardedAd = rewardedAd
+
+                        mRewardedAd?.fullScreenContentCallback =
+                            object : FullScreenContentCallback() {
+                                override fun onAdDismissedFullScreenContent() {
+                                    rewardedAdUtilLoadCallback?.onAdDismissedFullScreenContent()
+                                }
+
+                                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                                    rewardedAdUtilLoadCallback?.onAdFailedToShowFullScreenContent(
+                                        adError,
+                                    )
+                                }
+
+                                override fun onAdShowedFullScreenContent() {
+                                    mRewardedAd = null
+                                    rewardedAdUtilLoadCallback?.onAdShowedFullScreenContent()
+                                }
+                            }
+                    }
+                },
+            )
+        }
+    }
+
+
     /**
      * Call loadNativeAd with following params to load a Native Ad
      *
@@ -695,12 +2941,14 @@ object AdSdk {
             val BIGV1 = "1"
             val BIGV2 = "5"
             val BIGV3 = "2"
+            val GRID_AD = "7"
         }
     }
 
     fun loadNativeAd(
         lifecycle: Lifecycle,
         adUnit: String,
+        adName: String,
         viewGroup: ViewGroup,
         callback: NativeAdLoadCallback?,
         adType: String = ADType.DEFAULT_AD,
@@ -710,10 +2958,14 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int = 48,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
-        @LayoutRes val layoutId = when (adType) {
+        var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+        @LayoutRes val layoutId = when (newAdSize) {
             "6" -> {
                 mediaMaxHeight1 = 200
                 R.layout.native_admob_ad_t6
@@ -723,23 +2975,41 @@ object AdSdk {
             "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
             "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
             "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+            "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
             else -> R.layout.native_admob_ad_t1
         }
-        loadNativeAd(
-            lifecycle,
-            adUnit,
-            viewGroup,
-            callback,
-            layoutId,
-            null,
-            adType,
-            background = background,
-            textColor1,
-            textColor2,
-            mediaMaxHeight1,
-            loadingTextSize, contentURL, neighbourContentURL
-        )
 
+        if (isInitialized){
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                loadNativeAd(
+                    lifecycle,
+                    adUnit,
+                    adName,
+                    viewGroup,
+                    callback,
+                    layoutId,
+                    null,
+                    newAdSize,
+                    background = background,
+                    textColor1,
+                    textColor2,
+                    mediaMaxHeight1,
+                    loadingTextSize,
+                    contentURL,
+                    neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage,
+                    isAdmanager = isAdmanager,
+                    loadTimeOut = loadTimeOut
+                )
+            }
+            else {
+                viewGroup.visibility = GONE
+            }
+        }
+        else {
+            viewGroup.visibility = GONE
+            callback?.onAdFailed(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
     }
 
     /**
@@ -753,9 +3023,10 @@ object AdSdk {
      * @param layoutId -> nullable layoutId, if you want a custom layout, pass a custom layout otherwise its load default UI
      * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView?) as params
      */
-    fun loadNativeAd(
+    internal fun loadNativeAd(
         lifecycle: Lifecycle,
         adUnit: String,
+        adName: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
         @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
@@ -767,12 +3038,16 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
         loadNativeAd(
             System.currentTimeMillis(),
             lifecycle,
             adUnit,
+            adName,
             viewGroup,
             nativeAdLoadCallback,
             layoutId,
@@ -783,7 +3058,11 @@ object AdSdk {
             textColor2,
             mediaMaxHeight,
             loadingTextSize,
-            contentURL, neighbourContentURL
+            contentURL,
+            neighbourContentURL,
+            showLoadingMessage,
+            isAdmanager = isAdmanager,
+            loadTimeOut
         )
     }
 
@@ -796,10 +3075,11 @@ object AdSdk {
      * @param nativeAdLoadCallback -> nullable callback to register native ad load events
      * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView) as params
      */
-    private fun loadNativeAd(
+    internal fun loadNativeAd(
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adUnit: String,
+        adName: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
         @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
@@ -811,59 +3091,1327 @@ object AdSdk {
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
-        viewGroup.visibility = VISIBLE
-        if (application != null) {
-            val inflate = View.inflate(application, R.layout.ad_loading_layout, null)
-            val id1 = inflate.findViewById<View>(R.id.rl)
-            val tv = inflate.findViewById<TextView>(R.id.tv)
-            tv.textSize = loadingTextSize.toFloat()
-            if (textColor1 != null) {
-                tv.setTextColor(textColor1)
-            }
-            when (background) {
-                is String -> {
-                    id1.setBackgroundColor(Color.parseColor(background))
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            viewGroup.visibility = VISIBLE
+            if (application != null) {
+                if (adUnit.isBlank()) return
+
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
                 }
-                is Drawable -> {
-                    id1.background = background
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+                val inflate = View.inflate(application, R.layout.shimmer, null)
+                when (adType) {
+                    "6" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }/*DEFAULT_AD*/
+                    "3" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    /*SMALL*/
+                    "4" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                    }
+                    /*MEDIUM*/
+                    "1" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    /*BIGV1*/
+                    "5" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                    }
+                    /*BIGV2*/
+                    "2" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                    }
+                    /*BIGV3*/
+                    "7" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    /*GRID_AD*/
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+
                 }
-                is Int -> {
-                    id1.setBackgroundColor(background)
+
+//                val id1 = inflate.findViewById<View>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                if (textColor1 != null) {
+//                    tv.setTextColor(textColor1)
+//                }
+//                when (background) {
+//                    is String -> {
+//                        id1.setBackgroundColor(Color.parseColor(background))
+//                    }
+//                    is Drawable -> {
+//                        id1.background = background
+//                    }
+//                    is Int -> {
+//                        id1.setBackgroundColor(background)
+//                    }
+//                }
+                viewGroup.removeAllViews()
+                if (showLoadingMessage) {
+                    viewGroup.addView(inflate)
+                }
+
+                Log.d("native","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager){
+                    if (primaryIds.size > 0){
+                        loadNativeAd(
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            primaryIds,
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        val adView =
+                                            View.inflate(application, layoutId, null)
+                                                    as NativeAdView
+                                        if (background != null) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.background = background
+                                                }
+                                                is Int -> {
+                                                    adView.setBackgroundColor(background)
+                                                }
+                                            }
+                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (populator != null) {
+                                            nativeAd?.let {
+                                                populator.invoke(it, adView)
+                                            }
+                                        } else {
+                                            nativeAd?.let {
+                                                populateUnifiedNativeAdView(
+                                                    it,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                        }
+                                        viewGroup.removeAllViews()
+                                        viewGroup.addView(adView)
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size >0){
+                                        loadNativeAd(
+                                            id,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            layoutId,
+                                            populator,
+                                            adType,
+                                            background,
+                                            textColor1,
+                                            textColor2,
+                                            mediaMaxHeight,
+                                            loadingTextSize,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            showLoadingMessage,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            object: NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("native", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    if (nativeAd != null) {
+                                                        val adView =
+                                                            View.inflate(application, layoutId, null)
+                                                                    as NativeAdView
+                                                        if (background != null) {
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.background = background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                                when (background) {
+                                                                    is String -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                    }
+                                                                    is Drawable -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                    }
+                                                                    is Int -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        if (populator != null) {
+                                                            nativeAd?.let {
+                                                                populator.invoke(it, adView)
+                                                            }
+                                                        } else {
+                                                            nativeAd?.let {
+                                                                populateUnifiedNativeAdView(
+                                                                    it,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    AdMobUtil.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                        }
+                                                        viewGroup.removeAllViews()
+                                                        viewGroup.addView(adView)
+                                                        refreshNative(adName)
+                                                    }
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    loadNativeAd(
+                                                        id,
+                                                        lifecycle,
+                                                        adName,
+                                                        viewGroup,
+                                                        nativeAdLoadCallback,
+                                                        layoutId,
+                                                        populator,
+                                                        adType,
+                                                        background,
+                                                        textColor1,
+                                                        textColor2,
+                                                        mediaMaxHeight,
+                                                        loadingTextSize,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        showLoadingMessage,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        object: NativeInternalCallback{
+                                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                                Log.d("native", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                nativeAdLoadCallback?.onAdLoaded()
+                                                                if (nativeAd != null) {
+                                                                    val adView =
+                                                                        View.inflate(application, layoutId, null)
+                                                                                as NativeAdView
+                                                                    if (background != null) {
+                                                                        when (background) {
+                                                                            is String -> {
+                                                                                adView.setBackgroundColor(Color.parseColor(background))
+                                                                            }
+                                                                            is Drawable -> {
+                                                                                adView.background = background
+                                                                            }
+                                                                            is Int -> {
+                                                                                adView.setBackgroundColor(background)
+                                                                            }
+                                                                        }
+                                                                        if (layoutId == R.layout.native_admob_ad_t6){
+                                                                            when (background) {
+                                                                                is String -> {
+                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                                }
+                                                                                is Drawable -> {
+                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                                }
+                                                                                is Int -> {
+                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    if (populator != null) {
+                                                                        nativeAd?.let {
+                                                                            populator.invoke(it, adView)
+                                                                        }
+                                                                    } else {
+                                                                        nativeAd?.let {
+                                                                            populateUnifiedNativeAdView(
+                                                                                it,
+                                                                                adView,
+                                                                                adType,
+                                                                                textColor1,
+                                                                                textColor2,
+                                                                                AdMobUtil.fetchColor(adName),
+                                                                                mediaMaxHeight
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                    viewGroup.removeAllViews()
+                                                                    viewGroup.addView(adView)
+                                                                    refreshNative(adName)
+                                                                }
+                                                            }
+
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                            }
+
+                                                        },
+                                                        isAdmanager = isAdmanager,
+                                                    )
+                                                }
+
+                                            },
+                                            isAdmanager = isAdmanager,
+                                        )
+                                    }
+                                    else{
+                                        loadNativeAd(
+                                            id,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            layoutId,
+                                            populator,
+                                            adType,
+                                            background,
+                                            textColor1,
+                                            textColor2,
+                                            mediaMaxHeight,
+                                            loadingTextSize,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            showLoadingMessage,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            object: NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("native", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    if (nativeAd != null) {
+                                                        val adView =
+                                                            View.inflate(application, layoutId, null)
+                                                                    as NativeAdView
+                                                        if (background != null) {
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.background = background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                                when (background) {
+                                                                    is String -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                    }
+                                                                    is Drawable -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                    }
+                                                                    is Int -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        if (populator != null) {
+                                                            nativeAd?.let {
+                                                                populator.invoke(it, adView)
+                                                            }
+                                                        } else {
+                                                            nativeAd?.let {
+                                                                populateUnifiedNativeAdView(
+                                                                    it,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    AdMobUtil.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                        }
+                                                        viewGroup.removeAllViews()
+                                                        viewGroup.addView(adView)
+                                                        refreshNative(adName)
+                                                    }
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                }
+
+                                            },
+                                            isAdmanager = isAdmanager,
+                                        )
+                                    }
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                    else if (secondaryIds.size >0){
+                        loadNativeAd(
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            secondaryIds,
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        val adView =
+                                            View.inflate(application, layoutId, null)
+                                                    as NativeAdView
+                                        if (background != null) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.background = background
+                                                }
+                                                is Int -> {
+                                                    adView.setBackgroundColor(background)
+                                                }
+                                            }
+                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (populator != null) {
+                                            nativeAd?.let {
+                                                populator.invoke(it, adView)
+                                            }
+                                        } else {
+                                            nativeAd?.let {
+                                                populateUnifiedNativeAdView(
+                                                    it,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                        }
+                                        viewGroup.removeAllViews()
+                                        viewGroup.addView(adView)
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    loadNativeAd(
+                                        id,
+                                        lifecycle,
+                                        adName,
+                                        viewGroup,
+                                        nativeAdLoadCallback,
+                                        layoutId,
+                                        populator,
+                                        adType,
+                                        background,
+                                        textColor1,
+                                        textColor2,
+                                        mediaMaxHeight,
+                                        loadingTextSize,
+                                        contentURL,
+                                        neighbourContentURL,
+                                        showLoadingMessage,
+                                        listOf(adUnit),
+                                        fetchedTimer,
+                                        object: NativeInternalCallback{
+                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                Log.d("native", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
+                                                nativeAdLoadCallback?.onAdLoaded()
+                                                if (nativeAd != null) {
+                                                    val adView =
+                                                        View.inflate(application, layoutId, null)
+                                                                as NativeAdView
+                                                    if (background != null) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.background = background
+                                                            }
+                                                            is Int -> {
+                                                                adView.setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                        if (layoutId == R.layout.native_admob_ad_t6){
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if (populator != null) {
+                                                        nativeAd?.let {
+                                                            populator.invoke(it, adView)
+                                                        }
+                                                    } else {
+                                                        nativeAd?.let {
+                                                            populateUnifiedNativeAdView(
+                                                                it,
+                                                                adView,
+                                                                adType,
+                                                                textColor1,
+                                                                textColor2,
+                                                                AdMobUtil.fetchColor(adName),
+                                                                mediaMaxHeight
+                                                            )
+                                                        }
+                                                    }
+                                                    viewGroup.removeAllViews()
+                                                    viewGroup.addView(adView)
+                                                    refreshNative(adName)
+                                                }
+                                            }
+
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                            }
+
+                                        },
+                                        isAdmanager = isAdmanager,
+                                    )
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                    else{
+                        loadNativeAd(
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        val adView =
+                                            View.inflate(application, layoutId, null)
+                                                    as NativeAdView
+                                        if (background != null) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.background = background
+                                                }
+                                                is Int -> {
+                                                    adView.setBackgroundColor(background)
+                                                }
+                                            }
+                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (populator != null) {
+                                            nativeAd?.let {
+                                                populator.invoke(it, adView)
+                                            }
+                                        } else {
+                                            nativeAd?.let {
+                                                populateUnifiedNativeAdView(
+                                                    it,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                        }
+                                        viewGroup.removeAllViews()
+                                        viewGroup.addView(adView)
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                }
+                else {
+                    if (primaryIds.size > 0){
+                        loadNativeAdManager(
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            primaryIds,
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native_admanager", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        val adView =
+                                            View.inflate(application, layoutId, null)
+                                                    as NativeAdView
+                                        if (background != null) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.background = background
+                                                }
+                                                is Int -> {
+                                                    adView.setBackgroundColor(background)
+                                                }
+                                            }
+                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (populator != null) {
+                                            nativeAd?.let {
+                                                populator.invoke(it, adView)
+                                            }
+                                        } else {
+                                            nativeAd?.let {
+                                                populateUnifiedNativeAdView(
+                                                    it,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                        }
+                                        viewGroup.removeAllViews()
+                                        viewGroup.addView(adView)
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size >0){
+                                        loadNativeAdManager(
+                                            id,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            layoutId,
+                                            populator,
+                                            adType,
+                                            background,
+                                            textColor1,
+                                            textColor2,
+                                            mediaMaxHeight,
+                                            loadingTextSize,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            showLoadingMessage,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            object: NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("native_admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    if (nativeAd != null) {
+                                                        val adView =
+                                                            View.inflate(application, layoutId, null)
+                                                                    as NativeAdView
+                                                        if (background != null) {
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.background = background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                                when (background) {
+                                                                    is String -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                    }
+                                                                    is Drawable -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                    }
+                                                                    is Int -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        if (populator != null) {
+                                                            nativeAd?.let {
+                                                                populator.invoke(it, adView)
+                                                            }
+                                                        } else {
+                                                            nativeAd?.let {
+                                                                populateUnifiedNativeAdView(
+                                                                    it,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    AdMobUtil.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                        }
+                                                        viewGroup.removeAllViews()
+                                                        viewGroup.addView(adView)
+                                                        refreshNative(adName)
+                                                    }
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    loadNativeAdManager(
+                                                        id,
+                                                        lifecycle,
+                                                        adName,
+                                                        viewGroup,
+                                                        nativeAdLoadCallback,
+                                                        layoutId,
+                                                        populator,
+                                                        adType,
+                                                        background,
+                                                        textColor1,
+                                                        textColor2,
+                                                        mediaMaxHeight,
+                                                        loadingTextSize,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        showLoadingMessage,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        object: NativeInternalCallback{
+                                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                                Log.d("native_admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                nativeAdLoadCallback?.onAdLoaded()
+                                                                if (nativeAd != null) {
+                                                                    val adView =
+                                                                        View.inflate(application, layoutId, null)
+                                                                                as NativeAdView
+                                                                    if (background != null) {
+                                                                        when (background) {
+                                                                            is String -> {
+                                                                                adView.setBackgroundColor(Color.parseColor(background))
+                                                                            }
+                                                                            is Drawable -> {
+                                                                                adView.background = background
+                                                                            }
+                                                                            is Int -> {
+                                                                                adView.setBackgroundColor(background)
+                                                                            }
+                                                                        }
+                                                                        if (layoutId == R.layout.native_admob_ad_t6){
+                                                                            when (background) {
+                                                                                is String -> {
+                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                                }
+                                                                                is Drawable -> {
+                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                                }
+                                                                                is Int -> {
+                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    if (populator != null) {
+                                                                        nativeAd?.let {
+                                                                            populator.invoke(it, adView)
+                                                                        }
+                                                                    } else {
+                                                                        nativeAd?.let {
+                                                                            populateUnifiedNativeAdView(
+                                                                                it,
+                                                                                adView,
+                                                                                adType,
+                                                                                textColor1,
+                                                                                textColor2,
+                                                                                AdMobUtil.fetchColor(adName),
+                                                                                mediaMaxHeight
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                    viewGroup.removeAllViews()
+                                                                    viewGroup.addView(adView)
+                                                                    refreshNative(adName)
+                                                                }
+                                                            }
+
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                            }
+
+                                                        },
+                                                        isAdmanager = isAdmanager,
+                                                    )
+                                                }
+
+                                            },
+                                            isAdmanager = isAdmanager,
+                                        )
+                                    }
+                                    else{
+                                        loadNativeAdManager(
+                                            id,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            layoutId,
+                                            populator,
+                                            adType,
+                                            background,
+                                            textColor1,
+                                            textColor2,
+                                            mediaMaxHeight,
+                                            loadingTextSize,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            showLoadingMessage,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            object: NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("native_admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    if (nativeAd != null) {
+                                                        val adView =
+                                                            View.inflate(application, layoutId, null)
+                                                                    as NativeAdView
+                                                        if (background != null) {
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.background = background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                                when (background) {
+                                                                    is String -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                    }
+                                                                    is Drawable -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                    }
+                                                                    is Int -> {
+                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        if (populator != null) {
+                                                            nativeAd?.let {
+                                                                populator.invoke(it, adView)
+                                                            }
+                                                        } else {
+                                                            nativeAd?.let {
+                                                                populateUnifiedNativeAdView(
+                                                                    it,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    AdMobUtil.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                        }
+                                                        viewGroup.removeAllViews()
+                                                        viewGroup.addView(adView)
+                                                        refreshNative(adName)
+                                                    }
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                }
+
+                                            },
+                                            isAdmanager = isAdmanager,
+                                        )
+                                    }
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                    else if (secondaryIds.size >0){
+                        loadNativeAdManager(
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            secondaryIds,
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native_admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        val adView =
+                                            View.inflate(application, layoutId, null)
+                                                    as NativeAdView
+                                        if (background != null) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.background = background
+                                                }
+                                                is Int -> {
+                                                    adView.setBackgroundColor(background)
+                                                }
+                                            }
+                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (populator != null) {
+                                            nativeAd?.let {
+                                                populator.invoke(it, adView)
+                                            }
+                                        } else {
+                                            nativeAd?.let {
+                                                populateUnifiedNativeAdView(
+                                                    it,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                        }
+                                        viewGroup.removeAllViews()
+                                        viewGroup.addView(adView)
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    loadNativeAdManager(
+                                        id,
+                                        lifecycle,
+                                        adName,
+                                        viewGroup,
+                                        nativeAdLoadCallback,
+                                        layoutId,
+                                        populator,
+                                        adType,
+                                        background,
+                                        textColor1,
+                                        textColor2,
+                                        mediaMaxHeight,
+                                        loadingTextSize,
+                                        contentURL,
+                                        neighbourContentURL,
+                                        showLoadingMessage,
+                                        listOf(adUnit),
+                                        fetchedTimer,
+                                        object: NativeInternalCallback{
+                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                Log.d("native_admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
+                                                nativeAdLoadCallback?.onAdLoaded()
+                                                if (nativeAd != null) {
+                                                    val adView =
+                                                        View.inflate(application, layoutId, null)
+                                                                as NativeAdView
+                                                    if (background != null) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.background = background
+                                                            }
+                                                            is Int -> {
+                                                                adView.setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                        if (layoutId == R.layout.native_admob_ad_t6){
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if (populator != null) {
+                                                        nativeAd?.let {
+                                                            populator.invoke(it, adView)
+                                                        }
+                                                    } else {
+                                                        nativeAd?.let {
+                                                            populateUnifiedNativeAdView(
+                                                                it,
+                                                                adView,
+                                                                adType,
+                                                                textColor1,
+                                                                textColor2,
+                                                                AdMobUtil.fetchColor(adName),
+                                                                mediaMaxHeight
+                                                            )
+                                                        }
+                                                    }
+                                                    viewGroup.removeAllViews()
+                                                    viewGroup.addView(adView)
+                                                    refreshNative(adName)
+                                                }
+                                            }
+
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                            }
+
+                                        },
+                                        isAdmanager = isAdmanager,
+                                    )
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                    else{
+                        loadNativeAdManager(
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native_admanager", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        val adView =
+                                            View.inflate(application, layoutId, null)
+                                                    as NativeAdView
+                                        if (background != null) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.background = background
+                                                }
+                                                is Int -> {
+                                                    adView.setBackgroundColor(background)
+                                                }
+                                            }
+                                            if (layoutId == R.layout.native_admob_ad_t6){
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (populator != null) {
+                                            nativeAd?.let {
+                                                populator.invoke(it, adView)
+                                            }
+                                        } else {
+                                            nativeAd?.let {
+                                                populateUnifiedNativeAdView(
+                                                    it,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                        }
+                                        viewGroup.removeAllViews()
+                                        viewGroup.addView(adView)
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                }
+
+            } else {
+                AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
+            }
+        } else {
+            viewGroup.visibility = GONE
+        }
+    }
+
+    internal fun loadNativeAd(
+        id: Long = System.currentTimeMillis(),
+        lifecycle: Lifecycle,
+        adName: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        adType: String = "1",
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        mediaMaxHeight: Int = 300,
+        loadingTextSize: Int,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean,
+        primaryIds: List<String>,
+        fetchedTimer: Int,
+        nativeInternalCallback: NativeInternalCallback,
+        isAdmanager: Boolean
+    ){
+        var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                    this.cancel()
                 }
             }
-            viewGroup.removeAllViews()
-            viewGroup.addView(inflate)
-            if (adUnit.isBlank()) return
-            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
-                AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
-                    id,
-                    lifecycle,
-                    adUnit,
-                    viewGroup,
-                    nativeAdLoadCallback,
-                    layoutId,
-                    populator,
-                    adType,
-                    background,
-                    textColor1,
-                    textColor2,
-                    mediaMaxHeight,
-                    loadingTextSize,
-                    contentURL = contentURL, neighbourContentURL = neighbourContentURL
-                )
+
+            override fun onFinish() {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                }
+                else
+                    nativeInternalCallback.onFailure(loadAdError)
             }
+        }.start()
+        var loadedId = ""
+        for (adUnit in primaryIds){
             lifecycle.addObserver(object : LifecycleObserver {
                 @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 fun onDestroy() {
                     AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
                 }
             })
-            var nativeAd: NativeAd? = null
+
             val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
                 .forNativeAd { ad: NativeAd ->
-                    nativeAd = ad
+                    if (nativeAd == null && ad != null) {
+                        nativeAd = ad
+                        loadedId = adUnit
+                    }
                 }
                 .withAdListener(object : AdListener() {
 
@@ -873,47 +4421,39 @@ object AdSdk {
                     }
 
                     override fun onAdFailedToLoad(adError: LoadAdError) {
-                        nativeAdLoadCallback?.onAdFailed(adError)
+                        if (nativeAd == null)
+                            nativeAd = null
+                        viewGroup.removeAllViews()
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+//                        nativeAdLoadCallback?.onAdFailed(adError)
                     }
 
                     override fun onAdLoaded() {
                         super.onAdLoaded()
-                        nativeAdLoadCallback?.onAdLoaded()
-                        if (nativeAd != null) {
-                            val adView =
-                                View.inflate(application, layoutId, null)
-                                        as NativeAdView
-                            if (background != null) {
-                                when (background) {
-                                    is String -> {
-                                        adView.setBackgroundColor(Color.parseColor(background))
-                                    }
-                                    is Drawable -> {
-                                        adView.background = background
-                                    }
-                                    is Int -> {
-                                        adView.setBackgroundColor(background)
-                                    }
-                                }
+                        if (nativeAd !=null){
+                            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+                                AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
+                                    id,
+                                    lifecycle,
+                                    if (loadedId.equals("")) adUnit else loadedId,
+                                    adName,
+                                    viewGroup,
+                                    nativeAdLoadCallback,
+                                    layoutId,
+                                    populator,
+                                    adType,
+                                    background,
+                                    textColor1,
+                                    textColor2,
+                                    mediaMaxHeight,
+                                    loadingTextSize,
+                                    contentURL = contentURL,
+                                    neighbourContentURL = neighbourContentURL,
+                                    showLoadingMessage = showLoadingMessage,
+                                    isAdManager = isAdmanager
+                                )
                             }
-                            if (populator != null) {
-                                nativeAd?.let {
-                                    populator.invoke(it, adView)
-                                }
-                            } else {
-                                nativeAd?.let {
-                                    populateUnifiedNativeAdView(
-                                        it,
-                                        adView,
-                                        adType,
-                                        textColor1,
-                                        textColor2,
-                                        mediaMaxHeight
-                                    )
-                                }
-                            }
-                            viewGroup.removeAllViews()
-                            viewGroup.addView(adView)
                         }
                     }
                 })
@@ -933,8 +4473,340 @@ object AdSdk {
             adLoader.loadAd(
                 builder.build()
             )
+        }
+
+    }
+
+    internal fun loadNativeAdManager(
+        id: Long = System.currentTimeMillis(),
+        lifecycle: Lifecycle,
+        adName: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        adType: String = "1",
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        mediaMaxHeight: Int = 300,
+        loadingTextSize: Int,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean,
+        primaryIds: List<String>,
+        fetchedTimer: Int,
+        nativeInternalCallback: NativeInternalCallback,
+        isAdmanager: Boolean
+    ){
+        var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                }
+                else
+                    nativeInternalCallback.onFailure(loadAdError)
+            }
+        }.start()
+        var loadedId = ""
+        for (adUnit in primaryIds){
+            lifecycle.addObserver(object : LifecycleObserver {
+                @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                fun onDestroy() {
+                    AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
+                }
+            })
+
+            val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
+                .forNativeAd { ad: NativeAd ->
+                    if (nativeAd == null && ad != null) {
+                        nativeAd = ad
+                        loadedId = adUnit
+                    }
+                }
+                .withAdListener(object : AdListener() {
+
+                    override fun onAdClicked() {
+                        super.onAdClicked()
+                        nativeAdLoadCallback?.onAdClicked()
+                    }
+
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        if (nativeAd == null)
+                            nativeAd = null
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
+//                        nativeAdLoadCallback?.onAdFailed(adError)
+                    }
+
+                    override fun onAdLoaded() {
+                        super.onAdLoaded()
+                        if (nativeAd !=null){
+                            if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+                                AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
+                                    id,
+                                    lifecycle,
+                                    if (loadedId.equals("")) adUnit else loadedId,
+                                    adName,
+                                    viewGroup,
+                                    nativeAdLoadCallback,
+                                    layoutId,
+                                    populator,
+                                    adType,
+                                    background,
+                                    textColor1,
+                                    textColor2,
+                                    mediaMaxHeight,
+                                    loadingTextSize,
+                                    contentURL = contentURL,
+                                    neighbourContentURL = neighbourContentURL,
+                                    showLoadingMessage = showLoadingMessage,
+                                    isAdManager = isAdmanager
+                                )
+                            }
+                        }
+                    }
+                })
+                .withNativeAdOptions(
+                    NativeAdOptions.Builder()
+                        .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                        .setRequestCustomMuteThisAd(true)
+                        .build()
+                )
+                .build()
+            val builder = AdManagerAdRequest.Builder()
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            adLoader.loadAd(
+                builder.build()
+            )
+        }
+
+    }
+
+    internal fun loadNativeAdRefresh(
+        id: Long = System.currentTimeMillis(),
+        lifecycle: Lifecycle,
+        adUnit: String,
+        adName: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        @LayoutRes layoutId: Int = R.layout.native_admob_ad_t1,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        adType: String = "1",
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        mediaMaxHeight: Int = 300,
+        loadingTextSize: Int,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean,
+        isAdmanager: Boolean,
+    ) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            viewGroup.visibility = VISIBLE
+            if (application != null) {
+                val inflate = View.inflate(application, R.layout.shimmer, null)
+                when (adType) {
+                    "6" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }/*DEFAULT_AD*/
+                    "3" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    /*SMALL*/
+                    "4" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                    }
+                    /*MEDIUM*/
+                    "1" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    /*BIGV1*/
+                    "5" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                    }
+                    /*BIGV2*/
+                    "2" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                    }
+                    /*BIGV3*/
+                    "7" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    /*GRID_AD*/
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
+
+                }
+//                val id1 = inflate.findViewById<View>(R.id.cardView)
+//                val tv = inflate.findViewById<TextView>(R.id.tv)
+//                tv.textSize = loadingTextSize.toFloat()
+//                if (textColor1 != null) {
+//                    tv.setTextColor(textColor1)
+//                }
+//                when (background) {
+//                    is String -> {
+//                        id1.setBackgroundColor(Color.parseColor(background))
+//                    }
+//                    is Drawable -> {
+//                        id1.background = background
+//                    }
+//                    is Int -> {
+//                        id1.setBackgroundColor(background)
+//                    }
+//                }
+                viewGroup.removeAllViews()
+                if (showLoadingMessage) {
+                    viewGroup.addView(inflate)
+                }
+                if (adUnit.isBlank()) return
+                if (AdUtilConstants.nativeAdLifeCycleHashMap[id] == null) {
+                    AdUtilConstants.nativeAdLifeCycleHashMap[id] = NativeAdItem(
+                        id,
+                        lifecycle,
+                        adUnit,
+                        adName,
+                        viewGroup,
+                        nativeAdLoadCallback,
+                        layoutId,
+                        populator,
+                        adType,
+                        background,
+                        textColor1,
+                        textColor2,
+                        mediaMaxHeight,
+                        loadingTextSize,
+                        contentURL = contentURL,
+                        neighbourContentURL = neighbourContentURL,
+                        showLoadingMessage = showLoadingMessage,
+                        isAdManager = isAdmanager
+                    )
+                }
+                lifecycle.addObserver(object : LifecycleObserver {
+                    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                    fun onDestroy() {
+                        AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
+                    }
+                })
+                var nativeAd: NativeAd? = null
+                val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
+                    .forNativeAd { ad: NativeAd ->
+                        nativeAd = ad
+                    }
+                    .withAdListener(object : AdListener() {
+
+                        override fun onAdClicked() {
+                            super.onAdClicked()
+                            nativeAdLoadCallback?.onAdClicked()
+                        }
+
+                        override fun onAdFailedToLoad(adError: LoadAdError) {
+                            nativeAdLoadCallback?.onAdFailed(adError)
+                        }
+
+                        override fun onAdLoaded() {
+                            super.onAdLoaded()
+                            nativeAdLoadCallback?.onAdLoaded()
+                            if (nativeAd != null) {
+                                val adView =
+                                    View.inflate(application, layoutId, null)
+                                            as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    nativeAd?.let {
+                                        populator.invoke(it, adView)
+                                    }
+                                } else {
+                                    nativeAd?.let {
+                                        populateUnifiedNativeAdView(
+                                            it,
+                                            adView,
+                                            adType,
+                                            textColor1,
+                                            textColor2,
+                                            AdMobUtil.fetchColor(adName),
+                                            mediaMaxHeight
+                                        )
+                                    }
+                                }
+                                viewGroup.removeAllViews()
+                                viewGroup.addView(adView)
+                            }
+                        }
+                    })
+                    .withNativeAdOptions(
+                        NativeAdOptions.Builder()
+                            .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                            .setRequestCustomMuteThisAd(true)
+                            .build()
+                    )
+                    .build()
+                if (!isAdmanager){
+                    val builder = AdRequest.Builder().addNetworkExtrasBundle(
+                        AdMobAdapter::class.java,
+                        getConsentEnabledBundle()
+                    )
+                    contentURL?.let { builder.setContentUrl(it) }
+                    neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                    adLoader.loadAd(
+                        builder.build()
+                    )
+                    Log.d("native_refresher", "loadNativeAdRefresh: admob   "+adName+"  "+System.currentTimeMillis()/1000)
+                }
+                else {
+                    val builder = AdManagerAdRequest.Builder()
+                    contentURL?.let { builder.setContentUrl(it) }
+                    neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+                    adLoader.loadAd(
+                        builder.build()
+                    )
+                    Log.d("native_refresher", "loadNativeAdRefresh: admanager   "+adName+"  "+System.currentTimeMillis()/1000)
+                }
+
+
+            } else {
+                AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
+            }
         } else {
-            AdUtilConstants.nativeAdLifeCycleHashMap.remove(id)
+            viewGroup.visibility = GONE
         }
     }
 
@@ -971,10 +4843,12 @@ object AdSdk {
     /**
      * Call loadNativeAdFromService if activity is not available
      **/
-    fun loadNativeAdFromService(
+    fun loadNativeAdFromSrvs(
         layoutInflater: LayoutInflater,
         context: Context,
+        lifecycle: Lifecycle,
         adUnit: String,
+        adName: String,
         viewGroup: ViewGroup,
         nativeAdLoadCallback: NativeAdLoadCallback?,
         adType: String = "1",
@@ -988,151 +4862,1715 @@ object AdSdk {
         preloadAds: Boolean = false,
         autoRefresh: Boolean = false,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
+    ){
+        if (isInitialized){
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                loadNativeAdFromService(
+                    layoutInflater,
+                    context,
+                    lifecycle,
+                    adUnit,
+                    adName,
+                    viewGroup,
+                    nativeAdLoadCallback,
+                    background = background,
+                    textColor1 = textColor1,
+                    textColor2 = textColor2,
+                    mediaMaxHeight = mediaMaxHeight,
+                    loadingTextSize = loadingTextSize,
+                    id = id,
+                    populator = populator,
+                    adType = adType,
+                    preloadAds = preloadAds,
+                    autoRefresh = preloadAds,
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    showLoadingMessage = showLoadingMessage,
+                    isAdmanager = isAdmanager,
+                    loadTimeOut = loadTimeOut
+                )
+            }
+            else {
+                viewGroup.visibility = GONE
+            }
+        }
+        else {
+            viewGroup.visibility = GONE
+            nativeAdLoadCallback?.onAdFailed(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
+
+    }
+
+    internal fun loadNativeAdFromServiceRefresh(
+        layoutInflater: LayoutInflater,
+        context: Context,
+        lifecycle: Lifecycle,
+        adUnit: String,
+        adName: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        adType: String = "1",
+        mediaMaxHeight: Int = 300,
+        loadingTextSize: Int = 24,
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        id: Long = viewGroup.id.toLong(),
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        preloadAds: Boolean = false,
+        autoRefresh: Boolean = false,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
+        isAdmanager: Boolean
     ) {
-        @LayoutRes val layoutId = when (adType) {
-            "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
-            "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
-            "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
-            "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
-            "5" -> R.layout.native_admob_ad_t5/*BIG*/
-            "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
-            else -> R.layout.native_admob_ad_t1
-        }
-        viewGroup.visibility = VISIBLE
-        val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-        val id1 = inflate.findViewById<View>(R.id.rl)
-        val tv = inflate.findViewById<TextView>(R.id.tv)
-        tv.textSize = loadingTextSize.toFloat()
-        if (textColor1 != null) {
-            tv.setTextColor(textColor1)
-        }
-        when (background) {
-            is String -> {
-                id1.setBackgroundColor(Color.parseColor(background))
-            }
-            is Drawable -> {
-                id1.background = background
-            }
-            is Int -> {
-                id1.setBackgroundColor(background)
-            }
-        }
-        viewGroup.removeAllViews()
-        viewGroup.addView(inflate)
-        if (adUnit.isBlank()) return
-        if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null) {
-            AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
-                layoutInflater,
-                context,
-                id,
-                adUnit,
-                viewGroup,
-                nativeAdLoadCallback,
-                populator,
-                adType,
-                background,
-                textColor1,
-                textColor2,
-                mediaMaxHeight,
-                loadingTextSize,
-                preloadAds,
-                autoRefresh,
-                contentURL,
-                neighbourContentURL
-            )
-        }
-        var nativeAd: NativeAd? = null
-        val adLoader: AdLoader = AdLoader.Builder(context, adUnit)
-            .forNativeAd { ad: NativeAd ->
-                nativeAd = ad
-            }
-            .withAdListener(object : AdListener() {
-
-                override fun onAdClicked() {
-                    super.onAdClicked()
-                    nativeAdLoadCallback?.onAdClicked()
+        if (isInitialized){
+            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+                @LayoutRes val layoutId = when (newAdSize) {
+                    "6" -> { R.layout.native_admob_ad_t6
+                    }/*DEFAULT_AD*/
+                    "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+                    "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+                    "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+                    "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+                    "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+                    "7" -> R.layout.native_admob_ad_t7
+                    else -> R.layout.native_admob_ad_t1
                 }
+                viewGroup.visibility = VISIBLE
+                val inflate = View.inflate(application, R.layout.shimmer, null)
+                when (newAdSize) {
+                    "6" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }/*DEFAULT_AD*/
+                    "3" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                    }
+                    /*SMALL*/
+                    "4" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                    }
+                    /*MEDIUM*/
+                    "1" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
+                    /*BIGV1*/
+                    "5" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                    }
+                    /*BIGV2*/
+                    "2" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                    }
+                    /*BIGV3*/
+                    "7" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    /*GRID_AD*/
+                    else -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                    }
 
-                override fun onAdFailedToLoad(adError: LoadAdError) {
-                    nativeAdLoadCallback?.onAdFailed(adError)
                 }
+//            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+//            val id1 = inflate.findViewById<View>(R.id.cardView)
+//            val tv = inflate.findViewById<TextView>(R.id.tv)
+//            tv.textSize = loadingTextSize.toFloat()
+//            if (textColor1 != null) {
+//                tv.setTextColor(textColor1)
+//            }
+//            when (background) {
+//                is String -> {
+//                    id1.setBackgroundColor(Color.parseColor(background))
+//                }
+//                is Drawable -> {
+//                    id1.background = background
+//                }
+//                is Int -> {
+//                    id1.setBackgroundColor(background)
+//                }
+//            }
+                viewGroup.removeAllViews()
+                if (showLoadingMessage)
+                    viewGroup.addView(inflate)
+                if (adUnit.isBlank()) return
+                if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null) {
+                    AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
+                        layoutInflater,
+                        context,
+                        lifecycle,
+                        id,
+                        adUnit,
+                        adName,
+                        viewGroup,
+                        nativeAdLoadCallback,
+                        populator,
+                        newAdSize,
+                        background,
+                        textColor1,
+                        textColor2,
+                        mediaMaxHeight,
+                        loadingTextSize,
+                        preloadAds,
+                        autoRefresh,
+                        contentURL,
+                        neighbourContentURL,
+                        showLoadingMessage = showLoadingMessage,
+                        isAdmanager = isAdmanager
+                    )
+                }
+                var nativeAd: NativeAd? = null
+                val adLoader: AdLoader = AdLoader.Builder(context, adUnit)
+                    .forNativeAd { ad: NativeAd ->
+                        nativeAd = ad
+                    }
+                    .withAdListener(object : AdListener() {
 
-                override fun onAdLoaded() {
-                    super.onAdLoaded()
-                    nativeAdLoadCallback?.onAdLoaded()
-                    if (nativeAd != null) {
-                        val adView = layoutInflater.inflate(layoutId, null)
-                                as NativeAdView
-                        if (background != null) {
-                            when (background) {
-                                is String -> {
-                                    adView.setBackgroundColor(Color.parseColor(background))
+                        override fun onAdClicked() {
+                            super.onAdClicked()
+                            nativeAdLoadCallback?.onAdClicked()
+                        }
+
+                        override fun onAdFailedToLoad(adError: LoadAdError) {
+                            nativeAdLoadCallback?.onAdFailed(adError)
+                        }
+
+                        override fun onAdLoaded() {
+                            super.onAdLoaded()
+                            nativeAdLoadCallback?.onAdLoaded()
+                            if (nativeAd != null) {
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
                                 }
-                                is Drawable -> {
-                                    adView.background = background
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        newAdSize,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight
+                                    )
                                 }
-                                is Int -> {
-                                    adView.setBackgroundColor(background)
-                                }
+                                viewGroup.removeAllViews()
+                                viewGroup.addView(adView)
                             }
                         }
-                        if (populator != null) {
-                            populator.invoke(nativeAd!!, adView)
-                        } else {
-                            populateUnifiedNativeAdView(
-                                nativeAd!!,
-                                adView,
-                                adType,
-                                textColor1,
-                                textColor2,
-                                mediaMaxHeight
-                            )
-                        }
+                    })
+                    .withNativeAdOptions(
+                        NativeAdOptions.Builder()
+                            .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                            .setRequestCustomMuteThisAd(true)
+                            .build()
+                    ).build()
+                if (preloadNativeAdList != null) {
+                    val preloadNativeAds = preloadNativeAdList!![adName]
+                    val ad = preloadNativeAds?.ad
+                    if (ad != null) {
                         viewGroup.removeAllViews()
-                        viewGroup.addView(adView)
+                        viewGroup.addView(ad)
+                        preloadNativeAds.ad = null
+                        if (preloadAds) {
+                            preloadAds(layoutInflater, context)
+                        }
+                        Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad exist")
+                    } else {
+                        if (preloadAds) {
+                            preloadAds(layoutInflater, context)
+                        }
+                        Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad not exist")
+                        loadAd(
+                            adLoader,
+                            contentURL,
+                            neighbourContentURL,
+                            isAdmanager
+                        )
+                        /*The Extra Parameters are just for logging*/
                     }
+                } else {
+                    Log.d("refreshNativeService", "loadNativeAdFromServiceRefresh: ad exist else")
+                    if (preloadAds) {
+                        preloadAds(layoutInflater, context)
+                    }
+                    loadAd(adLoader, contentURL, neighbourContentURL,isAdmanager)
                 }
-            })
-            .withNativeAdOptions(
-                NativeAdOptions.Builder()
-                    .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
-                    .setRequestCustomMuteThisAd(true)
-                    .build()
-            ).build()
-        if (preloadNativeAdList != null) {
-            val preloadNativeAds = preloadNativeAdList!![adUnit]
-            val ad = preloadNativeAds?.ad
-            if (ad != null) {
-                viewGroup.removeAllViews()
-                viewGroup.addView(ad)
-                preloadNativeAds.ad = null
-                if (preloadAds) {
-                    preloadAds(layoutInflater, context)
+            } else {
+                viewGroup.visibility = GONE
+            }
+        }
+        else {
+            viewGroup.visibility = GONE
+            nativeAdLoadCallback?.onAdFailed(LoadAdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", "",null,null))
+        }
+    }
+
+    internal fun loadNativeAdFromService(
+        layoutInflater: LayoutInflater,
+        context: Context,
+        lifecycle: Lifecycle,
+        adUnit: String,
+        adName: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        adType: String = "1",
+        mediaMaxHeight: Int = 300,
+        loadingTextSize: Int = 24,
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        id: Long = viewGroup.id.toLong(),
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        preloadAds: Boolean = false,
+        autoRefresh: Boolean = false,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        showLoadingMessage: Boolean = true,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
+    ) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+            @LayoutRes val layoutId = when (newAdSize) {
+                "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
+                "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
+                "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
+                "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
+                "5" -> R.layout.native_admob_ad_t5/*BIG*/
+                "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
+                "7" -> R.layout.native_admob_ad_t7
+                else -> R.layout.native_admob_ad_t1
+            }
+            viewGroup.visibility = VISIBLE
+
+            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            if (fetchedTimer == 0){
+                fetchedTimer = loadTimeOut
+            }
+            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+            val inflate = View.inflate(application, R.layout.shimmer, null)
+            when (newAdSize) {
+                "6" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }/*DEFAULT_AD*/
+                "3" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                }
+                /*SMALL*/
+                "4" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                }
+                /*MEDIUM*/
+                "1" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                }
+                /*BIGV1*/
+                "5" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                }
+                /*BIGV2*/
+                "2" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                }
+                /*BIGV3*/
+                "7" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                }
+                /*GRID_AD*/
+                else -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }
+
+            }
+
+//            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+//            val id1 = inflate.findViewById<View>(R.id.cardView)
+//            val tv = inflate.findViewById<TextView>(R.id.tv)
+//            tv.textSize = loadingTextSize.toFloat()
+//            if (textColor1 != null) {
+//                tv.setTextColor(textColor1)
+//            }
+//            when (background) {
+//                is String -> {
+//                    id1.setBackgroundColor(Color.parseColor(background))
+//                }
+//                is Drawable -> {
+//                    id1.background = background
+//                }
+//                is Int -> {
+//                    id1.setBackgroundColor(background)
+//                }
+//            }
+            viewGroup.removeAllViews()
+            if (showLoadingMessage)
+                viewGroup.addView(inflate)
+            if (adUnit.isBlank()) return
+            if (preloadNativeAdList != null) {
+                val preloadNativeAds = preloadNativeAdList!![adName]
+                val ad = preloadNativeAds?.ad
+                if (ad != null) {
+                    viewGroup.removeAllViews()
+                    viewGroup.addView(ad)
+                    preloadNativeAds.ad = null
+                    if (preloadAds) {
+                        preloadAds(layoutInflater, context)
+                    }
+                    lifecycle.addObserver(object : LifecycleObserver {
+                        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                        fun onDestroy() {
+                            AdUtilConstants.nativeAdLifeCycleServiceHashMap.remove(id)
+                        }
+                    })
+                    if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null ) {
+                        AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
+                            layoutInflater,
+                            context,
+                            lifecycle,
+                            id,
+                            adUnit,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            populator,
+                            newAdSize,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            preloadAds,
+                            autoRefresh,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage = showLoadingMessage,
+                            isAdmanager = isAdmanager
+                        )
+                        refreshNativeService(adName)
+                    }
+
+                } else {
+                    if (preloadAds) {
+                        preloadAds(layoutInflater, context)
+                    }
+
+                    if (primaryIds.size>0){
+                        loadNativeAdFromService(
+                            layoutInflater,
+                            context,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            background = background,
+                            textColor1 = textColor1,
+                            textColor2 = textColor2,
+                            mediaMaxHeight = mediaMaxHeight,
+                            loadingTextSize = loadingTextSize,
+                            id = id,
+                            populator = populator,
+                            adType = newAdSize,
+                            preloadAds = preloadAds,
+                            autoRefresh = preloadAds,
+                            contentURL = contentURL,
+                            neighbourContentURL = neighbourContentURL,
+                            layoutId,
+                            fetchedTimer,
+                            primaryIds,
+                            object :NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    val adView = layoutInflater.inflate(layoutId, null)
+                                            as NativeAdView
+                                    if (background != null) {
+                                        when (background) {
+                                            is String -> {
+                                                adView.setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.background = background
+                                            }
+                                            is Int -> {
+                                                adView.setBackgroundColor(background)
+                                            }
+                                        }
+                                        if (layoutId == R.layout.native_admob_ad_t6) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                        .setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                        background
+                                                }
+                                                is Int -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                        .setBackgroundColor(background)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (populator != null) {
+                                        populator.invoke(nativeAd!!, adView)
+                                    } else {
+                                        populateUnifiedNativeAdView(
+                                            nativeAd!!,
+                                            adView,
+                                            adType,
+                                            textColor1,
+                                            textColor2,
+                                            AdMobUtil.fetchColor(adName),
+                                            mediaMaxHeight
+                                        )
+                                    }
+                                    viewGroup.removeAllViews()
+                                    viewGroup.addView(adView)
+                                    refreshNativeService(adName)
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size>0){
+                                        loadNativeAdFromService(
+                                            layoutInflater,
+                                            context,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            background = background,
+                                            textColor1 = textColor1,
+                                            textColor2 = textColor2,
+                                            mediaMaxHeight = mediaMaxHeight,
+                                            loadingTextSize = loadingTextSize,
+                                            id = id,
+                                            populator = populator,
+                                            adType = newAdSize,
+                                            preloadAds = preloadAds,
+                                            autoRefresh = preloadAds,
+                                            contentURL = contentURL,
+                                            neighbourContentURL = neighbourContentURL,
+                                            layoutId,
+                                            fetchedTimer,
+                                            secondaryIds,
+                                            object :NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    val adView = layoutInflater.inflate(layoutId, null)
+                                                            as NativeAdView
+                                                    if (background != null) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.background = background
+                                                            }
+                                                            is Int -> {
+                                                                adView.setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                        if (layoutId == R.layout.native_admob_ad_t6) {
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                        .setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                        background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                        .setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if (populator != null) {
+                                                        populator.invoke(nativeAd!!, adView)
+                                                    } else {
+                                                        populateUnifiedNativeAdView(
+                                                            nativeAd!!,
+                                                            adView,
+                                                            adType,
+                                                            textColor1,
+                                                            textColor2,
+                                                            AdMobUtil.fetchColor(adName),
+                                                            mediaMaxHeight
+                                                        )
+                                                    }
+                                                    viewGroup.removeAllViews()
+                                                    viewGroup.addView(adView)
+                                                    refreshNativeService(adName)
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    loadNativeAdFromService(
+                                                        layoutInflater,
+                                                        context,
+                                                        lifecycle,
+                                                        adName,
+                                                        viewGroup,
+                                                        nativeAdLoadCallback,
+                                                        background = background,
+                                                        textColor1 = textColor1,
+                                                        textColor2 = textColor2,
+                                                        mediaMaxHeight = mediaMaxHeight,
+                                                        loadingTextSize = loadingTextSize,
+                                                        id = id,
+                                                        populator = populator,
+                                                        adType = newAdSize,
+                                                        preloadAds = preloadAds,
+                                                        autoRefresh = preloadAds,
+                                                        contentURL = contentURL,
+                                                        neighbourContentURL = neighbourContentURL,
+                                                        layoutId,
+                                                        fetchedTimer,
+                                                        listOf(adUnit),
+                                                        object :NativeInternalCallback{
+                                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                                nativeAdLoadCallback?.onAdLoaded()
+                                                                val adView = layoutInflater.inflate(layoutId, null)
+                                                                        as NativeAdView
+                                                                if (background != null) {
+                                                                    when (background) {
+                                                                        is String -> {
+                                                                            adView.setBackgroundColor(Color.parseColor(background))
+                                                                        }
+                                                                        is Drawable -> {
+                                                                            adView.background = background
+                                                                        }
+                                                                        is Int -> {
+                                                                            adView.setBackgroundColor(background)
+                                                                        }
+                                                                    }
+                                                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                                                        when (background) {
+                                                                            is String -> {
+                                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                                    .setBackgroundColor(Color.parseColor(background))
+                                                                            }
+                                                                            is Drawable -> {
+                                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                                    background
+                                                                            }
+                                                                            is Int -> {
+                                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                                    .setBackgroundColor(background)
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if (populator != null) {
+                                                                    populator.invoke(nativeAd!!, adView)
+                                                                } else {
+                                                                    populateUnifiedNativeAdView(
+                                                                        nativeAd!!,
+                                                                        adView,
+                                                                        adType,
+                                                                        textColor1,
+                                                                        textColor2,
+                                                                        AdMobUtil.fetchColor(adName),
+                                                                        mediaMaxHeight
+                                                                    )
+                                                                }
+                                                                viewGroup.removeAllViews()
+                                                                viewGroup.addView(adView)
+                                                                refreshNativeService(adName)
+                                                            }
+
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                            }
+                                                        },
+                                                        showLoadingMessage,
+                                                        isAdmanager
+                                                    )
+                                                }
+                                            },
+                                            showLoadingMessage,
+                                            isAdmanager
+                                        )
+                                    }
+                                    else{
+                                        loadNativeAdFromService(
+                                            layoutInflater,
+                                            context,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            background = background,
+                                            textColor1 = textColor1,
+                                            textColor2 = textColor2,
+                                            mediaMaxHeight = mediaMaxHeight,
+                                            loadingTextSize = loadingTextSize,
+                                            id = id,
+                                            populator = populator,
+                                            adType = newAdSize,
+                                            preloadAds = preloadAds,
+                                            autoRefresh = preloadAds,
+                                            contentURL = contentURL,
+                                            neighbourContentURL = neighbourContentURL,
+                                            layoutId,
+                                            fetchedTimer,
+                                            listOf(adUnit),
+                                            object :NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    val adView = layoutInflater.inflate(layoutId, null)
+                                                            as NativeAdView
+                                                    if (background != null) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.background = background
+                                                            }
+                                                            is Int -> {
+                                                                adView.setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                        if (layoutId == R.layout.native_admob_ad_t6) {
+                                                            when (background) {
+                                                                is String -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                        .setBackgroundColor(Color.parseColor(background))
+                                                                }
+                                                                is Drawable -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                        background
+                                                                }
+                                                                is Int -> {
+                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                        .setBackgroundColor(background)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if (populator != null) {
+                                                        populator.invoke(nativeAd!!, adView)
+                                                    } else {
+                                                        populateUnifiedNativeAdView(
+                                                            nativeAd!!,
+                                                            adView,
+                                                            adType,
+                                                            textColor1,
+                                                            textColor2,
+                                                            AdMobUtil.fetchColor(adName),
+                                                            mediaMaxHeight
+                                                        )
+                                                    }
+                                                    viewGroup.removeAllViews()
+                                                    viewGroup.addView(adView)
+                                                    refreshNativeService(adName)
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                }
+                                            },
+                                            showLoadingMessage,
+                                            isAdmanager
+                                        )
+                                    }
+                                }
+                            },
+                            showLoadingMessage,
+                            isAdmanager
+                        )
+                    }
+                    else if (secondaryIds.size>0){
+                        loadNativeAdFromService(
+                            layoutInflater,
+                            context,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            background = background,
+                            textColor1 = textColor1,
+                            textColor2 = textColor2,
+                            mediaMaxHeight = mediaMaxHeight,
+                            loadingTextSize = loadingTextSize,
+                            id = id,
+                            populator = populator,
+                            adType = newAdSize,
+                            preloadAds = preloadAds,
+                            autoRefresh = preloadAds,
+                            contentURL = contentURL,
+                            neighbourContentURL = neighbourContentURL,
+                            layoutId,
+                            fetchedTimer,
+                            secondaryIds,
+                            object :NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    val adView = layoutInflater.inflate(layoutId, null)
+                                            as NativeAdView
+                                    if (background != null) {
+                                        when (background) {
+                                            is String -> {
+                                                adView.setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.background = background
+                                            }
+                                            is Int -> {
+                                                adView.setBackgroundColor(background)
+                                            }
+                                        }
+                                        if (layoutId == R.layout.native_admob_ad_t6) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                        .setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                        background
+                                                }
+                                                is Int -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                        .setBackgroundColor(background)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (populator != null) {
+                                        populator.invoke(nativeAd!!, adView)
+                                    } else {
+                                        populateUnifiedNativeAdView(
+                                            nativeAd!!,
+                                            adView,
+                                            adType,
+                                            textColor1,
+                                            textColor2,
+                                            AdMobUtil.fetchColor(adName),
+                                            mediaMaxHeight
+                                        )
+                                    }
+                                    viewGroup.removeAllViews()
+                                    viewGroup.addView(adView)
+                                    refreshNativeService(adName)
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    loadNativeAdFromService(
+                                        layoutInflater,
+                                        context,
+                                        lifecycle,
+                                        adName,
+                                        viewGroup,
+                                        nativeAdLoadCallback,
+                                        background = background,
+                                        textColor1 = textColor1,
+                                        textColor2 = textColor2,
+                                        mediaMaxHeight = mediaMaxHeight,
+                                        loadingTextSize = loadingTextSize,
+                                        id = id,
+                                        populator = populator,
+                                        adType = newAdSize,
+                                        preloadAds = preloadAds,
+                                        autoRefresh = preloadAds,
+                                        contentURL = contentURL,
+                                        neighbourContentURL = neighbourContentURL,
+                                        layoutId,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object :NativeInternalCallback{
+                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                nativeAdLoadCallback?.onAdLoaded()
+                                                val adView = layoutInflater.inflate(layoutId, null)
+                                                        as NativeAdView
+                                                if (background != null) {
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.background = background
+                                                        }
+                                                        is Int -> {
+                                                            adView.setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                    .setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                    background
+                                                            }
+                                                            is Int -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                    .setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (populator != null) {
+                                                    populator.invoke(nativeAd!!, adView)
+                                                } else {
+                                                    populateUnifiedNativeAdView(
+                                                        nativeAd!!,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        AdMobUtil.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                viewGroup.removeAllViews()
+                                                viewGroup.addView(adView)
+                                                refreshNativeService(adName)
+                                            }
+
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                            }
+                                        },
+                                        showLoadingMessage,
+                                        isAdmanager
+                                    )
+                                }
+                            },
+                            showLoadingMessage,
+                            isAdmanager
+                        )
+                    }
+                    else{
+                        loadNativeAdFromService(
+                            layoutInflater,
+                            context,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            background = background,
+                            textColor1 = textColor1,
+                            textColor2 = textColor2,
+                            mediaMaxHeight = mediaMaxHeight,
+                            loadingTextSize = loadingTextSize,
+                            id = id,
+                            populator = populator,
+                            adType = newAdSize,
+                            preloadAds = preloadAds,
+                            autoRefresh = preloadAds,
+                            contentURL = contentURL,
+                            neighbourContentURL = neighbourContentURL,
+                            layoutId,
+                            fetchedTimer,
+                            listOf(adUnit),
+                            object :NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    val adView = layoutInflater.inflate(layoutId, null)
+                                            as NativeAdView
+                                    if (background != null) {
+                                        when (background) {
+                                            is String -> {
+                                                adView.setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.background = background
+                                            }
+                                            is Int -> {
+                                                adView.setBackgroundColor(background)
+                                            }
+                                        }
+                                        if (layoutId == R.layout.native_admob_ad_t6) {
+                                            when (background) {
+                                                is String -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                        .setBackgroundColor(Color.parseColor(background))
+                                                }
+                                                is Drawable -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                        background
+                                                }
+                                                is Int -> {
+                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                        .setBackgroundColor(background)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (populator != null) {
+                                        populator.invoke(nativeAd!!, adView)
+                                    } else {
+                                        populateUnifiedNativeAdView(
+                                            nativeAd!!,
+                                            adView,
+                                            adType,
+                                            textColor1,
+                                            textColor2,
+                                            AdMobUtil.fetchColor(adName),
+                                            mediaMaxHeight
+                                        )
+                                    }
+                                    viewGroup.removeAllViews()
+                                    viewGroup.addView(adView)
+                                    refreshNativeService(adName)
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                }
+                            },
+                            showLoadingMessage,
+                            isAdmanager
+                        )
+                    }
+                    /*The Extra Parameters are just for logging*/
                 }
             } else {
                 if (preloadAds) {
                     preloadAds(layoutInflater, context)
                 }
-                loadAd(
-                    adLoader,
-                    contentURL,
-                    neighbourContentURL
-                )/*The Extra Parameters are just for logging*/
+                if (primaryIds.size>0){
+                    loadNativeAdFromService(
+                        layoutInflater,
+                        context,
+                        lifecycle,
+                        adName,
+                        viewGroup,
+                        nativeAdLoadCallback,
+                        background = background,
+                        textColor1 = textColor1,
+                        textColor2 = textColor2,
+                        mediaMaxHeight = mediaMaxHeight,
+                        loadingTextSize = loadingTextSize,
+                        id = id,
+                        populator = populator,
+                        adType = newAdSize,
+                        preloadAds = preloadAds,
+                        autoRefresh = preloadAds,
+                        contentURL = contentURL,
+                        neighbourContentURL = neighbourContentURL,
+                        layoutId,
+                        fetchedTimer,
+                        primaryIds,
+                        object :NativeInternalCallback{
+                            override fun onSuccess(nativeAd: NativeAd?) {
+                                nativeAdLoadCallback?.onAdLoaded()
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                    .setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                    background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                    .setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        adType,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight
+                                    )
+                                }
+                                viewGroup.removeAllViews()
+                                viewGroup.addView(adView)
+                                refreshNativeService(adName)
+                            }
+
+                            override fun onFailure(loadAdError: LoadAdError?) {
+                                if (secondaryIds.size>0){
+                                    loadNativeAdFromService(
+                                        layoutInflater,
+                                        context,
+                                        lifecycle,
+                                        adName,
+                                        viewGroup,
+                                        nativeAdLoadCallback,
+                                        background = background,
+                                        textColor1 = textColor1,
+                                        textColor2 = textColor2,
+                                        mediaMaxHeight = mediaMaxHeight,
+                                        loadingTextSize = loadingTextSize,
+                                        id = id,
+                                        populator = populator,
+                                        adType = newAdSize,
+                                        preloadAds = preloadAds,
+                                        autoRefresh = preloadAds,
+                                        contentURL = contentURL,
+                                        neighbourContentURL = neighbourContentURL,
+                                        layoutId,
+                                        fetchedTimer,
+                                        secondaryIds,
+                                        object :NativeInternalCallback{
+                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                nativeAdLoadCallback?.onAdLoaded()
+                                                val adView = layoutInflater.inflate(layoutId, null)
+                                                        as NativeAdView
+                                                if (background != null) {
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.background = background
+                                                        }
+                                                        is Int -> {
+                                                            adView.setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                    .setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                    background
+                                                            }
+                                                            is Int -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                    .setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (populator != null) {
+                                                    populator.invoke(nativeAd!!, adView)
+                                                } else {
+                                                    populateUnifiedNativeAdView(
+                                                        nativeAd!!,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        AdMobUtil.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                viewGroup.removeAllViews()
+                                                viewGroup.addView(adView)
+                                                refreshNativeService(adName)
+                                            }
+
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                loadNativeAdFromService(
+                                                    layoutInflater,
+                                                    context,
+                                                    lifecycle,
+                                                    adName,
+                                                    viewGroup,
+                                                    nativeAdLoadCallback,
+                                                    background = background,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    mediaMaxHeight = mediaMaxHeight,
+                                                    loadingTextSize = loadingTextSize,
+                                                    id = id,
+                                                    populator = populator,
+                                                    adType = newAdSize,
+                                                    preloadAds = preloadAds,
+                                                    autoRefresh = preloadAds,
+                                                    contentURL = contentURL,
+                                                    neighbourContentURL = neighbourContentURL,
+                                                    layoutId,
+                                                    fetchedTimer,
+                                                    listOf(adUnit),
+                                                    object :NativeInternalCallback{
+                                                        override fun onSuccess(nativeAd: NativeAd?) {
+                                                            nativeAdLoadCallback?.onAdLoaded()
+                                                            val adView = layoutInflater.inflate(layoutId, null)
+                                                                    as NativeAdView
+                                                            if (background != null) {
+                                                                when (background) {
+                                                                    is String -> {
+                                                                        adView.setBackgroundColor(Color.parseColor(background))
+                                                                    }
+                                                                    is Drawable -> {
+                                                                        adView.background = background
+                                                                    }
+                                                                    is Int -> {
+                                                                        adView.setBackgroundColor(background)
+                                                                    }
+                                                                }
+                                                                if (layoutId == R.layout.native_admob_ad_t6) {
+                                                                    when (background) {
+                                                                        is String -> {
+                                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                                .setBackgroundColor(Color.parseColor(background))
+                                                                        }
+                                                                        is Drawable -> {
+                                                                            adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                                background
+                                                                        }
+                                                                        is Int -> {
+                                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                                .setBackgroundColor(background)
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (populator != null) {
+                                                                populator.invoke(nativeAd!!, adView)
+                                                            } else {
+                                                                populateUnifiedNativeAdView(
+                                                                    nativeAd!!,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    AdMobUtil.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                            viewGroup.removeAllViews()
+                                                            viewGroup.addView(adView)
+                                                            refreshNativeService(adName)
+                                                        }
+
+                                                        override fun onFailure(loadAdError: LoadAdError?) {
+                                                            nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                        }
+                                                    },
+                                                    showLoadingMessage,
+                                                    isAdmanager
+                                                )
+                                            }
+                                        },
+                                        showLoadingMessage,
+                                        isAdmanager
+                                    )
+                                }
+                                else{
+                                    loadNativeAdFromService(
+                                        layoutInflater,
+                                        context,
+                                        lifecycle,
+                                        adName,
+                                        viewGroup,
+                                        nativeAdLoadCallback,
+                                        background = background,
+                                        textColor1 = textColor1,
+                                        textColor2 = textColor2,
+                                        mediaMaxHeight = mediaMaxHeight,
+                                        loadingTextSize = loadingTextSize,
+                                        id = id,
+                                        populator = populator,
+                                        adType = newAdSize,
+                                        preloadAds = preloadAds,
+                                        autoRefresh = preloadAds,
+                                        contentURL = contentURL,
+                                        neighbourContentURL = neighbourContentURL,
+                                        layoutId,
+                                        fetchedTimer,
+                                        listOf(adUnit),
+                                        object :NativeInternalCallback{
+                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                nativeAdLoadCallback?.onAdLoaded()
+                                                val adView = layoutInflater.inflate(layoutId, null)
+                                                        as NativeAdView
+                                                if (background != null) {
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.background = background
+                                                        }
+                                                        is Int -> {
+                                                            adView.setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                    .setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                    background
+                                                            }
+                                                            is Int -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                    .setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (populator != null) {
+                                                    populator.invoke(nativeAd!!, adView)
+                                                } else {
+                                                    populateUnifiedNativeAdView(
+                                                        nativeAd!!,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        AdMobUtil.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                viewGroup.removeAllViews()
+                                                viewGroup.addView(adView)
+                                                refreshNativeService(adName)
+                                            }
+
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                            }
+                                        },
+                                        showLoadingMessage,
+                                        isAdmanager
+                                    )
+                                }
+                            }
+                        },
+                        showLoadingMessage,
+                        isAdmanager
+                    )
+                }
+                else if (secondaryIds.size>0){
+                    loadNativeAdFromService(
+                        layoutInflater,
+                        context,
+                        lifecycle,
+                        adName,
+                        viewGroup,
+                        nativeAdLoadCallback,
+                        background = background,
+                        textColor1 = textColor1,
+                        textColor2 = textColor2,
+                        mediaMaxHeight = mediaMaxHeight,
+                        loadingTextSize = loadingTextSize,
+                        id = id,
+                        populator = populator,
+                        adType = newAdSize,
+                        preloadAds = preloadAds,
+                        autoRefresh = preloadAds,
+                        contentURL = contentURL,
+                        neighbourContentURL = neighbourContentURL,
+                        layoutId,
+                        fetchedTimer,
+                        secondaryIds,
+                        object :NativeInternalCallback{
+                            override fun onSuccess(nativeAd: NativeAd?) {
+                                nativeAdLoadCallback?.onAdLoaded()
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                    .setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                    background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                    .setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        adType,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight
+                                    )
+                                }
+                                viewGroup.removeAllViews()
+                                viewGroup.addView(adView)
+                                refreshNativeService(adName)
+                            }
+
+                            override fun onFailure(loadAdError: LoadAdError?) {
+                                loadNativeAdFromService(
+                                    layoutInflater,
+                                    context,
+                                    lifecycle,
+                                    adName,
+                                    viewGroup,
+                                    nativeAdLoadCallback,
+                                    background = background,
+                                    textColor1 = textColor1,
+                                    textColor2 = textColor2,
+                                    mediaMaxHeight = mediaMaxHeight,
+                                    loadingTextSize = loadingTextSize,
+                                    id = id,
+                                    populator = populator,
+                                    adType = newAdSize,
+                                    preloadAds = preloadAds,
+                                    autoRefresh = preloadAds,
+                                    contentURL = contentURL,
+                                    neighbourContentURL = neighbourContentURL,
+                                    layoutId,
+                                    fetchedTimer,
+                                    listOf(adUnit),
+                                    object :NativeInternalCallback{
+                                        override fun onSuccess(nativeAd: NativeAd?) {
+                                            nativeAdLoadCallback?.onAdLoaded()
+                                            val adView = layoutInflater.inflate(layoutId, null)
+                                                    as NativeAdView
+                                            if (background != null) {
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.setBackgroundColor(background)
+                                                    }
+                                                }
+                                                if (layoutId == R.layout.native_admob_ad_t6) {
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                .setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                                background
+                                                        }
+                                                        is Int -> {
+                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                                .setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (populator != null) {
+                                                populator.invoke(nativeAd!!, adView)
+                                            } else {
+                                                populateUnifiedNativeAdView(
+                                                    nativeAd!!,
+                                                    adView,
+                                                    adType,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight
+                                                )
+                                            }
+                                            viewGroup.removeAllViews()
+                                            viewGroup.addView(adView)
+                                            refreshNativeService(adName)
+                                        }
+
+                                        override fun onFailure(loadAdError: LoadAdError?) {
+                                            nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                        }
+                                    },
+                                    showLoadingMessage,
+                                    isAdmanager
+                                )
+                            }
+                        },
+                        showLoadingMessage,
+                        isAdmanager
+                    )
+                }
+                else{
+                    loadNativeAdFromService(
+                        layoutInflater,
+                        context,
+                        lifecycle,
+                        adName,
+                        viewGroup,
+                        nativeAdLoadCallback,
+                        background = background,
+                        textColor1 = textColor1,
+                        textColor2 = textColor2,
+                        mediaMaxHeight = mediaMaxHeight,
+                        loadingTextSize = loadingTextSize,
+                        id = id,
+                        populator = populator,
+                        adType = newAdSize,
+                        preloadAds = preloadAds,
+                        autoRefresh = preloadAds,
+                        contentURL = contentURL,
+                        neighbourContentURL = neighbourContentURL,
+                        layoutId,
+                        fetchedTimer,
+                        listOf(adUnit),
+                        object :NativeInternalCallback{
+                            override fun onSuccess(nativeAd: NativeAd?) {
+                                nativeAdLoadCallback?.onAdLoaded()
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6) {
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                    .setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
+                                                    background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout)
+                                                    .setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        adType,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight
+                                    )
+                                }
+                                viewGroup.removeAllViews()
+                                viewGroup.addView(adView)
+                                refreshNativeService(adName)
+                            }
+
+                            override fun onFailure(loadAdError: LoadAdError?) {
+                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                            }
+                        },
+                        showLoadingMessage,
+                        isAdmanager
+                    )
+                }
             }
         } else {
-            if (preloadAds) {
-                preloadAds(layoutInflater, context)
+            viewGroup.visibility = GONE
+        }
+    }
+
+    internal fun loadNativeAdFromService(
+        layoutInflater: LayoutInflater,
+        context: Context,
+        lifecycle: Lifecycle,
+        adName: String,
+        viewGroup: ViewGroup,
+        nativeAdLoadCallback: NativeAdLoadCallback?,
+        background: Any?,
+        textColor1: Int?,
+        textColor2: Int?,
+        mediaMaxHeight: Int,
+        loadingTextSize: Int,
+        id: Long,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)?,
+        adType: String,
+        preloadAds: Boolean,
+        autoRefresh: Boolean,
+        contentURL: String?,
+        neighbourContentURL: List<String>?,
+        layoutId: Int,
+        fetchedTimer: Int,
+        primaryIds: List<String>,
+        nativeInternalCallback: NativeInternalCallback,
+        showLoadingMessage: Boolean,
+        isAdmanager: Boolean
+    ) {
+        var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                    this.cancel()
+                }
             }
-            loadAd(adLoader, contentURL, neighbourContentURL)
+
+            override fun onFinish() {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                }
+                else
+                    nativeInternalCallback.onFailure(loadAdError)
+            }
+        }.start()
+        var loadedUnit = ""
+        for (adUnit in primaryIds){
+
+            val adLoader: AdLoader = AdLoader.Builder(context, adUnit)
+                .forNativeAd { ad: NativeAd ->
+                    if (nativeAd == null) {
+                        nativeAd = ad
+                        if (loadedUnit.equals(""))
+                            loadedUnit = adUnit
+                    }
+
+                }
+                .withAdListener(object : AdListener() {
+
+                    override fun onAdClicked() {
+                        super.onAdClicked()
+                        nativeAdLoadCallback?.onAdClicked()
+                    }
+
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        if (nativeAd == null)
+                            nativeAd = null
+                        viewGroup.removeAllViews()
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
+                    }
+
+                    override fun onAdLoaded() {
+                        super.onAdLoaded()
+                        if (AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] == null && nativeAd != null) {
+                            AdUtilConstants.nativeAdLifeCycleServiceHashMap[id] = NativeAdItemService(
+                                layoutInflater,
+                                context,
+                                lifecycle,
+                                id,
+                                if (!loadedUnit.equals("")) loadedUnit else adUnit,
+                                adName,
+                                viewGroup,
+                                nativeAdLoadCallback,
+                                populator,
+                                adType,
+                                background,
+                                textColor1,
+                                textColor2,
+                                mediaMaxHeight,
+                                loadingTextSize,
+                                preloadAds,
+                                autoRefresh,
+                                contentURL,
+                                neighbourContentURL,
+                                showLoadingMessage = showLoadingMessage,
+                                isAdmanager = isAdmanager
+                            )
+                        }
+                    }
+                })
+                .withNativeAdOptions(
+                    NativeAdOptions.Builder()
+                        .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                        .setRequestCustomMuteThisAd(true)
+                        .build()
+                ).build()
+
+            loadAd(
+                adLoader,
+                contentURL,
+                neighbourContentURL,
+                isAdmanager
+            )
         }
     }
 
 
-    private fun preLoadNativeAd(
+
+    internal fun preLoadNativeAd(
         layoutInflater: LayoutInflater,
         context: Context,
         adUnit: String,
+        adName: String,
         adType: String = "1",
         mediaMaxHeight: Int = 300,
         loadingTextSize: Int,
@@ -1141,108 +6579,646 @@ object AdSdk {
         textColor2: Int?,
         populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
         contentURL: String? = null,
-        neighbourContentURL: List<String>? = null
+        neighbourContentURL: List<String>? = null,
+        isAdmanager: Boolean,
+        loadTimeOut:Int
     ) {
-        @LayoutRes val layoutId = when (adType) {
-            "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
-            "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
-            "3" -> R.layout.native_admob_ad_t3/*SMALLEST*/
-            "4" -> R.layout.native_admob_ad_t4/*SMALLER*/
-            "5" -> R.layout.native_admob_ad_t5/*BIG*/
-            "6" -> R.layout.native_admob_ad_t6/*DEFAULT NATIVE SMALL*/
-            else -> R.layout.native_admob_ad_t1
-        }
-        val preloadNativeAds = preloadNativeAdList?.get(adUnit)
-        val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
-        val id1 = inflate.findViewById<View>(R.id.rl)
-        val tv = inflate.findViewById<TextView>(R.id.tv)
-        tv.textSize = loadingTextSize.toFloat()
-        if (textColor1 != null) {
-            tv.setTextColor(textColor1)
-        }
-        when (background) {
-            is String -> {
-                id1.setBackgroundColor(Color.parseColor(background))
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            var mediaMaxHeight1 = mediaMaxHeight
+            var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+            @LayoutRes val layoutId = when (newAdSize) {
+                "6" -> {
+                    mediaMaxHeight1 = 200
+                    R.layout.native_admob_ad_t6
+                }/*DEFAULT_AD*/
+                "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+                "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+                "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+                "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+                "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+                "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
+                else -> R.layout.native_admob_ad_t1
             }
-            is Drawable -> {
-                id1.background = background
-            }
-            is Int -> {
-                id1.setBackgroundColor(background)
-            }
-        }
-        if (adUnit.isBlank()) return
-        var nativeAd: NativeAd? = null
-        val adLoader: AdLoader? = AdLoader.Builder(context, adUnit)
-            .forNativeAd { ad: NativeAd ->
-                nativeAd = ad
-            }
-            .withAdListener(object : AdListener() {
+            if (adUnit.isBlank()) return
 
-                override fun onAdFailedToLoad(adError: LoadAdError) {
+            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            if (fetchedTimer == 0){
+                fetchedTimer = loadTimeOut
+            }
+            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+
+            val preloadNativeAds = preloadNativeAdList?.get(adName)
+
+            val inflate = View.inflate(application, R.layout.shimmer, null)
+            when (newAdSize) {
+                "6" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
+                }/*DEFAULT_AD*/
+                "3" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_small).visibility = View.VISIBLE
+                }
+                /*SMALL*/
+                "4" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_medium).visibility = View.VISIBLE
+                }
+                /*MEDIUM*/
+                "1" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                }
+                /*BIGV1*/
+                "5" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv2).visibility = View.VISIBLE
+                }
+                /*BIGV2*/
+                "2" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv3).visibility = View.VISIBLE
+                }
+                /*BIGV3*/
+                "7" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                }
+                /*GRID_AD*/
+                else -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
                 }
 
-                override fun onAdLoaded() {
-                    super.onAdLoaded()
-                    if (nativeAd != null) {
-                        val adView = layoutInflater.inflate(layoutId, null)
-                                as NativeAdView
-                        if (background != null) {
-                            when (background) {
-                                is String -> {
-                                    adView.setBackgroundColor(Color.parseColor(background))
+            }
+
+//            val inflate = layoutInflater.inflate(R.layout.ad_loading_layout, null)
+//            val id1 = inflate.findViewById<View>(R.id.cardView)
+//            val tv = inflate.findViewById<TextView>(R.id.tv)
+//            tv.textSize = loadingTextSize.toFloat()
+//            if (textColor1 != null) {
+//                tv.setTextColor(textColor1)
+//            }
+//            when (background) {
+//                is String -> {
+//                    id1.setBackgroundColor(Color.parseColor(background))
+//                }
+//                is Drawable -> {
+//                    id1.background = background
+//                }
+//                is Int -> {
+//                    id1.setBackgroundColor(background)
+//                }
+//            }
+
+            Log.d("preload_native", "onStart" + System.currentTimeMillis()/1000)
+            if (primaryIds.size>0){
+                preLoadNativeAd(
+                    adName,
+                    context,
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    primaryIds,
+                    fetchedTimer,
+                    object : NativeInternalCallback {
+                        override fun onSuccess(nativeAd: NativeAd?) {
+                        Log.d("preload_native", "onSuccess: First Shown" + System.currentTimeMillis()/1000)
+                           if (nativeAd != null) {
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
                                 }
-                                is Drawable -> {
-                                    adView.background = background
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        newAdSize,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight1
+                                    )
+                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
                                 }
-                                is Int -> {
-                                    adView.setBackgroundColor(background)
+                                if (preloadNativeAds != null) {
+                                    preloadNativeAds.ad = adView
                                 }
                             }
                         }
-                        if (populator != null) {
-                            populator.invoke(nativeAd!!, adView)
-                        } else {
-                            populateUnifiedNativeAdView(
-                                nativeAd!!,
-                                adView,
-                                adType,
-                                textColor1,
-                                textColor2,
-                                mediaMaxHeight
+
+                        override fun onFailure(loadAdError: LoadAdError?) {
+                            if (secondaryIds.size > 0){
+                                preLoadNativeAd(
+                                    adName,
+                                    context,
+                                    contentURL = contentURL,
+                                    neighbourContentURL = neighbourContentURL,
+                                    secondaryIds,
+                                    fetchedTimer,
+                                    object : NativeInternalCallback {
+                                        override fun onSuccess(nativeAd: NativeAd?) {
+                                        Log.d("preload_native", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                            if (nativeAd != null) {
+                                                val adView = layoutInflater.inflate(layoutId, null)
+                                                        as NativeAdView
+                                                if (background != null) {
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.background = background
+                                                        }
+                                                        is Int -> {
+                                                            adView.setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                            }
+                                                            is Int -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (populator != null) {
+                                                    populator.invoke(nativeAd!!, adView)
+                                                } else {
+                                                    populateUnifiedNativeAdView(
+                                                        nativeAd!!,
+                                                        adView,
+                                                        newAdSize,
+                                                        textColor1,
+                                                        textColor2,
+                                                        AdMobUtil.fetchColor(adName),
+                                                        mediaMaxHeight1
+                                                    )
+                                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                }
+                                                if (preloadNativeAds != null) {
+                                                    preloadNativeAds.ad = adView
+                                                }
+                                            }
+                                        }
+
+                                        override fun onFailure(loadAdError: LoadAdError?) {
+                                            preLoadNativeAd(
+                                                adName,
+                                                context,
+                                                contentURL = contentURL,
+                                                neighbourContentURL = neighbourContentURL,
+                                                listOf(adUnit),
+                                                fetchedTimer,
+                                                object : NativeInternalCallback {
+                                                    override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("preload_native", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                        if (nativeAd != null) {
+                                                            val adView = layoutInflater.inflate(layoutId, null)
+                                                                    as NativeAdView
+                                                            if (background != null) {
+                                                                when (background) {
+                                                                    is String -> {
+                                                                        adView.setBackgroundColor(Color.parseColor(background))
+                                                                    }
+                                                                    is Drawable -> {
+                                                                        adView.background = background
+                                                                    }
+                                                                    is Int -> {
+                                                                        adView.setBackgroundColor(background)
+                                                                    }
+                                                                }
+                                                                if (layoutId == R.layout.native_admob_ad_t6){
+                                                                    when (background) {
+                                                                        is String -> {
+                                                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                                        }
+                                                                        is Drawable -> {
+                                                                            adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                                        }
+                                                                        is Int -> {
+                                                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (populator != null) {
+                                                                populator.invoke(nativeAd!!, adView)
+                                                            } else {
+                                                                populateUnifiedNativeAdView(
+                                                                    nativeAd!!,
+                                                                    adView,
+                                                                    newAdSize,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    AdMobUtil.fetchColor(adName),
+                                                                    mediaMaxHeight1
+                                                                )
+                                                                Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                            }
+                                                            if (preloadNativeAds != null) {
+                                                                preloadNativeAds.ad = adView
+                                                            }
+                                                        }
+                                                    }
+
+                                                    override fun onFailure(loadAdError: LoadAdError?) {
+
+                                                    }
+                                                },
+                                                isAdmanager = isAdmanager
+                                            )
+                                        }
+                                    },
+                                    isAdmanager = isAdmanager
+                                )
+                            }
+                            else{
+                                preLoadNativeAd(
+                                    adName,
+                                    context,
+                                    contentURL = contentURL,
+                                    neighbourContentURL = neighbourContentURL,
+                                    listOf(adUnit),
+                                    fetchedTimer,
+                                    object : NativeInternalCallback {
+                                        override fun onSuccess(nativeAd: NativeAd?) {
+                                        Log.d("preload_native", "onSuccess: primary else Fallback Shown" + System.currentTimeMillis()/1000)
+                                            if (nativeAd != null) {
+                                                val adView = layoutInflater.inflate(layoutId, null)
+                                                        as NativeAdView
+                                                if (background != null) {
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.background = background
+                                                        }
+                                                        is Int -> {
+                                                            adView.setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                                        when (background) {
+                                                            is String -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                            }
+                                                            is Drawable -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                            }
+                                                            is Int -> {
+                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (populator != null) {
+                                                    populator.invoke(nativeAd!!, adView)
+                                                } else {
+                                                    populateUnifiedNativeAdView(
+                                                        nativeAd!!,
+                                                        adView,
+                                                        newAdSize,
+                                                        textColor1,
+                                                        textColor2,
+                                                        AdMobUtil.fetchColor(adName),
+                                                        mediaMaxHeight1
+                                                    )
+                                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                }
+                                                if (preloadNativeAds != null) {
+                                                    preloadNativeAds.ad = adView
+                                                }
+                                            }
+                                        }
+
+                                        override fun onFailure(loadAdError: LoadAdError?) {
+
+                                        }
+                                    },
+                                    isAdmanager = isAdmanager
+                                )
+                            }
+                        }
+                    },
+                    isAdmanager = isAdmanager
+                )
+            }
+            else if (secondaryIds.size > 0){
+                preLoadNativeAd(
+                    adName,
+                    context,
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    secondaryIds,
+                    fetchedTimer,
+                    object : NativeInternalCallback {
+                        override fun onSuccess(nativeAd: NativeAd?) {
+                            Log.d("preload_native", "onSuccess: Second Shown" + System.currentTimeMillis()/1000)
+                            if (nativeAd != null) {
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        newAdSize,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight1
+                                    )
+                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                }
+                                if (preloadNativeAds != null) {
+                                    preloadNativeAds.ad = adView
+                                }
+                            }
+                        }
+
+                        override fun onFailure(loadAdError: LoadAdError?) {
+                            preLoadNativeAd(
+                                adName,
+                                context,
+                                contentURL = contentURL,
+                                neighbourContentURL = neighbourContentURL,
+                                listOf(adUnit),
+                                fetchedTimer,
+                                object : NativeInternalCallback {
+                                    override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("preload_native", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
+                                        if (nativeAd != null) {
+                                            val adView = layoutInflater.inflate(layoutId, null)
+                                                    as NativeAdView
+                                            if (background != null) {
+                                                when (background) {
+                                                    is String -> {
+                                                        adView.setBackgroundColor(Color.parseColor(background))
+                                                    }
+                                                    is Drawable -> {
+                                                        adView.background = background
+                                                    }
+                                                    is Int -> {
+                                                        adView.setBackgroundColor(background)
+                                                    }
+                                                }
+                                                if (layoutId == R.layout.native_admob_ad_t6){
+                                                    when (background) {
+                                                        is String -> {
+                                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                                        }
+                                                        is Drawable -> {
+                                                            adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                                        }
+                                                        is Int -> {
+                                                            adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (populator != null) {
+                                                populator.invoke(nativeAd!!, adView)
+                                            } else {
+                                                populateUnifiedNativeAdView(
+                                                    nativeAd!!,
+                                                    adView,
+                                                    newAdSize,
+                                                    textColor1,
+                                                    textColor2,
+                                                    AdMobUtil.fetchColor(adName),
+                                                    mediaMaxHeight1
+                                                )
+                                                Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                            }
+                                            if (preloadNativeAds != null) {
+                                                preloadNativeAds.ad = adView
+                                            }
+                                        }
+                                    }
+
+                                    override fun onFailure(loadAdError: LoadAdError?) {
+
+                                    }
+                                },
+                                isAdmanager = isAdmanager
                             )
                         }
-                        if (preloadNativeAds != null) {
-                            preloadNativeAds.ad = adView
+                    },
+                    isAdmanager = isAdmanager
+                )
+            }
+            else{
+                preLoadNativeAd(
+                    adName,
+                    context,
+                    contentURL = contentURL,
+                    neighbourContentURL = neighbourContentURL,
+                    listOf(adUnit),
+                    fetchedTimer,
+                    object : NativeInternalCallback {
+                        override fun onSuccess(nativeAd: NativeAd?) {
+                        Log.d("preload_native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
+                            if (nativeAd != null) {
+                                val adView = layoutInflater.inflate(layoutId, null)
+                                        as NativeAdView
+                                if (background != null) {
+                                    when (background) {
+                                        is String -> {
+                                            adView.setBackgroundColor(Color.parseColor(background))
+                                        }
+                                        is Drawable -> {
+                                            adView.background = background
+                                        }
+                                        is Int -> {
+                                            adView.setBackgroundColor(background)
+                                        }
+                                    }
+                                    if (layoutId == R.layout.native_admob_ad_t6){
+                                        when (background) {
+                                            is String -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                                            }
+                                            is Drawable -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
+                                            }
+                                            is Int -> {
+                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (populator != null) {
+                                    populator.invoke(nativeAd!!, adView)
+                                } else {
+                                    populateUnifiedNativeAdView(
+                                        nativeAd!!,
+                                        adView,
+                                        newAdSize,
+                                        textColor1,
+                                        textColor2,
+                                        AdMobUtil.fetchColor(adName),
+                                        mediaMaxHeight1
+                                    )
+                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                }
+                                if (preloadNativeAds != null) {
+                                    preloadNativeAds.ad = adView
+                                }
+                            }
                         }
-                    }
-                }
-            })
-            .withNativeAdOptions(
-                NativeAdOptions.Builder()
-                    .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
-                    .setRequestCustomMuteThisAd(true)
-                    .build()
-            )
-            .build()
-        loadAd(adLoader, contentURL, neighbourContentURL)
+
+                        override fun onFailure(loadAdError: LoadAdError?) {
+
+                        }
+                    },
+                    isAdmanager = isAdmanager
+                )
+            }
+        }
     }
 
+    internal fun preLoadNativeAd(
+        adName: String,
+        context: Context,
+        contentURL: String? = null,
+        neighbourContentURL: List<String>? = null,
+        primaryIds: List<String>,
+        fetchedTimer: Int,
+        nativeInternalCallback: NativeInternalCallback,
+        isAdmanager: Boolean
+    ) {
+        var nativeAd: NativeAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(fetchedTimer.toLong(), 500) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                    this.cancel()
+                }
+            }
 
-    private fun loadAd(
+            override fun onFinish() {
+                if (nativeAd != null) {
+                    nativeInternalCallback.onSuccess(nativeAd)
+                }
+                else
+                    nativeInternalCallback.onFailure(loadAdError)
+            }
+        }.start()
+        var loadedId = ""
+        for (adUnit in primaryIds){
+            val adLoader: AdLoader? = AdLoader.Builder(context, adUnit)
+                .forNativeAd { ad: NativeAd ->
+                    if (nativeAd == null && ad != null) {
+                        nativeAd = ad
+                        loadedId = adUnit
+                    }
+                }
+                .withAdListener(object : AdListener() {
+
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adUnit+" : "+adError.message)
+
+                    }
+
+                    override fun onAdLoaded() {
+                        super.onAdLoaded()
+                    }
+                })
+                .withNativeAdOptions(
+                    NativeAdOptions.Builder()
+                        .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
+                        .setRequestCustomMuteThisAd(true)
+                        .build()
+                )
+                .build()
+            loadAd(adLoader, contentURL, neighbourContentURL,isAdmanager)
+        }
+
+    }
+
+    internal fun loadAd(
         adLoader: AdLoader?,
         contentURL: String?,
-        neighbourContentURL: List<String>?
+        neighbourContentURL: List<String>?,
+        isAdmanager: Boolean
     ) {
-        val builder = AdRequest.Builder().addNetworkExtrasBundle(
-            AdMobAdapter::class.java,
-            getConsentEnabledBundle()
-        )
-        contentURL?.let { builder.setContentUrl(it) }
-        neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
-        adLoader?.loadAd(
-            builder.build()
-        )
+        if (!isAdmanager){
+            val builder = AdRequest.Builder().addNetworkExtrasBundle(
+                AdMobAdapter::class.java,
+                getConsentEnabledBundle()
+            )
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            adLoader?.loadAd(
+                builder.build()
+            )
+        }
+        else {
+            val builder = AdManagerAdRequest.Builder()
+            contentURL?.let { builder.setContentUrl(it) }
+            neighbourContentURL?.let { builder.setNeighboringContentUrls(it) }
+            adLoader?.loadAd(
+                builder.build()
+            )
+            Log.d("loadAd", "loadAd: admanager  "+ System.currentTimeMillis()/1000)
+        }
+
     }
 
     fun populateUnifiedNativeAdView(
@@ -1251,6 +7227,7 @@ object AdSdk {
         adType: String,
         textColor1: Int?,
         textColor2: Int?,
+        buttonColor: String?,
         mediaMaxHeight: Int = 300,
     ) {
         val iconView = adView?.findViewById(R.id.icon) as ImageView
@@ -1343,10 +7320,13 @@ object AdSdk {
         }
 
 
-        val cta = adView.findViewById(R.id.call_to_action) as Button
+        val cta = adView.findViewById(R.id.call_to_action) as TextView
+        cta.backgroundTintList = (ColorStateList.valueOf(Color.parseColor(buttonColor)))
+        Log.d(TAG, adType+" :populateUnifiedNativeAdView: "+buttonColor)
+
         adView.callToActionView = cta
         adView.callToActionView?.visibility = VISIBLE
-        (adView.callToActionView as Button).text = nativeAd.callToAction
+        (adView.callToActionView as TextView).text = nativeAd.callToAction
         adView.setNativeAd(nativeAd)
         if (nativeAd.adChoicesInfo != null && adView.adChoicesView != null) {
             try {
@@ -1360,75 +7340,645 @@ object AdSdk {
 
     }
 
+    fun showAvailableInterstitialAd(activity: Activity,interstitialAd: InterstitialAd?=null,adManagerInterstitialAd: AdManagerInterstitialAd? = null){
+        if (interstitialAd!= null)
+            interstitialAd?.show(activity)
+        else if (adManagerInterstitialAd != null)
+            adManagerInterstitialAd?.show(activity)
+    }
+
     var create: AlertDialog? = null
+    var builder: AlertDialog.Builder? = null
     fun showRewardedIntersAd(
         activity: Activity,
         adId: String,
-        interstitialCallback: InterstitialCallback
+        adName: String,
+        interstitialCallback: InterstitialCallback,
+        isAdmanager:Boolean = false,
+        loadTimeOut:Int
     ) {
-        var moved = false
-        val ctd = object : CountDownTimer(5000, 1000) {
+        if (isInitialized){
+            if (adId != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
+                }
+                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
+                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+
+                showAdLoaderLayout(activity)
+
+                Log.d("rewardedInterstitial","OnStart:" + System.currentTimeMillis()/1000)
+                if (!isAdmanager) {
+                    if (primaryIds.size > 0) {
+                        showRewardedIntersAd(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialCallback,
+                            object : RewardInterstitialInternalCallback {
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d(
+                                        "rewardedInterstitial",
+                                        "onSuccess: Primary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (ad != null) {
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity, {
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0) {
+                                        showRewardedIntersAd(
+                                            adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialCallback,
+                                            object : RewardInterstitialInternalCallback {
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d(
+                                                        "rewardedInterstitial",
+                                                        "onSuccess: First Secondary Shown" + System.currentTimeMillis() / 1000
+                                                    )
+                                                    if (ad != null) {
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity, {
+
+                                                        })
+                                                    }
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    showRewardedIntersAd(
+                                                        adName,
+                                                        activity,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adId),
+                                                        interstitialCallback,
+                                                        object : RewardInterstitialInternalCallback {
+                                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                                Log.d(
+                                                                    "rewardedInterstitial",
+                                                                    "onSuccess: First Fallback Shown" + System.currentTimeMillis() / 1000
+                                                                )
+                                                                if (ad != null) {
+                                                                    dismissAdLoaderLayout(activity)
+                                                                    ad!!.show(activity, {
+
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialCallback.moveNext()
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        showRewardedIntersAd(
+                                            adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            listOf(adId),
+                                            interstitialCallback,
+                                            object : RewardInterstitialInternalCallback {
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d(
+                                                        "rewardedInterstitial",
+                                                        "onSuccess: First else Fallback Shown" + System.currentTimeMillis() / 1000
+                                                    )
+                                                    if (ad != null) {
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity, {
+
+                                                        })
+                                                    }
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialCallback.moveNext()
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    } else if (secondaryIds.size > 0) {
+                        showRewardedIntersAd(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialCallback,
+                            object : RewardInterstitialInternalCallback {
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d(
+                                        "rewardedInterstitial",
+                                        "onSuccess: Second Secondary Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (ad != null) {
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity, {
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    showRewardedIntersAd(
+                                        adName,
+                                        activity,
+                                        fetchedTimer.toLong(),
+                                        listOf(adId),
+                                        interstitialCallback,
+                                        object : RewardInterstitialInternalCallback {
+                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                Log.d(
+                                                    "rewardedInterstitial",
+                                                    "onSuccess: Second Fallback Shown" + System.currentTimeMillis() / 1000
+                                                )
+                                                if (ad != null) {
+                                                    dismissAdLoaderLayout(activity)
+                                                    ad!!.show(activity, {
+
+                                                    })
+                                                }
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                interstitialCallback.moveNext()
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        showRewardedIntersAd(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            listOf(adId),
+                            interstitialCallback,
+                            object : RewardInterstitialInternalCallback {
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d(
+                                        "rewardedInterstitial",
+                                        "onSuccess: else Fallback Shown" + System.currentTimeMillis() / 1000
+                                    )
+                                    if (ad != null) {
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity, {
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialCallback.moveNext()
+                                }
+                            }
+                        )
+                    }
+                }
+                else {
+                    if (primaryIds.size >0){
+                        showRewardedIntersAdManager(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            primaryIds,
+                            interstitialCallback,
+                            object :RewardInterstitialInternalCallback{
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d("rewardedInterstitial", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    if (ad != null){
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity,{
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size > 0){
+                                        showRewardedIntersAdManager(
+                                            adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            secondaryIds,
+                                            interstitialCallback,
+                                            object :RewardInterstitialInternalCallback{
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d("rewardedInterstitial", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    if (ad != null){
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity,{
+
+                                                        })
+                                                    }
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    showRewardedIntersAdManager(
+                                                        adName,
+                                                        activity,
+                                                        fetchedTimer.toLong(),
+                                                        listOf(adId),
+                                                        interstitialCallback,
+                                                        object :RewardInterstitialInternalCallback{
+                                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                                Log.d("rewardedInterstitial", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                if (ad != null){
+                                                                    dismissAdLoaderLayout(activity)
+                                                                    ad!!.show(activity,{
+
+                                                                    })
+                                                                }
+                                                            }
+
+                                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                                interstitialCallback.moveNext()
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                    else{
+                                        showRewardedIntersAdManager(
+                                            adName,
+                                            activity,
+                                            fetchedTimer.toLong(),
+                                            listOf(adId),
+                                            interstitialCallback,
+                                            object :RewardInterstitialInternalCallback{
+                                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                    Log.d("rewardedInterstitial", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    if (ad != null){
+                                                        dismissAdLoaderLayout(activity)
+                                                        ad!!.show(activity,{
+
+                                                        })
+                                                    }
+                                                }
+
+                                                override fun onFailed(loadAdError: LoadAdError?) {
+                                                    interstitialCallback.moveNext()
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    else if (secondaryIds.size > 0){
+                        showRewardedIntersAdManager(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            secondaryIds,
+                            interstitialCallback,
+                            object :RewardInterstitialInternalCallback{
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d("rewardedInterstitial", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
+                                    if (ad != null){
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity,{
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    showRewardedIntersAdManager(
+                                        adName,
+                                        activity,
+                                        fetchedTimer.toLong(),
+                                        listOf(adId),
+                                        interstitialCallback,
+                                        object :RewardInterstitialInternalCallback{
+                                            override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                                Log.d("rewardedInterstitial", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
+                                                if (ad != null){
+                                                    dismissAdLoaderLayout(activity)
+                                                    ad!!.show(activity,{
+
+                                                    })
+                                                }
+                                            }
+
+                                            override fun onFailed(loadAdError: LoadAdError?) {
+                                                interstitialCallback.moveNext()
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    else{
+                        showRewardedIntersAdManager(
+                            adName,
+                            activity,
+                            fetchedTimer.toLong(),
+                            listOf(adId),
+                            interstitialCallback,
+                            object :RewardInterstitialInternalCallback{
+                                override fun onSuccess(ad: RewardedInterstitialAd?) {
+                                    Log.d("rewardedInterstitial", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
+                                    if (ad != null){
+                                        dismissAdLoaderLayout(activity)
+                                        ad!!.show(activity,{
+
+                                        })
+                                    }
+                                }
+
+                                override fun onFailed(loadAdError: LoadAdError?) {
+                                    interstitialCallback.moveNext()
+                                }
+                            }
+                        )
+                    }
+                }
+            } else {
+                interstitialCallback.moveNext(AdError(404, "AD BLOCKED", ""))
+            }
+        }
+        else {
+            interstitialCallback.moveNext(AdError(404, "Ads SDK not (initialized / properly initial). Try initializing again.", ""))
+        }
+
+    }
+
+    internal  fun showRewardedIntersAd(
+        adName:String,
+        activity: Activity,
+        timer: Long,
+        primaryIds: List<String>,
+        interstitialCallback: InterstitialCallback,
+        rewardInternalCallback: RewardInterstitialInternalCallback
+    ){
+        var isShown = false
+        var ads: RewardedInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(timer, 500) {
             override fun onTick(p0: Long) {
+                if (ads != null){
+                    rewardInternalCallback.onSuccess(ads)
+                    this.cancel()
+                }
             }
 
             override fun onFinish() {
-                if (!moved) {
-                    dismissAdLoaderLayout(activity)
-                    interstitialCallback.moveNext()
-                    moved = true
+                if (ads != null){
+                    rewardInternalCallback.onSuccess(ads)
+                }
+                else{
+                    rewardInternalCallback.onFailed(loadAdError)
                 }
             }
+        }.start()
+
+        for (adId in primaryIds){
+            RewardedInterstitialAd.load(activity, adId,
+                AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
+                    override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                        if (!isShown) {
+                            ads = ad
+                            isShown = true
+                            Log.d(TAG, "Ad was loaded.")
+                            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    super.onAdFailedToShowFullScreenContent(p0)
+                                        interstitialCallback.moveNext(p0)
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    super.onAdDismissedFullScreenContent()
+                                        interstitialCallback.moveNext()
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+//                        dismissAdLoaderLayout(activity)
+                        if (ads == null)
+                            ads = null
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adId+" : "+adError.message)
+//                        if (!isShown) {
+//                            interstitialCallback.moveNext(adError)
+//                            isShown = true
+//                        }
+                    }
+                })
         }
-        ctd.start()
-        val builder = AlertDialog.Builder(activity, R.style.DialogTheme)
-        builder.setView(
+    }
+
+    internal  fun showRewardedIntersAdManager(
+        adName: String,
+        activity: Activity,
+        timer: Long,
+        primaryIds: List<String>,
+        interstitialCallback: InterstitialCallback,
+        rewardInternalCallback: RewardInterstitialInternalCallback
+    ){
+        var isShown = false
+        var ads: RewardedInterstitialAd? = null
+        var loadAdError: LoadAdError? = null
+        object : CountDownTimer(timer, 500) {
+            override fun onTick(p0: Long) {
+                if (ads != null){
+                    rewardInternalCallback.onSuccess(ads)
+                    this.cancel()
+                }
+            }
+
+            override fun onFinish() {
+                if (ads != null){
+                    rewardInternalCallback.onSuccess(ads)
+                }
+                else{
+                    rewardInternalCallback.onFailed(loadAdError)
+                }
+            }
+        }.start()
+
+        for (adId in primaryIds){
+            RewardedInterstitialAd.load(activity, adId,
+                AdManagerAdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
+                    override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                        if (!isShown) {
+                            ads = ad
+                            isShown = true
+                            Log.d(TAG, "Ad was loaded.")
+                            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                                override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                    super.onAdFailedToShowFullScreenContent(p0)
+                                    interstitialCallback.moveNext(p0)
+                                }
+
+                                override fun onAdDismissedFullScreenContent() {
+                                    super.onAdDismissedFullScreenContent()
+                                    interstitialCallback.moveNext()
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+//                        dismissAdLoaderLayout(activity)
+                        if (ads == null)
+                            ads = null
+                        loadAdError = adError
+                        Log.d(TAG, "onAdFailedToLoad: "+adName+" : "+adId+" : "+adError.message)
+//                        if (!isShown) {
+//                            interstitialCallback.moveNext(adError)
+//                            isShown = true
+//                        }
+                    }
+                })
+        }
+    }
+
+    internal fun showAdLoaderLayout(activity: Activity) {
+        dismissAdLoaderLayout(activity)//Added This So that The alertDialog Variable is never used twice which will lead to no closing of the dialog
+        builder = AlertDialog.Builder(activity, R.style.DialogTheme)
+        builder?.setView(
             LayoutInflater.from(activity).inflate(R.layout.ad_loading_layout_inters, null)
         )
-        create = builder.create()
+        create = builder?.create()
         if (!activity.isFinishing) {
             create?.show()
         }
-        RewardedInterstitialAd.load(activity, adId,
-            AdRequest.Builder().build(), object : RewardedInterstitialAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedInterstitialAd) {
-                    ctd.cancel()
-                    if (!moved) {
-                        ad.show(activity) {
+    }
 
+
+    val preloadedRewardedAdList: HashMap<String, RewardedAd?> = hashMapOf()
+    val AdRewardedList: HashMap<String, Boolean> = hashMapOf()
+
+    fun preLoadRewardedAd(
+        activity: Activity?,
+        adUnit: String,
+        adName: String
+    ) {
+        EmptyAdList(adUnit)
+        if (activity != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            val adRequest = AdRequest.Builder()
+                .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
+                .build()
+            RewardedAd.load(
+                activity,
+                adUnit,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                        EmptyAdList(adUnit)
+                    }
+
+                    override fun onAdLoaded(rewardedAd: RewardedAd) {
+                        preloadedRewardedAdList[adUnit] = rewardedAd
+                        AdRewardedList[adUnit] = false
+                    }
+                },
+            )
+        }
+    }
+
+    private fun EmptyAdList(adUnit: String) {
+        preloadedRewardedAdList[adUnit] = null
+        AdRewardedList[adUnit] = false
+    }
+
+    fun showRewardedAdsAfterWait(
+        activity: Activity?,
+        timeToWait: Long,
+        adId: String,
+        adName: String,
+        callback: RewardedCallback
+    ) {
+        if (isInitialized){
+            if (activity != null && adId != "STOP") {
+                showAdLoaderLayout(activity)
+                if (preloadedRewardedAdList.containsKey(adId)) {
+                    var rewardedAd: RewardedAd? = null
+                    var ctd: CountDownTimer? = null
+                    ctd = object : CountDownTimer(timeToWait, 500) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            rewardedAd = preloadedRewardedAdList[adId]
+                            if (rewardedAd != null) {
+                                ctd?.cancel()
+                                ctd = null
+                                rewardedAd?.fullScreenContentCallback =
+                                    object : FullScreenContentCallback() {
+                                        override fun onAdDismissedFullScreenContent() {
+                                            super.onAdDismissedFullScreenContent()
+                                            callback.moveNext(AdRewardedList[adId] ?: false)
+                                            dismissAdLoaderLayout(activity)
+                                        }
+
+                                        override fun onAdFailedToShowFullScreenContent(p0: AdError) {
+                                            super.onAdFailedToShowFullScreenContent(p0)
+                                            callback.moveNext(p0)
+                                            dismissAdLoaderLayout(activity)
+                                        }
+
+                                        override fun onAdShowedFullScreenContent() {
+                                            super.onAdShowedFullScreenContent()
+                                            preloadedRewardedAdList.remove(adId)
+                                            AdRewardedList[adId] = false
+                                            dismissAdLoaderLayout(activity)
+                                        }
+                                    }
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    rewardedAd?.show(
+                                        activity
+                                    ) { AdRewardedList[adId] = true }
+                                }, 1500)
+                            }
                         }
-                        Log.d(TAG, "Ad was loaded.")
-                        dismissAdLoaderLayout(activity)
-                        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                            override fun onAdFailedToShowFullScreenContent(p0: AdError) {
-                                super.onAdFailedToShowFullScreenContent(p0)
-                                if (!moved) {
-                                    ctd.cancel()
-                                    interstitialCallback.moveNext(p0)
-                                    moved = true
-                                }
-                            }
 
-                            override fun onAdDismissedFullScreenContent() {
-                                super.onAdDismissedFullScreenContent()
-                                if (!moved) {
-                                    ctd.cancel()
-                                    interstitialCallback.moveNext()
-                                    moved = true
-                                }
-                            }
+                        override fun onFinish() {
+                            EmptyAdList(adId)
+                            preloadedRewardedAdList.remove(adId)
+                            AdRewardedList[adId] = false
+                            dismissAdLoaderLayout(activity)
+                            callback.adNotLoaded()
                         }
                     }
+                    ctd?.start()
+                } else {
+                    preLoadRewardedAd(activity, adId,adName)
+                    showRewardedAdsAfterWait(
+                        activity,
+                        timeToWait,
+                        adId,
+                        adName,
+                        callback
+                    )
                 }
+            } else {
+                callback.moveNext(AdError(404, "AD BLOCKED", ""))
+            }
+        }
+        else {
+            callback.moveNext(AdError(404,"Ads SDK not (initialized / properly initial). Try initializing again.",""))
+        }
 
-                override fun onAdFailedToLoad(adError: LoadAdError) {
-                    dismissAdLoaderLayout(activity)
-                    if (!moved) {
-                        ctd.cancel()
-                        interstitialCallback.moveNext(adError)
-                        moved = true
-                    }
-                }
-            })
     }
 
     private fun dismissAdLoaderLayout(activity: Activity) {

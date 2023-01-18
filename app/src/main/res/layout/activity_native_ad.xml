@@ -347,6 +347,25 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/llRoot8"
+                    android:layout_width="match_parent"
+                    android:layout_weight="0.5"
+                    android:layout_height="wrap_content" />
+
+                <FrameLayout
+                    android:id="@+id/llRoot9"
+                    android:layout_width="match_parent"
+                    android:layout_weight="0.5"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
             <FrameLayout
                 android:id="@+id/llRoot"
                 android:layout_width="match_parent"
@@ -383,6 +402,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
+            <FrameLayout
+                android:id="@+id/llRoot6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <FrameLayout
+                android:id="@+id/llRoot7"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+
+
+
+
         </LinearLayout>
     </ScrollView>
 
@@ -394,6 +427,12 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/refresh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Button" />
 
         <Button
             android:id="@+id/disable_refresh"

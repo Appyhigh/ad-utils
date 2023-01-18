@@ -13,7 +13,10 @@ data class BannerAdItem(
     val viewGroup: ViewGroup,
     val adUnit: String,
     val adSize: AdSize,
+    val adName: String,
+    val showLoadingMessage: Boolean,
     val bannerAdLoadCallback: BannerAdLoadCallback?,
     var contentURL: String?,
-    var neighbourContentURL: List<String>?
+    var neighbourContentURL: List<String>?,
+    var isAdManager:Boolean
 )

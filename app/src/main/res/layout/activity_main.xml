@@ -36,6 +36,15 @@
             android:textColor="@color/white" />
 
         <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnRewardedInterstitialAd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:background="@color/purple_700"
+            android:text="@string/rewarded_ad_example_interstitial"
+            android:textColor="@color/white" />
+
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnRewardedAd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

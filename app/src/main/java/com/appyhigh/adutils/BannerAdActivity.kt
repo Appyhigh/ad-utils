@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -19,27 +20,45 @@ class BannerAdActivity : AppCompatActivity() {
             this,
             lifecycle,
             binding.typeOne,
-            bannerAdUnit,
+            "ca-app-pub-3940256099942544/6300978111",
+            "util_banner",
             AdSize.BANNER,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            background = Color.DKGRAY,
+            textColor1 = Color.WHITE,
+            loadingTextSize = 32,
+            showLoadingMessage = true,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadBannerAd(
             this,
             lifecycle,
             binding.typeTwo,
-            bannerAdUnit,
+            "ca-app-pub-3940256099942544/6300978111",
+            "util_banner1",
             AdSize.LARGE_BANNER,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            background = Color.DKGRAY,
+            textColor1 = Color.WHITE,
+            loadingTextSize = 32,
+            showLoadingMessage = true,
+            loadTimeOut = 4000
         )
 
         AdSdk.loadBannerAd(
             this,
             lifecycle,
             binding.typeThree,
-            bannerAdUnit,
+            "ca-app-pub-3940256099942544/6300978111",
+            "util_banner2",
             AdSize.MEDIUM_RECTANGLE,
-            bannerAdLoadCallback
+            bannerAdLoadCallback,
+            background = Color.DKGRAY,
+            textColor1 = Color.WHITE,
+            loadingTextSize = 32,
+            showLoadingMessage = true,
+            loadTimeOut = 4000
         )
     }
 
@@ -48,7 +67,7 @@ class BannerAdActivity : AppCompatActivity() {
             Log.d("BannerAdLoadCallback", "onAdLoaded")
         }
 
-        override fun onAdFailedToLoad(adError: LoadAdError) {
+        override fun onAdFailedToLoad(adError: LoadAdError?) {
             Log.d("BannerAdLoadCallback", "onAdFailedToLoad")
         }
 

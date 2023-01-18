@@ -5,7 +5,7 @@
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:layout_margin="5dp"
-    android:background="@drawable/nad_bg"
+    android:background="@drawable/nad_bg_empty"
     android:elevation="1dp"
     tools:ignore="MissingDefaultResource">
 
@@ -161,7 +161,7 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <Button
+            <TextView
                 android:id="@+id/call_to_action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -169,6 +169,7 @@
                 android:background="@drawable/ads_bg_lib_curver"
                 android:foregroundGravity="center"
                 android:gravity="center"
+                android:padding="13dp"
                 android:textColor="@color/color_white"
                 android:textSize="13sp"
                 android:textStyle="bold"

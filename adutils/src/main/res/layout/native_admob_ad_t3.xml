@@ -5,7 +5,7 @@
     android:layout_width="fill_parent"
     android:layout_height="match_parent"
     android:layout_margin="5dp"
-    android:background="@drawable/nad_bg"
+    android:background="@drawable/nad_bg_empty"
     android:elevation="1dp">
 
     <RelativeLayout
@@ -157,7 +157,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-            <Button
+            <TextView
                 android:id="@+id/call_to_action"
                 android:layout_width="fill_parent"
                 android:layout_height="40dip"
