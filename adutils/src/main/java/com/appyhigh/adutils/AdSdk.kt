@@ -6640,6 +6640,7 @@ object AdSdk {
         isAdmanager: Boolean,
         loadTimeOut:Int
     ) {
+        Log.d("preLoadNativeAd: ", adUnit+"-"+adName)
         if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
             var mediaMaxHeight1 = mediaMaxHeight
             var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
