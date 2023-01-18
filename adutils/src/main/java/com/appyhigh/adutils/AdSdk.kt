@@ -222,6 +222,63 @@ object AdSdk {
         }
     }
 
+    fun initializeForService(
+        app: Application,
+        bannerRefreshTimer: Long = 45000L,
+        nativeRefreshTimer: Long = 45000L,
+        testDevice: String? = null,
+        preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
+        packageName: String = app.packageName,
+        dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
+        fetchingCallback: FetchingCallback? = null
+    ) {
+        this.app = app
+        application = app
+        val inflater = LayoutInflater.from(app)
+        AppPref.getInstance(app.applicationContext)
+        AdMobUtil.context = app.applicationContext
+        if (consentInformation == null) {
+            consentInformation = ConsentInformation.getInstance(app)
+        }
+        if (consentInformation?.consentStatus == ConsentStatus.NON_PERSONALIZED) {
+            extras.putString("npa", "1")
+        }
+        if (testDevice != null) {
+            val build = RequestConfiguration.Builder()
+                .setTestDeviceIds(listOf(testDevice)).build()
+            MobileAds.setRequestConfiguration(build)
+        }
+        MobileAds.initialize(app) {
+            isInitialized = true
+            preloadNativeAdList = preloadingNativeAdList
+            val context = application?.applicationContext
+            if (context != null) {
+                if (preloadNativeAdList != null && inflater != null) {
+                    preloadAds(inflater, context)
+                }
+
+                DynamicsAds.getDynamicAds(
+                    context,
+                    packageName,
+                    dynamicAdsFetchThresholdInSecs,
+                    preloadingNativeAdList,
+                    fetchingCallback
+                )
+            }
+            fetchingCallback?.OnInitialized()
+        }
+
+        if (isGooglePlayServicesAvailable(app)) {
+            if (application == null) {
+                bannerAdRefreshTimer = bannerRefreshTimer
+                nativeAdRefreshTimer = nativeRefreshTimer
+                refreshBanner(null)
+                refreshNative(null)
+                refreshNativeService(null)
+            }
+        }
+    }
+
     fun preloadAds(application: Application,preloadingNativeAdList: HashMap<String, PreloadNativeAds>){
         val context = application.applicationContext
         val inflater = LayoutInflater.from(app)
