@@ -5,7 +5,7 @@
 
 An ad util library to facilitate easy and standardized implementation of latest Admob SDK
 
-##Proguard
+## Proguard
 
 ```proguard
 -keep class io.jsonwebtoken.*.* { *; }
