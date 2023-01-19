@@ -505,6 +505,11 @@ object AdSdk {
                         )
                     appOpenAdCallback?.onInitSuccess(appOpenManager)
                 }
+                try {
+                    AppOpenManager.Companion.isPremiumUser = isPremium
+                }catch (e:Exception){
+                    e.printStackTrace()
+                }
             }
         }
         else{

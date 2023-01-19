@@ -323,6 +323,7 @@ class AppOpenManager(
                 backgroundThreshold = 1000
             }
             Log.i(LOG_TAG, "App Background Time: $appBackgroundTime ms")
+            isPremium = isPremiumUser
             if (appBackgroundTime > backgroundThreshold && !isPremium)
                 showAdIfAvailable()
         }
@@ -346,6 +347,7 @@ class AppOpenManager(
         private var splashAppOpenAd: AppOpenAd? = null
         private var reason: String? = null
         var initialized: Boolean = false
+        var isPremiumUser:Boolean = false
 
 //        interface appOpenCallBack {
 //            fun adDismissed()
@@ -420,6 +422,7 @@ class AppOpenManager(
 */
         initialized = true
         myApplication.registerActivityLifecycleCallbacks(this)
+        isPremium = isPremiumUser
         if (!isPremium)
             fetchAd()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
