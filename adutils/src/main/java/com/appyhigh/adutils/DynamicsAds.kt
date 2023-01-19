@@ -29,6 +29,20 @@ class DynamicsAds {
         val updateJSON = JSONObject()
         var adMobNew: List<AdMod> = ArrayList()
 
+        fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
+            return try {
+                if (!AdMobUtil.fetchPrimaryById(adName).isEmpty()) {
+                    val string = AdMobUtil.fetchPrimaryById(adName)?.get(0)
+                    string
+                }
+                else{
+                    fallBackAdId
+                }
+            } catch (e: Exception) {
+                fallBackAdId
+            }
+        }
+
         @SuppressLint("CheckResult")
         fun getDynamicAds(
             applicationContext: Context,
