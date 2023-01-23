@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.appyhigh.adutils.callbacks.AppOpenAdLoadCallback
 import com.appyhigh.adutils.callbacks.SplashInterstitialCallback
 import com.appyhigh.adutils.callbacks.VersionControlCallback
+import com.appyhigh.adutils.callbacks.VersionControllCallbackForced
 import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
@@ -90,11 +91,9 @@ class SplashActivity : AppCompatActivity() {
                     )
                 }
             },
-            versionControlCallback = object : VersionControlCallback {
-                override fun OnSoftUpdate() {
-                }
-
+            versionControlCallback = object : VersionControllCallbackForced {
                 override fun OnHardUpdate() {
+
                 }
             }
         )
