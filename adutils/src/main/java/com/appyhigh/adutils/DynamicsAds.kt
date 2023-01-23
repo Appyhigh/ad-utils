@@ -14,6 +14,8 @@ import com.appyhigh.adutils.models.apimodels.AppRequest
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.models.apimodels.SingleAppResponse
 import com.appyhigh.adutils.utils.AdMobUtil
+import com.appyhigh.adutils.utils.AdMobUtil.fetchAdById
+import com.appyhigh.adutils.utils.AdMobUtil.fetchPrimaryById
 import com.appyhigh.adutils.utils.RSAKeyGenerator
 import com.appyhigh.adutils.utils.container.AppPref
 import com.example.speakinenglish.container.AppPrefs
@@ -28,19 +30,24 @@ class DynamicsAds {
     companion object {
         val updateJSON = JSONObject()
         var adMobNew: List<AdMod> = ArrayList()
+        var context: Context? = null
 
         fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
-            return try {
-                if (!AdMobUtil.fetchPrimaryById(adName).isEmpty()) {
-                    val string = AdMobUtil.fetchPrimaryById(adName)?.get(0)
-                    string
-                }
-                else{
+            return if (context != null){
+                try {
+                    if (!context!!.fetchPrimaryById(adName).isEmpty()) {
+                        val string = context!!.fetchPrimaryById(adName)?.get(0)
+                        string
+                    }
+                    else{
+                        fallBackAdId
+                    }
+                } catch (e: Exception) {
                     fallBackAdId
                 }
-            } catch (e: Exception) {
-                fallBackAdId
             }
+            else
+                fallBackAdId
         }
 
         @SuppressLint("CheckResult")
@@ -74,7 +81,7 @@ class DynamicsAds {
                                         }
                                         val string = Gson().toJson(item?.adMob,object : TypeToken<List<AdMod?>?>() {}.type)
                                         AppPref.put(applicationContext,AppPref.ads,string)
-                                        Log.d("Dynamicads", "getDynamicAds: "+AdMobUtil.fetchAdById("util_interstitial"))
+                                        Log.d("Dynamicads", "getDynamicAds: "+applicationContext.fetchAdById("util_interstitial"))
                                         if (preloadingNativeAdList != null) {
                                             preloadAds(
                                                 applicationContext as Application,

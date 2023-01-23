@@ -13,6 +13,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.appyhigh.adutils.callbacks.AppOpenAdCallback
 import com.appyhigh.adutils.interfaces.AppOpenInternalCallback
 import com.appyhigh.adutils.utils.AdMobUtil
+import com.appyhigh.adutils.utils.AdMobUtil.fetchAdLoadTimeout
+import com.appyhigh.adutils.utils.AdMobUtil.fetchPrimaryById
+import com.appyhigh.adutils.utils.AdMobUtil.fetchSecondaryById
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -77,12 +80,12 @@ class AppOpenManager(
 //        if (isAdAvailable) {
 //            return
 //        }
-        var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+        var fetchedTimer:Int = myApplication.fetchAdLoadTimeout(adName)
         if (fetchedTimer == 0){
             fetchedTimer = loadTimeOut
         }
-        var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-        var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+        var primaryIds = myApplication.fetchPrimaryById(adName)
+        var secondaryIds = myApplication.fetchSecondaryById(adName)
 
         Log.d("appopen","OnStart:" + System.currentTimeMillis()/1000)
         if (primaryIds.size>0){
