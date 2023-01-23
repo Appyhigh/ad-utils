@@ -12,6 +12,7 @@ import com.appyhigh.adutils.databinding.ActivitySplashBinding
 import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.utils.AdMobUtil
+import com.appyhigh.adutils.utils.AdMobUtil.printData
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 
@@ -54,7 +55,7 @@ class SplashActivity : AppCompatActivity() {
                 override fun OnComplete(app: AppsData?) {
                 }
                 override fun OnInitialized() {
-                    AdMobUtil.printData()
+                    applicationContext.printData()
                     AdSdk.loadAppOpenAd(
                         this@SplashActivity,
                         "ca-app-pub-3940256099942544/3419835294",

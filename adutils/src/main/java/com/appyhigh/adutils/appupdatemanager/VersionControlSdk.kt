@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.util.Log
 import android.view.View
 import com.appyhigh.adutils.utils.AdMobUtil
+import com.appyhigh.adutils.utils.AdMobUtil.fetchCriticalVersion
+import com.appyhigh.adutils.utils.AdMobUtil.fetchLatestVersion
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
@@ -44,9 +46,9 @@ object VersionControlSdk {
     ) {
         try {
             currentVersion =
-                AdMobUtil.fetchLatestVersion()
+                context.fetchLatestVersion()
             criticalVersion =
-                AdMobUtil.fetchCriticalVersion()
+                context.fetchCriticalVersion()
             appUpdateManager = AppUpdateManagerFactory.create(context)
             this.view = view
             if (buildVersion < currentVersion.toFloat().toInt()) {
@@ -92,9 +94,9 @@ object VersionControlSdk {
     ) {
         try {
             currentVersion =
-                AdMobUtil.fetchLatestVersion()
+                context.fetchLatestVersion()
             criticalVersion =
-                AdMobUtil.fetchCriticalVersion()
+                context.fetchCriticalVersion()
             appUpdateManager = AppUpdateManagerFactory.create(context)
             this.view = view
             if (buildVersion < currentVersion.toFloat().toInt()) {

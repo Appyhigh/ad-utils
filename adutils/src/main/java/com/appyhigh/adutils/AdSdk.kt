@@ -32,7 +32,14 @@ import com.appyhigh.adutils.models.NativeAdItemService
 import com.appyhigh.adutils.models.PreloadNativeAds
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.utils.AdMobUtil
+import com.appyhigh.adutils.utils.AdMobUtil.fetchAdLoadTimeout
+import com.appyhigh.adutils.utils.AdMobUtil.fetchAdSize
+import com.appyhigh.adutils.utils.AdMobUtil.fetchAdStatusFromAdId
 import com.appyhigh.adutils.utils.AdMobUtil.fetchBannerAdSize
+import com.appyhigh.adutils.utils.AdMobUtil.fetchColor
+import com.appyhigh.adutils.utils.AdMobUtil.fetchPrimaryById
+import com.appyhigh.adutils.utils.AdMobUtil.fetchRefreshTime
+import com.appyhigh.adutils.utils.AdMobUtil.fetchSecondaryById
 import com.appyhigh.adutils.utils.container.AppPref
 import com.google.ads.consent.*
 import com.google.ads.mediation.admob.AdMobAdapter
@@ -291,10 +298,10 @@ object AdSdk {
     internal fun refreshBanner(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.bannerAdLifeCycleHashMap) {
-                if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
-                    fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
+                if (bannerRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && item.value.activity.fetchRefreshTime(item.value.adName) != 0L) {
+                    fixedRateTimer(item.value.adName, false, item.value.activity.fetchRefreshTime(item.value.adName), item.value.activity.fetchRefreshTime(item.value.adName)) {
                         if (item.value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && bannerRefresh == REFRESH_STATE.REFRESH_ON &&
-                            AdMobUtil.fetchAdStatusFromAdId(item.value.adName))
+                            item.value.activity.fetchAdStatusFromAdId(item.value.adName))
                             Handler(Looper.getMainLooper()).post {
                                 loadBannerAdRefresh(
                                     item.value.activity,
@@ -319,11 +326,11 @@ object AdSdk {
     internal fun refreshNative(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.nativeAdLifeCycleHashMap) {
-                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
-                    fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
+                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && item.value.viewGroup.context.fetchRefreshTime(item.value.adName) != 0L) {
+                    fixedRateTimer(item.value.adName, false, item.value.viewGroup.context.fetchRefreshTime(item.value.adName), item.value.viewGroup.context.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
                         if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
-                            AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
+                            item.value.viewGroup.context.fetchAdStatusFromAdId(value.adName)) {
                             Handler(Looper.getMainLooper()).post {
                                 loadNativeAdRefresh(
                                     value.id,
@@ -358,11 +365,11 @@ object AdSdk {
     internal fun refreshNativeService(adName:String?){
         if (isGooglePlayServicesAvailable(app)) {
             for (item in AdUtilConstants.nativeAdLifeCycleServiceHashMap) {
-                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && AdMobUtil.fetchRefreshTime(item.value.adName) != 0L) {
-                    fixedRateTimer(item.value.adName, false, AdMobUtil.fetchRefreshTime(item.value.adName), AdMobUtil.fetchRefreshTime(item.value.adName)) {
+                if (nativeRefresh == REFRESH_STATE.REFRESH_ON && adName.equals(item.value.adName) && item.value.context.fetchRefreshTime(item.value.adName) != 0L) {
+                    fixedRateTimer(item.value.adName, false, item.value.context.fetchRefreshTime(item.value.adName), item.value.context.fetchRefreshTime(item.value.adName)) {
                         val value = item.value
                         if (value.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && nativeRefresh == REFRESH_STATE.REFRESH_ON &&
-                            value.autoRefresh && AdMobUtil.fetchAdStatusFromAdId(value.adName)) {
+                            value.autoRefresh && item.value.context.fetchAdStatusFromAdId(value.adName)) {
                             Handler(Looper.getMainLooper()).post {
                                 loadNativeAdFromServiceRefresh(
                                     value.layoutInflater,
@@ -517,7 +524,7 @@ object AdSdk {
         isPremium:Boolean = false
     ) {
         if (isInitialized){
-            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application?.applicationContext!!.fetchAdStatusFromAdId(adName)) {
                 if (!AppOpenManager.initialized) {
                     val appOpenManager =
                         AppOpenManager(
@@ -564,13 +571,13 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         if (isInitialized){
-            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
+                var fetchedTimer:Int = activity.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = loadTimeOut
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = activity.fetchPrimaryById(adName)
+                var secondaryIds = activity.fetchSecondaryById(adName)
 
                 Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
                 if (primaryIds.size > 0){
@@ -842,7 +849,7 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         if (isInitialized){
-            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
                 loadBannerAd(
                     activity,
                     System.currentTimeMillis(),
@@ -850,7 +857,7 @@ object AdSdk {
                     viewGroup,
                     adUnit,
                     adName,
-                    fetchBannerAdSize(adName,adSize),
+                    application?.applicationContext!!.fetchBannerAdSize(adName,adSize),
                     bannerAdLoadCallback,
                     contentURL,
                     neighbourContentURL,
@@ -890,17 +897,17 @@ object AdSdk {
         isAdmanager:Boolean = false,
         loadTimeOut:Int
     ) {
-        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
             if (application != null) {
                 viewGroup.visibility = VISIBLE
                 if (adUnit.isBlank()) return
 
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                var fetchedTimer:Int = activity.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = loadTimeOut
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = activity.fetchPrimaryById(adName)
+                var secondaryIds = activity.fetchSecondaryById(adName)
 
 
                 val inflate = View.inflate(application, R.layout.shimmer_banner, null)
@@ -1562,7 +1569,7 @@ object AdSdk {
         isAdmanager: Boolean
     ) {
         if (isInitialized){
-            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
                 if (application != null) {
                     if (adUnit.isBlank()) return
                     val inflate = View.inflate(application, R.layout.shimmer_banner, null)
@@ -1696,14 +1703,14 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         if (isInitialized){
-            if (application != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (application != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application?.applicationContext!!.fetchAdStatusFromAdId(adName)) {
                 var mInterstitialAd: InterstitialAd? = null
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                var fetchedTimer:Int = application?.applicationContext!!.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = loadTimeOut
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = application?.applicationContext!!.fetchPrimaryById(adName)
+                var secondaryIds = application?.applicationContext!!.fetchSecondaryById(adName)
                 Log.d("main_interstitial","OnStart:" + System.currentTimeMillis()/1000)
                 if (!isAdmanager){
                     if (primaryIds.size > 0){
@@ -2107,14 +2114,14 @@ object AdSdk {
         isAdmanager:Boolean = false
     ) {
         if (isInitialized){
-            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
 
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                var fetchedTimer:Int = activity.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = timer.toInt()
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = activity.fetchPrimaryById(adName)
+                var secondaryIds = activity.fetchSecondaryById(adName)
 
 
                 if (!isAdmanager){
@@ -2513,14 +2520,14 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         if (isInitialized){
-            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName))
+            if (activity != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName))
             {
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                var fetchedTimer:Int = activity.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = loadTimeOut
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = activity.fetchPrimaryById(adName)
+                var secondaryIds = activity.fetchSecondaryById(adName)
                 if (showLoaderScreen)
                     showAdLoaderLayout(activity)
                 Log.d("rewarded","OnStart:" + System.currentTimeMillis()/1000)
@@ -3054,7 +3061,7 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         var mediaMaxHeight1 = mediaMaxHeight
-        var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+        var newAdSize = application?.applicationContext!!.fetchAdSize(adName,adType)
         @LayoutRes val layoutId = when (newAdSize) {
             "6" -> {
                 mediaMaxHeight1 = 200
@@ -3070,7 +3077,7 @@ object AdSdk {
         }
 
         if (isInitialized){
-            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application?.applicationContext!!.fetchAdStatusFromAdId(adName)) {
                 loadNativeAd(
                     lifecycle,
                     adUnit,
@@ -3186,17 +3193,17 @@ object AdSdk {
         isAdmanager:Boolean = false,
         loadTimeOut:Int
     ) {
-        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application?.applicationContext!!.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (application != null) {
                 if (adUnit.isBlank()) return
 
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+                var fetchedTimer:Int = application?.applicationContext!!.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = loadTimeOut
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = application?.applicationContext!!.fetchPrimaryById(adName)
+                var secondaryIds = application?.applicationContext!!.fetchSecondaryById(adName)
 
                 val inflate = View.inflate(application, R.layout.shimmer, null)
                 when (adType) {
@@ -3318,15 +3325,20 @@ object AdSdk {
                                             }
                                         } else {
                                             nativeAd?.let {
-                                                populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
-                                                )
+                                                try {
+                                                    populateUnifiedNativeAdView(
+                                                        it,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        application!!.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                catch (e:Exception){
+
+                                                }
                                             }
                                         }
                                         viewGroup.removeAllViews()
@@ -3396,15 +3408,20 @@ object AdSdk {
                                                             }
                                                         } else {
                                                             nativeAd?.let {
-                                                                populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    AdMobUtil.fetchColor(adName),
-                                                                    mediaMaxHeight
-                                                                )
+                                                                try {
+                                                                    populateUnifiedNativeAdView(
+                                                                        it,
+                                                                        adView,
+                                                                        adType,
+                                                                        textColor1,
+                                                                        textColor2,
+                                                                        application!!.fetchColor(adName),
+                                                                        mediaMaxHeight
+                                                                    )
+                                                                }
+                                                                catch (e:Exception){
+
+                                                                }
                                                             }
                                                         }
                                                         viewGroup.removeAllViews()
@@ -3473,15 +3490,20 @@ object AdSdk {
                                                                         }
                                                                     } else {
                                                                         nativeAd?.let {
-                                                                            populateUnifiedNativeAdView(
-                                                                                it,
-                                                                                adView,
-                                                                                adType,
-                                                                                textColor1,
-                                                                                textColor2,
-                                                                                AdMobUtil.fetchColor(adName),
-                                                                                mediaMaxHeight
-                                                                            )
+                                                                            try {
+                                                                                populateUnifiedNativeAdView(
+                                                                                    it,
+                                                                                    adView,
+                                                                                    adType,
+                                                                                    textColor1,
+                                                                                    textColor2,
+                                                                                    application!!.fetchColor(adName),
+                                                                                    mediaMaxHeight
+                                                                                )
+                                                                            }
+                                                                            catch (e:Exception){
+
+                                                                            }
                                                                         }
                                                                     }
                                                                     viewGroup.removeAllViews()
@@ -3563,15 +3585,20 @@ object AdSdk {
                                                             }
                                                         } else {
                                                             nativeAd?.let {
-                                                                populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    AdMobUtil.fetchColor(adName),
-                                                                    mediaMaxHeight
-                                                                )
+                                                                try {
+                                                                    populateUnifiedNativeAdView(
+                                                                        it,
+                                                                        adView,
+                                                                        adType,
+                                                                        textColor1,
+                                                                        textColor2,
+                                                                        application!!.fetchColor(adName),
+                                                                        mediaMaxHeight
+                                                                    )
+                                                                }
+                                                                catch (e:Exception){
+
+                                                                }
                                                             }
                                                         }
                                                         viewGroup.removeAllViews()
@@ -3654,15 +3681,20 @@ object AdSdk {
                                             }
                                         } else {
                                             nativeAd?.let {
-                                                populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
-                                                )
+                                                try {
+                                                    populateUnifiedNativeAdView(
+                                                        it,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        application!!.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                catch (e:Exception){
+
+                                                }
                                             }
                                         }
                                         viewGroup.removeAllViews()
@@ -3731,15 +3763,20 @@ object AdSdk {
                                                         }
                                                     } else {
                                                         nativeAd?.let {
-                                                            populateUnifiedNativeAdView(
-                                                                it,
-                                                                adView,
-                                                                adType,
-                                                                textColor1,
-                                                                textColor2,
-                                                                AdMobUtil.fetchColor(adName),
-                                                                mediaMaxHeight
-                                                            )
+                                                            try {
+                                                                populateUnifiedNativeAdView(
+                                                                    it,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    application!!.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                            catch (e:Exception){
+
+                                                            }
                                                         }
                                                     }
                                                     viewGroup.removeAllViews()
@@ -3821,15 +3858,20 @@ object AdSdk {
                                             }
                                         } else {
                                             nativeAd?.let {
-                                                populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
-                                                )
+                                                try {
+                                                    populateUnifiedNativeAdView(
+                                                        it,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        application!!.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                catch (e:Exception){
+
+                                                }
                                             }
                                         }
                                         viewGroup.removeAllViews()
@@ -3909,15 +3951,20 @@ object AdSdk {
                                             }
                                         } else {
                                             nativeAd?.let {
-                                                populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
-                                                )
+                                                try {
+                                                    populateUnifiedNativeAdView(
+                                                        it,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        application!!.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                catch (e:Exception){
+
+                                                }
                                             }
                                         }
                                         viewGroup.removeAllViews()
@@ -3987,15 +4034,20 @@ object AdSdk {
                                                             }
                                                         } else {
                                                             nativeAd?.let {
-                                                                populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    AdMobUtil.fetchColor(adName),
-                                                                    mediaMaxHeight
-                                                                )
+                                                                try {
+                                                                    populateUnifiedNativeAdView(
+                                                                        it,
+                                                                        adView,
+                                                                        adType,
+                                                                        textColor1,
+                                                                        textColor2,
+                                                                        application!!.fetchColor(adName),
+                                                                        mediaMaxHeight
+                                                                    )
+                                                                }
+                                                                catch (e:Exception){
+
+                                                                }
                                                             }
                                                         }
                                                         viewGroup.removeAllViews()
@@ -4064,15 +4116,20 @@ object AdSdk {
                                                                         }
                                                                     } else {
                                                                         nativeAd?.let {
-                                                                            populateUnifiedNativeAdView(
-                                                                                it,
-                                                                                adView,
-                                                                                adType,
-                                                                                textColor1,
-                                                                                textColor2,
-                                                                                AdMobUtil.fetchColor(adName),
-                                                                                mediaMaxHeight
-                                                                            )
+                                                                            try {
+                                                                                populateUnifiedNativeAdView(
+                                                                                    it,
+                                                                                    adView,
+                                                                                    adType,
+                                                                                    textColor1,
+                                                                                    textColor2,
+                                                                                    application!!.fetchColor(adName),
+                                                                                    mediaMaxHeight
+                                                                                )
+                                                                            }
+                                                                            catch (e:Exception){
+
+                                                                            }
                                                                         }
                                                                     }
                                                                     viewGroup.removeAllViews()
@@ -4154,15 +4211,20 @@ object AdSdk {
                                                             }
                                                         } else {
                                                             nativeAd?.let {
-                                                                populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    AdMobUtil.fetchColor(adName),
-                                                                    mediaMaxHeight
-                                                                )
+                                                                try {
+                                                                    populateUnifiedNativeAdView(
+                                                                        it,
+                                                                        adView,
+                                                                        adType,
+                                                                        textColor1,
+                                                                        textColor2,
+                                                                        application!!.fetchColor(adName),
+                                                                        mediaMaxHeight
+                                                                    )
+                                                                }
+                                                                catch (e:Exception){
+
+                                                                }
                                                             }
                                                         }
                                                         viewGroup.removeAllViews()
@@ -4245,15 +4307,20 @@ object AdSdk {
                                             }
                                         } else {
                                             nativeAd?.let {
-                                                populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
-                                                )
+                                                try {
+                                                    populateUnifiedNativeAdView(
+                                                        it,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        application!!.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                catch (e:Exception){
+
+                                                }
                                             }
                                         }
                                         viewGroup.removeAllViews()
@@ -4322,15 +4389,20 @@ object AdSdk {
                                                         }
                                                     } else {
                                                         nativeAd?.let {
-                                                            populateUnifiedNativeAdView(
-                                                                it,
-                                                                adView,
-                                                                adType,
-                                                                textColor1,
-                                                                textColor2,
-                                                                AdMobUtil.fetchColor(adName),
-                                                                mediaMaxHeight
-                                                            )
+                                                            try {
+                                                                populateUnifiedNativeAdView(
+                                                                    it,
+                                                                    adView,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    application!!.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                            }
+                                                            catch (e:Exception){
+
+                                                            }
                                                         }
                                                     }
                                                     viewGroup.removeAllViews()
@@ -4412,15 +4484,20 @@ object AdSdk {
                                             }
                                         } else {
                                             nativeAd?.let {
-                                                populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    AdMobUtil.fetchColor(adName),
-                                                    mediaMaxHeight
-                                                )
+                                                try {
+                                                    populateUnifiedNativeAdView(
+                                                        it,
+                                                        adView,
+                                                        adType,
+                                                        textColor1,
+                                                        textColor2,
+                                                        application!!.fetchColor(adName),
+                                                        mediaMaxHeight
+                                                    )
+                                                }
+                                                catch (e:Exception){
+
+                                                }
                                             }
                                         }
                                         viewGroup.removeAllViews()
@@ -4704,7 +4781,7 @@ object AdSdk {
         showLoadingMessage: Boolean,
         isAdmanager: Boolean,
     ) {
-        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application?.applicationContext!!.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (application != null) {
                 val inflate = View.inflate(application, R.layout.shimmer, null)
@@ -4846,15 +4923,20 @@ object AdSdk {
                                     }
                                 } else {
                                     nativeAd?.let {
-                                        populateUnifiedNativeAdView(
-                                            it,
-                                            adView,
-                                            adType,
-                                            textColor1,
-                                            textColor2,
-                                            AdMobUtil.fetchColor(adName),
-                                            mediaMaxHeight
-                                        )
+                                        try {
+                                            populateUnifiedNativeAdView(
+                                                it,
+                                                adView,
+                                                adType,
+                                                textColor1,
+                                                textColor2,
+                                                application!!.fetchColor(adName),
+                                                mediaMaxHeight
+                                            )
+                                        }
+                                        catch (e:Exception){
+
+                                        }
                                     }
                                 }
                                 viewGroup.removeAllViews()
@@ -4958,7 +5040,7 @@ object AdSdk {
         loadTimeOut:Int
     ){
         if (isInitialized){
-            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+            if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && context.fetchAdStatusFromAdId(adName)) {
                 loadNativeAdFromService(
                     layoutInflater,
                     context,
@@ -5019,8 +5101,8 @@ object AdSdk {
         isAdmanager: Boolean
     ) {
         if (isInitialized){
-            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-                var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && context.fetchAdStatusFromAdId(adName)) {
+                var newAdSize = context.fetchAdSize(adName,adType)
                 @LayoutRes val layoutId = when (newAdSize) {
                     "6" -> { R.layout.native_admob_ad_t6
                     }/*DEFAULT_AD*/
@@ -5171,7 +5253,7 @@ object AdSdk {
                                         newAdSize,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
                                 }
@@ -5251,8 +5333,8 @@ object AdSdk {
         isAdmanager:Boolean = false,
         loadTimeOut:Int
     ) {
-        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-            var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && context.fetchAdStatusFromAdId(adName)) {
+            var newAdSize = context.fetchAdSize(adName,adType)
             @LayoutRes val layoutId = when (newAdSize) {
                 "1" -> R.layout.native_admob_ad_t1/*MEDIUM*/
                 "2" -> R.layout.native_admob_ad_t2/*SEMIMEDIUM*/
@@ -5265,12 +5347,12 @@ object AdSdk {
             }
             viewGroup.visibility = VISIBLE
 
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            var fetchedTimer:Int = context.fetchAdLoadTimeout(adName)
             if (fetchedTimer == 0){
                 fetchedTimer = loadTimeOut
             }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+            var primaryIds = context.fetchPrimaryById(adName)
+            var secondaryIds = context.fetchSecondaryById(adName)
 
             val inflate = View.inflate(application, R.layout.shimmer, null)
             when (newAdSize) {
@@ -5443,7 +5525,7 @@ object AdSdk {
                                             adType,
                                             textColor1,
                                             textColor2,
-                                            AdMobUtil.fetchColor(adName),
+                                            context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
                                     }
@@ -5519,7 +5601,7 @@ object AdSdk {
                                                             adType,
                                                             textColor1,
                                                             textColor2,
-                                                            AdMobUtil.fetchColor(adName),
+                                                            context.fetchColor(adName),
                                                             mediaMaxHeight
                                                         )
                                                     }
@@ -5594,7 +5676,7 @@ object AdSdk {
                                                                         adType,
                                                                         textColor1,
                                                                         textColor2,
-                                                                        AdMobUtil.fetchColor(adName),
+                                                                        context.fetchColor(adName),
                                                                         mediaMaxHeight
                                                                     )
                                                                 }
@@ -5682,7 +5764,7 @@ object AdSdk {
                                                             adType,
                                                             textColor1,
                                                             textColor2,
-                                                            AdMobUtil.fetchColor(adName),
+                                                            context.fetchColor(adName),
                                                             mediaMaxHeight
                                                         )
                                                     }
@@ -5771,7 +5853,7 @@ object AdSdk {
                                             adType,
                                             textColor1,
                                             textColor2,
-                                            AdMobUtil.fetchColor(adName),
+                                            context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
                                     }
@@ -5846,7 +5928,7 @@ object AdSdk {
                                                         adType,
                                                         textColor1,
                                                         textColor2,
-                                                        AdMobUtil.fetchColor(adName),
+                                                        context.fetchColor(adName),
                                                         mediaMaxHeight
                                                     )
                                                 }
@@ -5934,7 +6016,7 @@ object AdSdk {
                                             adType,
                                             textColor1,
                                             textColor2,
-                                            AdMobUtil.fetchColor(adName),
+                                            context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
                                     }
@@ -6023,7 +6105,7 @@ object AdSdk {
                                         adType,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
                                 }
@@ -6099,7 +6181,7 @@ object AdSdk {
                                                         adType,
                                                         textColor1,
                                                         textColor2,
-                                                        AdMobUtil.fetchColor(adName),
+                                                        context.fetchColor(adName),
                                                         mediaMaxHeight
                                                     )
                                                 }
@@ -6174,7 +6256,7 @@ object AdSdk {
                                                                     adType,
                                                                     textColor1,
                                                                     textColor2,
-                                                                    AdMobUtil.fetchColor(adName),
+                                                                    context.fetchColor(adName),
                                                                     mediaMaxHeight
                                                                 )
                                                             }
@@ -6262,7 +6344,7 @@ object AdSdk {
                                                         adType,
                                                         textColor1,
                                                         textColor2,
-                                                        AdMobUtil.fetchColor(adName),
+                                                        context.fetchColor(adName),
                                                         mediaMaxHeight
                                                     )
                                                 }
@@ -6351,7 +6433,7 @@ object AdSdk {
                                         adType,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
                                 }
@@ -6426,7 +6508,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                    AdMobUtil.fetchColor(adName),
+                                                    context.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -6514,7 +6596,7 @@ object AdSdk {
                                         adType,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
                                 }
@@ -6674,9 +6756,9 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         Log.d("preLoadNativeAd: ", adUnit+"-"+adName)
-        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && context.fetchAdStatusFromAdId(adName)) {
             var mediaMaxHeight1 = mediaMaxHeight
-            var newAdSize = AdMobUtil.fetchAdSize(adName,adType)
+            var newAdSize = context.fetchAdSize(adName,adType)
             @LayoutRes val layoutId = when (newAdSize) {
                 "6" -> {
                     mediaMaxHeight1 = 200
@@ -6692,12 +6774,12 @@ object AdSdk {
             }
             if (adUnit.isBlank()) return
 
-            var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            var fetchedTimer:Int = context.fetchAdLoadTimeout(adName)
             if (fetchedTimer == 0){
                 fetchedTimer = loadTimeOut
             }
-            var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-            var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+            var primaryIds = context.fetchPrimaryById(adName)
+            var secondaryIds = context.fetchSecondaryById(adName)
 
 
             val preloadNativeAds = preloadNativeAdList?.get(adName)
@@ -6806,10 +6888,10 @@ object AdSdk {
                                         newAdSize,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight1
                                     )
-                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                    Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                 }
                                 if (preloadNativeAds != null) {
                                     preloadNativeAds.ad = adView
@@ -6867,10 +6949,10 @@ object AdSdk {
                                                         newAdSize,
                                                         textColor1,
                                                         textColor2,
-                                                        AdMobUtil.fetchColor(adName),
+                                                        context.fetchColor(adName),
                                                         mediaMaxHeight1
                                                     )
-                                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                    Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                                 }
                                                 if (preloadNativeAds != null) {
                                                     preloadNativeAds.ad = adView
@@ -6927,10 +7009,10 @@ object AdSdk {
                                                                     newAdSize,
                                                                     textColor1,
                                                                     textColor2,
-                                                                    AdMobUtil.fetchColor(adName),
+                                                                    context.fetchColor(adName),
                                                                     mediaMaxHeight1
                                                                 )
-                                                                Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                                Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                                             }
                                                             if (preloadNativeAds != null) {
                                                                 preloadNativeAds.ad = adView
@@ -6998,10 +7080,10 @@ object AdSdk {
                                                         newAdSize,
                                                         textColor1,
                                                         textColor2,
-                                                        AdMobUtil.fetchColor(adName),
+                                                        context.fetchColor(adName),
                                                         mediaMaxHeight1
                                                     )
-                                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                    Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                                 }
                                                 if (preloadNativeAds != null) {
                                                     preloadNativeAds.ad = adView
@@ -7070,10 +7152,10 @@ object AdSdk {
                                         newAdSize,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight1
                                     )
-                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                    Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                 }
                                 if (preloadNativeAds != null) {
                                     preloadNativeAds.ad = adView
@@ -7130,10 +7212,10 @@ object AdSdk {
                                                     newAdSize,
                                                     textColor1,
                                                     textColor2,
-                                                    AdMobUtil.fetchColor(adName),
+                                                    context.fetchColor(adName),
                                                     mediaMaxHeight1
                                                 )
-                                                Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                                Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                             }
                                             if (preloadNativeAds != null) {
                                                 preloadNativeAds.ad = adView
@@ -7201,10 +7283,10 @@ object AdSdk {
                                         newAdSize,
                                         textColor1,
                                         textColor2,
-                                        AdMobUtil.fetchColor(adName),
+                                        context.fetchColor(adName),
                                         mediaMaxHeight1
                                     )
-                                    Log.d("preloadColor", "onSuccess: "+AdMobUtil.fetchColor(adName))
+                                    Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
                                 }
                                 if (preloadNativeAds != null) {
                                     preloadNativeAds.ad = adView
@@ -7449,13 +7531,13 @@ object AdSdk {
         loadTimeOut:Int
     ) {
         if (isInitialized){
-            if (adId != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
-                var fetchedTimer:Int = AdMobUtil.fetchAdLoadTimeout(adName)
+            if (adId != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
+                var fetchedTimer:Int = activity.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
                     fetchedTimer = loadTimeOut
                 }
-                var primaryIds = AdMobUtil.fetchPrimaryById(adName)
-                var secondaryIds = AdMobUtil.fetchSecondaryById(adName)
+                var primaryIds = activity.fetchPrimaryById(adName)
+                var secondaryIds = activity.fetchSecondaryById(adName)
 
                 showAdLoaderLayout(activity)
 
@@ -7968,7 +8050,7 @@ object AdSdk {
         adName: String
     ) {
         EmptyAdList(adUnit)
-        if (activity != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && AdMobUtil.fetchAdStatusFromAdId(adName)) {
+        if (activity != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && activity.fetchAdStatusFromAdId(adName)) {
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
