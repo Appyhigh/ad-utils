@@ -30,9 +30,8 @@ class DynamicsAds {
     companion object {
         val updateJSON = JSONObject()
         var adMobNew: List<AdMod> = ArrayList()
-        var context: Context? = null
 
-        fun getDynamicAdsId(fallBackAdId: String, adName: String): String {
+        fun getDynamicAdsId(context: Context, fallBackAdId: String, adName: String): String {
             return if (context != null){
                 try {
                     if (!context!!.fetchPrimaryById(adName).isEmpty()) {

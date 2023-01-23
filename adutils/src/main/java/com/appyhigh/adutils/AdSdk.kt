@@ -181,7 +181,6 @@ object AdSdk {
         val inflater = LayoutInflater.from(app)
         AppPref.getInstance(app.applicationContext)
         AdMobUtil.context = app.applicationContext
-        DynamicsAds.context = app.applicationContext
         if (consentInformation == null) {
             consentInformation = ConsentInformation.getInstance(app)
         }
