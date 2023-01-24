@@ -6,4 +6,6 @@ abstract class NativeAdLoadCallback {
     open fun onAdLoaded() {}
     open fun onAdFailed(adError: LoadAdError?) {}
     open fun onAdClicked() {}
+    open fun onContextFailed(){}
+
 }

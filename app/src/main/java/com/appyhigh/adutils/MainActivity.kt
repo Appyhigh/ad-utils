@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity(), VersionControlCallback {
         )
         if (BuildConfig.DEBUG) {
             AdSdk.attachAppOpenAdManager(
+                application,
                 "ca-app-pub-3940256099942544/3419835294",
                 "util_appopen",
                 object : AppOpenAdCallback() {
@@ -68,7 +69,9 @@ class MainActivity : AppCompatActivity(), VersionControlCallback {
                 loadTimeOut = 4000,
             )
         } else {
-            AdSdk.attachAppOpenAdManager("ca-app-pub-3940256099942544/3419835294",
+            AdSdk.attachAppOpenAdManager(
+                application,
+                "ca-app-pub-3940256099942544/3419835294",
                 "util_appopen",
                 object : AppOpenAdCallback() {
                     override fun onAdFailedToLoad(loadAdError: LoadAdError?) {
@@ -99,6 +102,10 @@ class MainActivity : AppCompatActivity(), VersionControlCallback {
 
                 override fun moveNext(error: AdError) {
                     Log.d("AdSDK", "moveNext: 2 " + error.message)
+                }
+
+                override fun onContextFailed() {
+                    Log.d("AdSDK", "moveNext: 2 " + "onContextFailed")
                 }
             },
             loadTimeOut = 4000)
@@ -157,6 +164,10 @@ class MainActivity : AppCompatActivity(), VersionControlCallback {
         override fun onAdShowedFullScreenContent() {
             interstitialAd = null
         }
+
+        override fun onContextFailed() {
+            Log.d("AdSDK", "interstitial: 2 " + "onContextFailed")
+        }
     }
 
     private val mRewardedAdUtilCallback = object : RewardedAdUtilLoadCallback {
@@ -182,10 +193,15 @@ class MainActivity : AppCompatActivity(), VersionControlCallback {
             rewardedAd = null
         }
 
+        override fun onContextFailed() {
+            Log.d("AdSDK", "reward: 2 " + "onContextFailed")
+        }
+
     }
 
     private fun loadInterstitialAd(activity: Activity) {
         AdSdk.loadInterstitialAd(
+            activity,
             "util_interstitial",
             "ca-app-pub-3940256099942544/1033173712",
             mInterstitialAdUtilCallback,

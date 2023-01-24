@@ -7,4 +7,5 @@ interface InterstitialCallback {
     fun moveNext()
     fun moveNext(error: LoadAdError)
     fun moveNext(error: AdError)
+    fun onContextFailed()
 }

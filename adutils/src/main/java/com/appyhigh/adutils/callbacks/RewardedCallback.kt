@@ -8,4 +8,5 @@ interface RewardedCallback {
     fun moveNext(error: LoadAdError)
     fun moveNext(error: AdError)
     fun adNotLoaded()
+    fun onContextFailed()
 }

@@ -14,4 +14,5 @@ abstract class AppOpenAdLoadCallback {
     open fun onAdFailedToLoad(loadAdError: LoadAdError? = null) {}
     open fun onAdFailedToShow(adError: AdError) {}
     open fun onAdClosed() {}
+    open fun onContextFailed() {}
 }

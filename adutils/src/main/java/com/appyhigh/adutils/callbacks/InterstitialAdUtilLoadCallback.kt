@@ -14,4 +14,5 @@ interface InterstitialAdUtilLoadCallback {
     fun onAdDismissedFullScreenContent()
     fun onAdFailedToShowFullScreenContent(adError: AdError?)
     fun onAdShowedFullScreenContent()
+    fun onContextFailed()
 }

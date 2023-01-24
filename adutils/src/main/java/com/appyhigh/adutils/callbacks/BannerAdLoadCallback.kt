@@ -12,4 +12,6 @@ interface BannerAdLoadCallback {
     fun onAdClicked()
 
     fun onAdClosed()
+
+    fun onContextFailed()
 }

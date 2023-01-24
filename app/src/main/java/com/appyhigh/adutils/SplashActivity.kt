@@ -87,6 +87,10 @@ class SplashActivity : AppCompatActivity() {
                             override fun OnError(msg: String) {
                                 Log.d("Splashinterstial", "onAdFailedToLoad: " + msg)
                             }
+
+                            override fun onContextFailed() {
+                                TODO("Not yet implemented")
+                            }
                         }, 6000
                     )
                 }

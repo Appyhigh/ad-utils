@@ -51,6 +51,7 @@ class NativeAdActivity : AppCompatActivity() {
         )*/
 
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit,
             adName = "util_native_grid",
@@ -63,6 +64,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit,
             adName = "util_native_grid",
@@ -75,6 +77,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit2,
             adName = "util_native_default",
@@ -85,6 +88,7 @@ class NativeAdActivity : AppCompatActivity() {
             loadTimeOut = 4000
         )
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit,
             adName = "util_native_small",
@@ -95,6 +99,7 @@ class NativeAdActivity : AppCompatActivity() {
             loadTimeOut = 4000
         )
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit2,
             adName = "util_native_medium",
@@ -106,6 +111,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit,
             adName = "util_native_bigv1",
@@ -118,6 +124,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit,
             adName = "util_native_bigv2",
@@ -130,6 +137,7 @@ class NativeAdActivity : AppCompatActivity() {
         )
 
         AdSdk.loadNativeAd(
+            this@NativeAdActivity,
             lifecycle = lifecycle,
             adUnit = adUnit,
             adName = "util_native_bigv3",
@@ -198,6 +206,11 @@ class NativeAdActivity : AppCompatActivity() {
         override fun onAdClicked() {
             super.onAdClicked()
             Log.d("AdSdk", "onAdClicked: $s")
+        }
+
+        override fun onContextFailed() {
+            super.onContextFailed()
+            Log.d("AdSdk", "onContextFailed: $s")
         }
     }
 

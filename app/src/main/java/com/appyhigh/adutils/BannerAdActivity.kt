@@ -1,5 +1,6 @@
 package com.appyhigh.adutils
 
+import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -46,6 +47,7 @@ class BannerAdActivity : AppCompatActivity() {
             loadTimeOut = 4000
         )
 
+        var application: Activity? = null
         AdSdk.loadBannerAd(
             this,
             lifecycle,
@@ -81,6 +83,10 @@ class BannerAdActivity : AppCompatActivity() {
 
         override fun onAdClosed() {
             Log.d("BannerAdLoadCallback", "onAdClosed")
+        }
+
+        override fun onContextFailed() {
+            Log.d("BannerAdLoadCallback", "onContextFailed")
         }
 
     }
