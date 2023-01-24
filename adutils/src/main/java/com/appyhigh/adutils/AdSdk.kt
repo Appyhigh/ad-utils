@@ -556,7 +556,7 @@ object AdSdk {
                     Log.d("appopen_new",adName+"OnStart:" + System.currentTimeMillis()/1000)
                     if (primaryIds.size > 0){
                         loadAppOpenAd(
-                                activity,
+                            activity,
                             adName,
                             fetchedTimer,
                             primaryIds,
@@ -721,7 +721,7 @@ object AdSdk {
     }
 
     internal fun loadAppOpenAd(
-        application:Activity,
+        application:Context,
         adName:String,
         fetchedTimer:Int,
         primaryIds:List<String>,
@@ -818,7 +818,7 @@ object AdSdk {
      *
      */
     fun loadBannerAd(
-        application: Activity,
+        application: Context,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
         adUnit: String,
@@ -873,7 +873,7 @@ object AdSdk {
     }
 
     internal fun loadBannerAd(
-        application: Activity,
+        application: Context,
         id: Long,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
@@ -1327,7 +1327,7 @@ object AdSdk {
     }
 
     internal fun loadBannerAd(
-        activity: Activity,
+        activity: Context,
         id: Long,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
@@ -1432,7 +1432,7 @@ object AdSdk {
     }
 
     internal fun loadBannerAdManager(
-        activity: Activity,
+        activity: Context,
         id: Long,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
@@ -1538,7 +1538,7 @@ object AdSdk {
     }
 
     internal fun loadBannerAdRefresh(
-        application: Activity,
+        application: Context,
         id: Long,
         lifecycle: Lifecycle,
         viewGroup: ViewGroup,
@@ -1681,7 +1681,7 @@ object AdSdk {
      * IMPORTANT: You wont be able to show ad if you pass a null callback
      */
     fun loadInterstitialAd(
-        application: Activity,
+        application: Context,
         adName: String,
         adUnit: String,
         interstitialAdUtilLoadCallback: InterstitialAdUtilLoadCallback?,
@@ -1969,7 +1969,7 @@ object AdSdk {
     }
 
     internal fun loadInterstitialAd(
-        application: Activity,
+        application: Context,
         adName: String,
         timer: Long,
         primaryIds: List<String>,
@@ -2044,7 +2044,7 @@ object AdSdk {
     }
 
     internal fun loadInterstitialAdManager(
-        application:Activity,
+        application:Context,
         adName: String,
         timer: Long,
         primaryIds: List<String>,
@@ -2903,7 +2903,7 @@ object AdSdk {
 
     internal fun loadRewardedAd(
         adName: String,
-        activity: Activity,
+        activity: Context,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
         timer: Long,
         primaryIds: List<String>,
@@ -2971,7 +2971,7 @@ object AdSdk {
 
     internal fun loadRewardedAdManager(
         adName: String,
-        activity: Activity,
+        activity: Context,
         rewardedAdUtilLoadCallback: RewardedAdUtilLoadCallback?,
         timer: Long,
         primaryIds: List<String>,
@@ -3062,7 +3062,7 @@ object AdSdk {
     }
 
     fun loadNativeAd(
-        application:Activity,
+        application:Context,
         lifecycle: Lifecycle,
         adUnit: String,
         adName: String,
@@ -3149,7 +3149,7 @@ object AdSdk {
      * @param populator -> nullable populator, if you want a custom population method, pass a method which takes (NativeAd, NativeAdView?) as params
      */
     internal fun loadNativeAd(
-        application: Activity,
+        application: Context,
         lifecycle: Lifecycle,
         adUnit: String,
         adName: String,
@@ -3203,7 +3203,7 @@ object AdSdk {
      * @param populator -> nullable populator, if you want a custom population method, pass a custom populator which takes (NativeAd, NativeAdView) as params
      */
     internal fun loadNativeAd(
-        application: Activity,
+        application: Context,
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adUnit: String,
@@ -4553,7 +4553,7 @@ object AdSdk {
     }
 
     internal fun loadNativeAd(
-        application: Activity,
+        application: Context,
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adName: String,
@@ -4675,7 +4675,7 @@ object AdSdk {
     }
 
     internal fun loadNativeAdManager(
-        application: Activity,
+        application: Context,
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adName: String,
@@ -4794,7 +4794,7 @@ object AdSdk {
     }
 
     internal fun loadNativeAdRefresh(
-        application: Activity,
+        application: Context,
         id: Long = System.currentTimeMillis(),
         lifecycle: Lifecycle,
         adUnit: String,
@@ -7957,7 +7957,7 @@ object AdSdk {
 
     internal  fun showRewardedIntersAdManager(
         adName: String,
-        activity: Activity,
+        activity: Context,
         timer: Long,
         primaryIds: List<String>,
         interstitialCallback: InterstitialCallback,
@@ -8038,7 +8038,7 @@ object AdSdk {
     val AdRewardedList: HashMap<String, Boolean> = hashMapOf()
 
     fun preLoadRewardedAd(
-        application: Activity?,
+        application: Context?,
         adUnit: String,
         adName: String
     ) {
