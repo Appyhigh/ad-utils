@@ -493,11 +493,11 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application?.applicationContext!!.fetchAdStatusFromAdId(adName)) {
+                if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     if (!AppOpenManager.initialized) {
                         val appOpenManager =
                             AppOpenManager(
-                                application!!,
+                                application,
                                 appOpenAdUnit,
                                 adName,
                                 isShownOnlyOnce,
@@ -779,7 +779,7 @@ object AdSdk {
             }
             if (!isAdmanager){
                 AppOpenAd.load(
-                application!!, appOpenAdUnit,
+                application, appOpenAdUnit,
                 AdRequest.Builder()
                     .addNetworkExtrasBundle(
                         AdMobAdapter::class.java,
@@ -791,7 +791,7 @@ object AdSdk {
             }
             else {
                 AppOpenAd.load(
-                application!!, appOpenAdUnit,
+                application, appOpenAdUnit,
                 AdManagerAdRequest.Builder()
                     .build(),
                 AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT, loadCallback
@@ -836,7 +836,7 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+                if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     loadBannerAd(
                         application,
                         System.currentTimeMillis(),
@@ -890,7 +890,7 @@ object AdSdk {
         isAdmanager:Boolean = false,
         loadTimeOut:Int
     ) {
-        if (application != null && adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+        if (application != null && adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (adUnit.isBlank()) return
 
@@ -1556,7 +1556,7 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+                if (adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     if (application != null) {
                         if (adUnit.isBlank()) return
                         val inflate = View.inflate(application, R.layout.shimmer_banner, null)
@@ -1690,7 +1690,7 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (adUnit != "STOP" && AppPref.getBoolean(application.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+                if (adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     var mInterstitialAd: InterstitialAd? = null
                     var fetchedTimer:Int = application.fetchAdLoadTimeout(adName)
                     if (fetchedTimer == 0){
@@ -1999,7 +1999,7 @@ object AdSdk {
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()
             InterstitialAd.load(
-                application!!,
+                application,
                 adUnit,
                 adRequest,
                 object : InterstitialAdLoadCallback() {
@@ -2073,7 +2073,7 @@ object AdSdk {
             var adRequest = AdManagerAdRequest.Builder()
                             .build()
 
-            AdManagerInterstitialAd.load(application!!.applicationContext,adUnit, adRequest, object : AdManagerInterstitialAdLoadCallback() {
+            AdManagerInterstitialAd.load(application.applicationContext,adUnit, adRequest, object : AdManagerInterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     if (mAdManagerInterstitialAd == null)
                         mAdManagerInterstitialAd = null
@@ -2122,7 +2122,7 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+                if (adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
 
                     var fetchedTimer:Int = application.fetchAdLoadTimeout(adName)
                     if (fetchedTimer == 0){
@@ -2534,7 +2534,7 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName))
+                if (adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName))
                 {
                     var fetchedTimer:Int = application.fetchAdLoadTimeout(adName)
                     if (fetchedTimer == 0){
@@ -3082,9 +3082,9 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+                if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     var mediaMaxHeight1 = mediaMaxHeight
-                    var newAdSize = application.fetchAdSize(adName,adType)!!
+                    var newAdSize = application.fetchAdSize(adName,adType)
                     @LayoutRes val layoutId = when (newAdSize) {
                         "6" -> {
                             mediaMaxHeight1 = 200
@@ -3224,7 +3224,7 @@ object AdSdk {
         isAdmanager:Boolean = false,
         loadTimeOut:Int
     ) {
-        if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+        if (adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
             viewGroup.visibility = VISIBLE
             if (application != null) {
                 if (adUnit.isBlank()) return
@@ -3347,7 +3347,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                        application!!.fetchColor(adName),
+                                                    application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -3431,7 +3431,7 @@ object AdSdk {
                                                                     adType,
                                                                     textColor1,
                                                                     textColor2,
-                                                                        application!!.fetchColor(adName),
+                                                                    application.fetchColor(adName),
                                                                     mediaMaxHeight
                                                                 )
                                                             }
@@ -3514,7 +3514,7 @@ object AdSdk {
                                                                                 adType,
                                                                                 textColor1,
                                                                                 textColor2,
-                                                                                    application!!.fetchColor(adName),
+                                                                                application.fetchColor(adName),
                                                                                 mediaMaxHeight
                                                                             )
                                                                         }
@@ -3610,7 +3610,7 @@ object AdSdk {
                                                                     adType,
                                                                     textColor1,
                                                                     textColor2,
-                                                                        application!!.fetchColor(adName),
+                                                                    application.fetchColor(adName),
                                                                     mediaMaxHeight
                                                                 )
                                                             }
@@ -3707,7 +3707,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                        application!!.fetchColor(adName),
+                                                    application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -3790,7 +3790,7 @@ object AdSdk {
                                                                 adType,
                                                                 textColor1,
                                                                 textColor2,
-                                                                    application!!.fetchColor(adName),
+                                                                application.fetchColor(adName),
                                                                 mediaMaxHeight
                                                             )
                                                         }
@@ -3886,7 +3886,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                        application!!.fetchColor(adName),
+                                                    application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -3980,7 +3980,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                        application!!.fetchColor(adName),
+                                                    application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -4064,7 +4064,7 @@ object AdSdk {
                                                                     adType,
                                                                     textColor1,
                                                                     textColor2,
-                                                                        application!!.fetchColor(adName),
+                                                                    application.fetchColor(adName),
                                                                     mediaMaxHeight
                                                                 )
                                                             }
@@ -4147,7 +4147,7 @@ object AdSdk {
                                                                                 adType,
                                                                                 textColor1,
                                                                                 textColor2,
-                                                                                    application!!.fetchColor(adName),
+                                                                                application.fetchColor(adName),
                                                                                 mediaMaxHeight
                                                                             )
                                                                         }
@@ -4243,7 +4243,7 @@ object AdSdk {
                                                                     adType,
                                                                     textColor1,
                                                                     textColor2,
-                                                                        application!!.fetchColor(adName),
+                                                                    application.fetchColor(adName),
                                                                     mediaMaxHeight
                                                                 )
                                                             }
@@ -4340,7 +4340,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                        application!!.fetchColor(adName),
+                                                        application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -4423,7 +4423,7 @@ object AdSdk {
                                                                 adType,
                                                                 textColor1,
                                                                 textColor2,
-                                                                    application!!.fetchColor(adName),
+                                                                    application.fetchColor(adName),
                                                                 mediaMaxHeight
                                                             )
                                                         }
@@ -4519,7 +4519,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                        application!!.fetchColor(adName),
+                                                        application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -4602,7 +4602,7 @@ object AdSdk {
                 }
             })
 
-            val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
+            val adLoader: AdLoader = AdLoader.Builder(application, adUnit)
                 .forNativeAd { ad: NativeAd ->
                     if (nativeAd == null && ad != null) {
                         nativeAd = ad
@@ -4724,7 +4724,7 @@ object AdSdk {
                 }
             })
 
-            val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
+            val adLoader: AdLoader = AdLoader.Builder(application, adUnit)
                 .forNativeAd { ad: NativeAd ->
                     if (nativeAd == null && ad != null) {
                         nativeAd = ad
@@ -4815,7 +4815,7 @@ object AdSdk {
         isAdmanager: Boolean,
     ) {
         if (application != null){
-            if (adUnit != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+            if (adUnit != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                 viewGroup.visibility = VISIBLE
                 if (application != null) {
                     val inflate = View.inflate(application, R.layout.shimmer, null)
@@ -4887,7 +4887,7 @@ object AdSdk {
                         }
                     })
                     var nativeAd: NativeAd? = null
-                    val adLoader: AdLoader = AdLoader.Builder(application!!, adUnit)
+                    val adLoader: AdLoader = AdLoader.Builder(application, adUnit)
                         .forNativeAd { ad: NativeAd ->
                             nativeAd = ad
                         }
@@ -4948,7 +4948,7 @@ object AdSdk {
                                                     adType,
                                                     textColor1,
                                                     textColor2,
-                                                    application!!.fetchColor(adName),
+                                                    application.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
                                             }
@@ -7519,7 +7519,7 @@ object AdSdk {
     ) {
         if (isInitialized){
             if (application != null){
-                if (adId != "STOP" && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+                if (adId != "STOP" && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     var fetchedTimer:Int = application.fetchAdLoadTimeout(adName)
                     if (fetchedTimer == 0){
                         fetchedTimer = loadTimeOut
@@ -8043,7 +8043,7 @@ object AdSdk {
         adName: String
     ) {
         EmptyAdList(adUnit)
-        if (application != null && AppPref.getBoolean(application?.applicationContext!!,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
+        if (application != null && AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
             val adRequest = AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, getConsentEnabledBundle())
                 .build()

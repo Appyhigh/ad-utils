@@ -69,6 +69,11 @@ class SplashActivity : AppCompatActivity() {
                                 super.onAdFailedToLoad(loadAdError)
                                 Log.d("Appopen", "onAdFailedToLoad: " + loadAdError?.message)
                             }
+
+                            override fun onContextFailed() {
+                                super.onContextFailed()
+                                Log.d("Appopen", "onContextFailed: ")
+                            }
                         },
                         true,
                         loadTimeOut = 4000
@@ -89,7 +94,7 @@ class SplashActivity : AppCompatActivity() {
                             }
 
                             override fun onContextFailed() {
-                                TODO("Not yet implemented")
+                                Log.d("Splashinterstial", "onContextFailed: ")
                             }
                         }, 6000
                     )
