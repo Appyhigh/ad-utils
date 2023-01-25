@@ -55,7 +55,8 @@ class DynamicsAds {
             appPackageName: String,
             dynamicAdsFetchThresholdInSecs: Int,
             preloadingNativeAdList: HashMap<String, PreloadNativeAds>?,
-            fetchingCallback: AdSdk.FetchingCallback?
+            fetchingCallback: AdSdk.FetchingCallback?,
+            isTestingMode: Boolean = false
         ) {
             try {
                 val lastTime = AppPref.getLong(applicationContext,AppPref.lastFetched)
@@ -63,7 +64,7 @@ class DynamicsAds {
                 if (l > dynamicAdsFetchThresholdInSecs) {
 //                    if (isNetworkConnected(applicationContext)) {
                         val appRequest = AppRequest(appPackageName,"ANDROID")
-                        AdmobInstance.ApiBuilder(applicationContext)
+                        AdmobInstance.ApiBuilder(applicationContext,isTestingMode)
                             .getAppInfo(appRequest)
                             .doOnSuccess { response ->
                                 if (response.status == "success"){

@@ -18,7 +18,7 @@ object AdmobInstance {
     val API = "https://admob-automation.apyhi.com/"
     val TEST_API = "https://admob-automation-qa.apyhi.com/"
 
-    fun ApiBuilder(activity: Context): AdmobApi{
+    fun ApiBuilder(activity: Context,isTestingMode: Boolean): AdmobApi{
         val token = DynamicsAds.fetchToken(activity)
         val headerAuthorizationInterceptor: Interceptor = object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
@@ -38,8 +38,9 @@ object AdmobInstance {
         clientBuilder.addInterceptor(headerAuthorizationInterceptor)
         clientBuilder.addInterceptor(interceptor)
 
+        val finalUrl = if (isTestingMode) TEST_API else API
         val retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(API)
+            .baseUrl(finalUrl)
             .client(clientBuilder.build())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(GsonConverterFactory.create())

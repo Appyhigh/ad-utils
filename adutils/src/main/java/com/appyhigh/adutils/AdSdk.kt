@@ -172,7 +172,8 @@ object AdSdk {
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
         fetchingCallback: FetchingCallback? = null,
-        versionControlCallback:VersionControlCallback?
+        versionControlCallback:VersionControlCallback?,
+        isTestingMode: Boolean = false
     ) {
         this.app = app
         val inflater = LayoutInflater.from(app)
@@ -202,7 +203,8 @@ object AdSdk {
                     packageName,
                     dynamicAdsFetchThresholdInSecs,
                     preloadingNativeAdList,
-                    fetchingCallback
+                    fetchingCallback,
+                    isTestingMode
                 )
             }
             initVersionController(
@@ -233,7 +235,8 @@ object AdSdk {
         preloadingNativeAdList: HashMap<String, PreloadNativeAds>? = null,
         packageName: String = app.packageName,
         dynamicAdsFetchThresholdInSecs: Int = 24 * 60 * 60,
-        fetchingCallback: FetchingCallback? = null
+        fetchingCallback: FetchingCallback? = null,
+        isTestingMode: Boolean = false
     ) {
         this.app = app
         val inflater = LayoutInflater.from(app)
@@ -263,7 +266,8 @@ object AdSdk {
                     packageName,
                     dynamicAdsFetchThresholdInSecs,
                     preloadingNativeAdList,
-                    fetchingCallback
+                    fetchingCallback,
+                    isTestingMode
                 )
             }
             fetchingCallback?.OnInitialized()
