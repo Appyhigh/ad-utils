@@ -15,6 +15,7 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.*
 import androidx.annotation.LayoutRes
 import androidx.lifecycle.Lifecycle
@@ -6403,12 +6404,13 @@ object AdSdk {
                     child.adjustViewBounds = true
                     val layoutParams1 = child.layoutParams
                     layoutParams1.width = MATCH_PARENT
-                    layoutParams1.height = mediaMaxHeight
+                    layoutParams1.height = WRAP_CONTENT
                     child.layoutParams = layoutParams1
+                    child.setAdjustViewBounds(true);
                 } else { //Videos
                     val params = child.layoutParams
                     params.width = MATCH_PARENT
-                    params.height = maxHeightPixels
+                    params.height = WRAP_CONTENT
                     child.layoutParams = params
                 }
             }
