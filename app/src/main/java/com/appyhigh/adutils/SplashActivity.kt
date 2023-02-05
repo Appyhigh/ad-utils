@@ -107,7 +107,6 @@ class SplashActivity : AppCompatActivity() {
                 override fun OnHardUpdate() {
                 }
             },
-            isTestingMode = true
         )
     }
 }

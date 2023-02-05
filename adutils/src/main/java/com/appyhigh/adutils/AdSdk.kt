@@ -488,7 +488,7 @@ object AdSdk {
         application: Application,
         appOpenAdUnit: String,
         adName: String,
-         appOpenAdCallback: AppOpenAdCallback? = null,
+        appOpenAdCallback: AppOpenAdCallback? = null,
         backgroundThreshold: Int = 30000,
         isShownOnlyOnce: Boolean = false,
         isAdmanager:Boolean = false,
@@ -3062,6 +3062,7 @@ object AdSdk {
             val BIGV2 = "5"
             val BIGV3 = "2"
             val GRID_AD = "7"
+            val DYNAMIC = "8"
         }
     }
 
@@ -3088,7 +3089,8 @@ object AdSdk {
             if (application != null){
                 if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     var mediaMaxHeight1 = mediaMaxHeight
-                    var newAdSize = application.fetchAdSize(adName,adType)
+                    var newAdSize = adType
+//                    var newAdSize = application.fetchAdSize(adName,adType)
                     @LayoutRes val layoutId = when (newAdSize) {
                         "6" -> {
                             mediaMaxHeight1 = 200
@@ -3102,7 +3104,6 @@ object AdSdk {
                         "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
                         else -> R.layout.native_admob_ad_t1
                     }
-
                     loadNativeAd(
                         application,
                         lifecycle,
@@ -3309,59 +3310,27 @@ object AdSdk {
                                     Log.d("native", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
                                     nativeAdLoadCallback?.onAdLoaded()
                                     if (nativeAd != null) {
-                                        val adView =
-                                            View.inflate(application, layoutId, null)
-                                                    as NativeAdView
-                                        if (background != null) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.background = background
-                                                }
-                                                is Int -> {
-                                                    adView.setBackgroundColor(background)
-                                                }
-                                            }
-                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (populator != null) {
-                                            nativeAd?.let {
-                                                populator.invoke(it, adView)
-                                            }
-                                        } else {
-                                            nativeAd?.let {
-                                                try {
+                                        nativeAd?.let {
+                                            try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                    viewGroup,
+                                                    populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
-                                                catch (e:Exception){
+                                            catch (e:Exception){
 
-                                                }
                                             }
                                         }
-                                        viewGroup.removeAllViews()
-                                        viewGroup.addView(adView)
+
                                         refreshNative(adName)
                                     }
                                 }
@@ -3393,59 +3362,26 @@ object AdSdk {
                                                     Log.d("native", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
                                                     nativeAdLoadCallback?.onAdLoaded()
                                                     if (nativeAd != null) {
-                                                        val adView =
-                                                            View.inflate(application, layoutId, null)
-                                                                    as NativeAdView
-                                                        if (background != null) {
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                                when (background) {
-                                                                    is String -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                    }
-                                                                    is Drawable -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                    }
-                                                                    is Int -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                        if (populator != null) {
-                                                            nativeAd?.let {
-                                                                populator.invoke(it, adView)
-                                                            }
-                                                        } else {
                                                             nativeAd?.let {
                                                                 try {
-                                                                populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    application.fetchColor(adName),
-                                                                    mediaMaxHeight
-                                                                )
-                                                            }
+                                                                    populateUnifiedNativeAdView(
+                                                                        viewGroup,
+                                                                        populator,
+                                                                        application,
+                                                                        background = background,
+                                                                        adName = adName,
+                                                                        nativeAd = it,
+                                                                        adType = adType,
+                                                                        textColor1 = textColor1,
+                                                                        textColor2 = textColor2,
+                                                                        buttonColor = application.fetchColor(adName),
+                                                                        mediaMaxHeight = mediaMaxHeight
+                                                                    )
+                                                                 }
                                                                 catch (e:Exception){
 
                                                                 }
                                                             }
-                                                        }
-                                                        viewGroup.removeAllViews()
-                                                        viewGroup.addView(adView)
                                                         refreshNative(adName)
                                                     }
                                                 }
@@ -3476,59 +3412,26 @@ object AdSdk {
                                                                 Log.d("native", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
                                                                 nativeAdLoadCallback?.onAdLoaded()
                                                                 if (nativeAd != null) {
-                                                                    val adView =
-                                                                        View.inflate(application, layoutId, null)
-                                                                                as NativeAdView
-                                                                    if (background != null) {
-                                                                        when (background) {
-                                                                            is String -> {
-                                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                                            }
-                                                                            is Drawable -> {
-                                                                                adView.background = background
-                                                                            }
-                                                                            is Int -> {
-                                                                                adView.setBackgroundColor(background)
-                                                                            }
-                                                                        }
-                                                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                                                            when (background) {
-                                                                                is String -> {
-                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                                }
-                                                                                is Drawable -> {
-                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                                }
-                                                                                is Int -> {
-                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    if (populator != null) {
-                                                                        nativeAd?.let {
-                                                                            populator.invoke(it, adView)
-                                                                        }
-                                                                    } else {
                                                                         nativeAd?.let {
                                                                             try {
                                                                             populateUnifiedNativeAdView(
-                                                                                it,
-                                                                                adView,
-                                                                                adType,
-                                                                                textColor1,
-                                                                                textColor2,
-                                                                                application.fetchColor(adName),
-                                                                                mediaMaxHeight
+                                                                                viewGroup,
+                                                                                populator,
+                                                                                application,
+                                                                                background = background,
+                                                                                adName = adName,
+                                                                                nativeAd = it,
+                                                                                adType = adType,
+                                                                                textColor1 = textColor1,
+                                                                                textColor2 = textColor2,
+                                                                                buttonColor = application.fetchColor(adName),
+                                                                                mediaMaxHeight = mediaMaxHeight
                                                                             )
                                                                         }
                                                                             catch (e:Exception){
 
                                                                             }
                                                                         }
-                                                                    }
-                                                                    viewGroup.removeAllViews()
-                                                                    viewGroup.addView(adView)
                                                                     refreshNative(adName)
                                                                 }
                                                             }
@@ -3572,59 +3475,26 @@ object AdSdk {
                                                     Log.d("native", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
                                                     nativeAdLoadCallback?.onAdLoaded()
                                                     if (nativeAd != null) {
-                                                        val adView =
-                                                            View.inflate(application, layoutId, null)
-                                                                    as NativeAdView
-                                                        if (background != null) {
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                                when (background) {
-                                                                    is String -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                    }
-                                                                    is Drawable -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                    }
-                                                                    is Int -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                        if (populator != null) {
-                                                            nativeAd?.let {
-                                                                populator.invoke(it, adView)
-                                                            }
-                                                        } else {
                                                             nativeAd?.let {
                                                                 try {
                                                                 populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    application.fetchColor(adName),
-                                                                    mediaMaxHeight
+                                                                viewGroup,
+                                                                populator,
+                                                                    application,
+                                                                    background = background,
+                                                                    adName = adName,
+                                                                    nativeAd = it,
+                                                                    adType = adType,
+                                                                    textColor1 = textColor1,
+                                                                    textColor2 = textColor2,
+                                                                    buttonColor = application.fetchColor(adName),
+                                                                    mediaMaxHeight = mediaMaxHeight
                                                                 )
                                                             }
                                                                 catch (e:Exception){
 
                                                                 }
                                                             }
-                                                        }
-                                                        viewGroup.removeAllViews()
-                                                        viewGroup.addView(adView)
                                                         refreshNative(adName)
                                                     }
                                                 }
@@ -3669,59 +3539,26 @@ object AdSdk {
                                     Log.d("native", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
                                     nativeAdLoadCallback?.onAdLoaded()
                                     if (nativeAd != null) {
-                                        val adView =
-                                            View.inflate(application, layoutId, null)
-                                                    as NativeAdView
-                                        if (background != null) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.background = background
-                                                }
-                                                is Int -> {
-                                                    adView.setBackgroundColor(background)
-                                                }
-                                            }
-                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (populator != null) {
-                                            nativeAd?.let {
-                                                populator.invoke(it, adView)
-                                            }
-                                        } else {
                                             nativeAd?.let {
                                                 try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
                                                 catch (e:Exception){
 
                                                 }
                                             }
-                                        }
-                                        viewGroup.removeAllViews()
-                                        viewGroup.addView(adView)
                                         refreshNative(adName)
                                     }
                                 }
@@ -3752,59 +3589,26 @@ object AdSdk {
                                                 Log.d("native", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
                                                 nativeAdLoadCallback?.onAdLoaded()
                                                 if (nativeAd != null) {
-                                                    val adView =
-                                                        View.inflate(application, layoutId, null)
-                                                                as NativeAdView
-                                                    if (background != null) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (populator != null) {
-                                                        nativeAd?.let {
-                                                            populator.invoke(it, adView)
-                                                        }
-                                                    } else {
                                                         nativeAd?.let {
                                                             try {
                                                             populateUnifiedNativeAdView(
-                                                                it,
-                                                                adView,
-                                                                adType,
-                                                                textColor1,
-                                                                textColor2,
-                                                                application.fetchColor(adName),
-                                                                mediaMaxHeight
+                                                            viewGroup,
+                                                                populator,
+                                                                application,
+                                                                background = background,
+                                                                adName = adName,
+                                                                nativeAd = it,
+                                                                adType = adType,
+                                                                textColor1 = textColor1,
+                                                                textColor2 = textColor2,
+                                                                buttonColor = application.fetchColor(adName),
+                                                                mediaMaxHeight = mediaMaxHeight
                                                             )
                                                         }
                                                             catch (e:Exception){
 
                                                             }
                                                         }
-                                                    }
-                                                    viewGroup.removeAllViews()
-                                                    viewGroup.addView(adView)
                                                     refreshNative(adName)
                                                 }
                                             }
@@ -3848,59 +3652,26 @@ object AdSdk {
                                     Log.d("native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
                                     nativeAdLoadCallback?.onAdLoaded()
                                     if (nativeAd != null) {
-                                        val adView =
-                                            View.inflate(application, layoutId, null)
-                                                    as NativeAdView
-                                        if (background != null) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.background = background
-                                                }
-                                                is Int -> {
-                                                    adView.setBackgroundColor(background)
-                                                }
-                                            }
-                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (populator != null) {
-                                            nativeAd?.let {
-                                                populator.invoke(it, adView)
-                                            }
-                                        } else {
                                             nativeAd?.let {
                                                 try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
                                                 catch (e:Exception){
 
                                                 }
                                             }
-                                        }
-                                        viewGroup.removeAllViews()
-                                        viewGroup.addView(adView)
                                         refreshNative(adName)
                                     }
                                 }
@@ -3942,59 +3713,26 @@ object AdSdk {
                                     Log.d("native_admanager", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
                                     nativeAdLoadCallback?.onAdLoaded()
                                     if (nativeAd != null) {
-                                        val adView =
-                                            View.inflate(application, layoutId, null)
-                                                    as NativeAdView
-                                        if (background != null) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.background = background
-                                                }
-                                                is Int -> {
-                                                    adView.setBackgroundColor(background)
-                                                }
-                                            }
-                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (populator != null) {
-                                            nativeAd?.let {
-                                                populator.invoke(it, adView)
-                                            }
-                                        } else {
                                             nativeAd?.let {
                                                 try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
                                                 catch (e:Exception){
 
                                                 }
                                             }
-                                        }
-                                        viewGroup.removeAllViews()
-                                        viewGroup.addView(adView)
                                         refreshNative(adName)
                                     }
                                 }
@@ -4026,59 +3764,26 @@ object AdSdk {
                                                     Log.d("native_admanager", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
                                                     nativeAdLoadCallback?.onAdLoaded()
                                                     if (nativeAd != null) {
-                                                        val adView =
-                                                            View.inflate(application, layoutId, null)
-                                                                    as NativeAdView
-                                                        if (background != null) {
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                                when (background) {
-                                                                    is String -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                    }
-                                                                    is Drawable -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                    }
-                                                                    is Int -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                        if (populator != null) {
-                                                            nativeAd?.let {
-                                                                populator.invoke(it, adView)
-                                                            }
-                                                        } else {
                                                             nativeAd?.let {
                                                                 try {
                                                                 populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    application.fetchColor(adName),
-                                                                    mediaMaxHeight
+                                                                viewGroup,
+                                                                populator,
+                                                                    application,
+                                                                    background = background,
+                                                                    adName = adName,
+                                                                    nativeAd = it,
+                                                                    adType = adType,
+                                                                    textColor1 = textColor1,
+                                                                    textColor2 = textColor2,
+                                                                    buttonColor = application.fetchColor(adName),
+                                                                    mediaMaxHeight = mediaMaxHeight
                                                                 )
                                                             }
                                                                 catch (e:Exception){
 
                                                                 }
                                                             }
-                                                        }
-                                                        viewGroup.removeAllViews()
-                                                        viewGroup.addView(adView)
                                                         refreshNative(adName)
                                                     }
                                                 }
@@ -4109,59 +3814,26 @@ object AdSdk {
                                                                 Log.d("native_admanager", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
                                                                 nativeAdLoadCallback?.onAdLoaded()
                                                                 if (nativeAd != null) {
-                                                                    val adView =
-                                                                        View.inflate(application, layoutId, null)
-                                                                                as NativeAdView
-                                                                    if (background != null) {
-                                                                        when (background) {
-                                                                            is String -> {
-                                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                                            }
-                                                                            is Drawable -> {
-                                                                                adView.background = background
-                                                                            }
-                                                                            is Int -> {
-                                                                                adView.setBackgroundColor(background)
-                                                                            }
-                                                                        }
-                                                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                                                            when (background) {
-                                                                                is String -> {
-                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                                }
-                                                                                is Drawable -> {
-                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                                }
-                                                                                is Int -> {
-                                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    if (populator != null) {
-                                                                        nativeAd?.let {
-                                                                            populator.invoke(it, adView)
-                                                                        }
-                                                                    } else {
                                                                         nativeAd?.let {
                                                                             try {
                                                                             populateUnifiedNativeAdView(
-                                                                                it,
-                                                                                adView,
-                                                                                adType,
-                                                                                textColor1,
-                                                                                textColor2,
-                                                                                application.fetchColor(adName),
-                                                                                mediaMaxHeight
+                                                                            viewGroup,
+                                                                            populator,
+                                                                                application,
+                                                                                background = background,
+                                                                                adName = adName,
+                                                                                nativeAd = it,
+                                                                                adType = adType,
+                                                                                textColor1 = textColor1,
+                                                                                textColor2 = textColor2,
+                                                                                buttonColor = application.fetchColor(adName),
+                                                                                mediaMaxHeight = mediaMaxHeight
                                                                             )
                                                                         }
                                                                             catch (e:Exception){
 
                                                                             }
                                                                         }
-                                                                    }
-                                                                    viewGroup.removeAllViews()
-                                                                    viewGroup.addView(adView)
                                                                     refreshNative(adName)
                                                                 }
                                                             }
@@ -4205,59 +3877,26 @@ object AdSdk {
                                                     Log.d("native_admanager", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
                                                     nativeAdLoadCallback?.onAdLoaded()
                                                     if (nativeAd != null) {
-                                                        val adView =
-                                                            View.inflate(application, layoutId, null)
-                                                                    as NativeAdView
-                                                        if (background != null) {
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                                when (background) {
-                                                                    is String -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                    }
-                                                                    is Drawable -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                    }
-                                                                    is Int -> {
-                                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                        if (populator != null) {
-                                                            nativeAd?.let {
-                                                                populator.invoke(it, adView)
-                                                            }
-                                                        } else {
                                                             nativeAd?.let {
                                                                 try {
                                                                 populateUnifiedNativeAdView(
-                                                                    it,
-                                                                    adView,
-                                                                    adType,
-                                                                    textColor1,
-                                                                    textColor2,
-                                                                    application.fetchColor(adName),
-                                                                    mediaMaxHeight
+                                                                viewGroup,
+                                                                populator,
+                                                                    application,
+                                                                    background = background,
+                                                                    adName = adName,
+                                                                    nativeAd = it,
+                                                                    adType = adType,
+                                                                    textColor1 = textColor1,
+                                                                    textColor2 = textColor2,
+                                                                    buttonColor = application.fetchColor(adName),
+                                                                    mediaMaxHeight = mediaMaxHeight
                                                                 )
                                                             }
                                                                 catch (e:Exception){
 
                                                                 }
                                                             }
-                                                        }
-                                                        viewGroup.removeAllViews()
-                                                        viewGroup.addView(adView)
                                                         refreshNative(adName)
                                                     }
                                                 }
@@ -4302,59 +3941,26 @@ object AdSdk {
                                     Log.d("native_admanager", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
                                     nativeAdLoadCallback?.onAdLoaded()
                                     if (nativeAd != null) {
-                                        val adView =
-                                            View.inflate(application, layoutId, null)
-                                                    as NativeAdView
-                                        if (background != null) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.background = background
-                                                }
-                                                is Int -> {
-                                                    adView.setBackgroundColor(background)
-                                                }
-                                            }
-                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (populator != null) {
-                                            nativeAd?.let {
-                                                populator.invoke(it, adView)
-                                            }
-                                        } else {
                                             nativeAd?.let {
                                                 try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                        application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
                                                 catch (e:Exception){
 
                                                 }
                                             }
-                                        }
-                                        viewGroup.removeAllViews()
-                                        viewGroup.addView(adView)
                                         refreshNative(adName)
                                     }
                                 }
@@ -4385,59 +3991,26 @@ object AdSdk {
                                                 Log.d("native_admanager", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
                                                 nativeAdLoadCallback?.onAdLoaded()
                                                 if (nativeAd != null) {
-                                                    val adView =
-                                                        View.inflate(application, layoutId, null)
-                                                                as NativeAdView
-                                                    if (background != null) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (populator != null) {
-                                                        nativeAd?.let {
-                                                            populator.invoke(it, adView)
-                                                        }
-                                                    } else {
                                                         nativeAd?.let {
                                                             try {
                                                             populateUnifiedNativeAdView(
-                                                                it,
-                                                                adView,
-                                                                adType,
-                                                                textColor1,
-                                                                textColor2,
-                                                                    application.fetchColor(adName),
-                                                                mediaMaxHeight
+                                                            viewGroup,
+                                                            populator,
+                                                                application,
+                                                                background = background,
+                                                                adName = adName,
+                                                                nativeAd = it,
+                                                                adType = adType,
+                                                                textColor1 = textColor1,
+                                                                textColor2 = textColor2,
+                                                                buttonColor = application.fetchColor(adName),
+                                                                mediaMaxHeight = mediaMaxHeight
                                                             )
                                                         }
                                                             catch (e:Exception){
 
                                                             }
                                                         }
-                                                    }
-                                                    viewGroup.removeAllViews()
-                                                    viewGroup.addView(adView)
                                                     refreshNative(adName)
                                                 }
                                             }
@@ -4481,59 +4054,26 @@ object AdSdk {
                                     Log.d("native_admanager", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
                                     nativeAdLoadCallback?.onAdLoaded()
                                     if (nativeAd != null) {
-                                        val adView =
-                                            View.inflate(application, layoutId, null)
-                                                    as NativeAdView
-                                        if (background != null) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.background = background
-                                                }
-                                                is Int -> {
-                                                    adView.setBackgroundColor(background)
-                                                }
-                                            }
-                                            if (layoutId == R.layout.native_admob_ad_t6){
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if (populator != null) {
-                                            nativeAd?.let {
-                                                populator.invoke(it, adView)
-                                            }
-                                        } else {
                                             nativeAd?.let {
                                                 try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                        application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
                                                 catch (e:Exception){
 
                                                 }
                                             }
-                                        }
-                                        viewGroup.removeAllViews()
-                                        viewGroup.addView(adView)
                                         refreshNative(adName)
                                     }
                                 }
@@ -4910,59 +4450,26 @@ object AdSdk {
                                 super.onAdLoaded()
                                 nativeAdLoadCallback?.onAdLoaded()
                                 if (nativeAd != null) {
-                                    val adView =
-                                        View.inflate(application, layoutId, null)
-                                                as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        nativeAd?.let {
-                                            populator.invoke(it, adView)
-                                        }
-                                    } else {
                                         nativeAd?.let {
                                             try {
                                                 populateUnifiedNativeAdView(
-                                                    it,
-                                                    adView,
-                                                    adType,
-                                                    textColor1,
-                                                    textColor2,
-                                                    application.fetchColor(adName),
-                                                    mediaMaxHeight
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
                                                 )
                                             }
                                             catch (e:Exception){
 
                                             }
                                         }
-                                    }
-                                    viewGroup.removeAllViews()
-                                    viewGroup.addView(adView)
                                 }
                             }
                         })
@@ -5234,49 +4741,20 @@ object AdSdk {
                                 super.onAdLoaded()
                                 nativeAdLoadCallback?.onAdLoaded()
                                 if (nativeAd != null) {
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
                                         populateUnifiedNativeAdView(
+                                        viewGroup,
+                                        populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             newAdSize,
                                             textColor1,
                                             textColor2,
                                             context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
-                                    }
-                                    viewGroup.removeAllViews()
-                                    viewGroup.addView(adView)
                                 }
                             }
                         })
@@ -5490,52 +4968,20 @@ object AdSdk {
                             object :NativeInternalCallback{
                                 override fun onSuccess(nativeAd: NativeAd?) {
                                     nativeAdLoadCallback?.onAdLoaded()
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                        .setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                        background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                        .setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
                                         populateUnifiedNativeAdView(
+                                        viewGroup,
+                                        populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             adType,
                                             textColor1,
                                             textColor2,
                                             context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
-                                    }
-                                    viewGroup.removeAllViews()
-                                    viewGroup.addView(adView)
                                     refreshNativeService(adName)
                                 }
 
@@ -5566,52 +5012,22 @@ object AdSdk {
                                             object :NativeInternalCallback{
                                                 override fun onSuccess(nativeAd: NativeAd?) {
                                                     nativeAdLoadCallback?.onAdLoaded()
-                                                    val adView = layoutInflater.inflate(layoutId, null)
-                                                            as NativeAdView
-                                                    if (background != null) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.setBackgroundColor(background)
-                                                            }
+                                                        if (nativeAd != null) {
+                                                            populateUnifiedNativeAdView(
+                                                            viewGroup,
+                                                            populator,
+                                                                context,
+                                                                layoutInflater,
+                                                                background,
+                                                                adName,
+                                                                nativeAd!!,
+                                                                adType,
+                                                                textColor1,
+                                                                textColor2,
+                                                                context.fetchColor(adName),
+                                                                mediaMaxHeight
+                                                            )
                                                         }
-                                                        if (layoutId == R.layout.native_admob_ad_t6) {
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                        .setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                        background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                        .setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (populator != null) {
-                                                        populator.invoke(nativeAd!!, adView)
-                                                    } else {
-                                                        populateUnifiedNativeAdView(
-                                                            nativeAd!!,
-                                                            adView,
-                                                            adType,
-                                                            textColor1,
-                                                            textColor2,
-                                                            context.fetchColor(adName),
-                                                            mediaMaxHeight
-                                                        )
-                                                    }
-                                                    viewGroup.removeAllViews()
-                                                    viewGroup.addView(adView)
                                                     refreshNativeService(adName)
                                                 }
 
@@ -5641,52 +5057,21 @@ object AdSdk {
                                                         object :NativeInternalCallback{
                                                             override fun onSuccess(nativeAd: NativeAd?) {
                                                                 nativeAdLoadCallback?.onAdLoaded()
-                                                                val adView = layoutInflater.inflate(layoutId, null)
-                                                                        as NativeAdView
-                                                                if (background != null) {
-                                                                    when (background) {
-                                                                        is String -> {
-                                                                            adView.setBackgroundColor(Color.parseColor(background))
-                                                                        }
-                                                                        is Drawable -> {
-                                                                            adView.background = background
-                                                                        }
-                                                                        is Int -> {
-                                                                            adView.setBackgroundColor(background)
-                                                                        }
-                                                                    }
-                                                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                                                        when (background) {
-                                                                            is String -> {
-                                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                                    .setBackgroundColor(Color.parseColor(background))
-                                                                            }
-                                                                            is Drawable -> {
-                                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                                    background
-                                                                            }
-                                                                            is Int -> {
-                                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                                    .setBackgroundColor(background)
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                                if (populator != null) {
-                                                                    populator.invoke(nativeAd!!, adView)
-                                                                } else {
+                                                                if (nativeAd != null)
                                                                     populateUnifiedNativeAdView(
+                                                                        viewGroup,
+                                                                        populator,
+                                                                        context,
+                                                                        layoutInflater,
+                                                                        background,
+                                                                        adName,
                                                                         nativeAd!!,
-                                                                        adView,
                                                                         adType,
                                                                         textColor1,
                                                                         textColor2,
                                                                         context.fetchColor(adName),
                                                                         mediaMaxHeight
                                                                     )
-                                                                }
-                                                                viewGroup.removeAllViews()
-                                                                viewGroup.addView(adView)
                                                                 refreshNativeService(adName)
                                                             }
 
@@ -5729,52 +5114,22 @@ object AdSdk {
                                             object :NativeInternalCallback{
                                                 override fun onSuccess(nativeAd: NativeAd?) {
                                                     nativeAdLoadCallback?.onAdLoaded()
-                                                    val adView = layoutInflater.inflate(layoutId, null)
-                                                            as NativeAdView
-                                                    if (background != null) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                        if (layoutId == R.layout.native_admob_ad_t6) {
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                        .setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                        background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                        .setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (populator != null) {
-                                                        populator.invoke(nativeAd!!, adView)
-                                                    } else {
+
+                                                    if (nativeAd != null)
                                                         populateUnifiedNativeAdView(
+                                                            viewGroup,
+                                                            populator,
+                                                            context,
+                                                            layoutInflater,
+                                                            background,
+                                                            adName,
                                                             nativeAd!!,
-                                                            adView,
                                                             adType,
                                                             textColor1,
                                                             textColor2,
                                                             context.fetchColor(adName),
                                                             mediaMaxHeight
                                                         )
-                                                    }
-                                                    viewGroup.removeAllViews()
-                                                    viewGroup.addView(adView)
                                                     refreshNativeService(adName)
                                                 }
 
@@ -5818,52 +5173,21 @@ object AdSdk {
                             object :NativeInternalCallback{
                                 override fun onSuccess(nativeAd: NativeAd?) {
                                     nativeAdLoadCallback?.onAdLoaded()
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                        .setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                        background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                        .setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
+                                    if (nativeAd != null)
                                         populateUnifiedNativeAdView(
+                                            viewGroup,
+                                            populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             adType,
                                             textColor1,
                                             textColor2,
                                             context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
-                                    }
-                                    viewGroup.removeAllViews()
-                                    viewGroup.addView(adView)
                                     refreshNativeService(adName)
                                 }
 
@@ -5893,52 +5217,21 @@ object AdSdk {
                                         object :NativeInternalCallback{
                                             override fun onSuccess(nativeAd: NativeAd?) {
                                                 nativeAdLoadCallback?.onAdLoaded()
-                                                val adView = layoutInflater.inflate(layoutId, null)
-                                                        as NativeAdView
-                                                if (background != null) {
-                                                    when (background) {
-                                                        is String -> {
-                                                            adView.setBackgroundColor(Color.parseColor(background))
-                                                        }
-                                                        is Drawable -> {
-                                                            adView.background = background
-                                                        }
-                                                        is Int -> {
-                                                            adView.setBackgroundColor(background)
-                                                        }
-                                                    }
-                                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                    .setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                    background
-                                                            }
-                                                            is Int -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                    .setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (populator != null) {
-                                                    populator.invoke(nativeAd!!, adView)
-                                                } else {
+                                                if (nativeAd != null)
                                                     populateUnifiedNativeAdView(
+                                                        viewGroup,
+                                                        populator,
+                                                        context,
+                                                        layoutInflater,
+                                                        background,
+                                                        adName,
                                                         nativeAd!!,
-                                                        adView,
                                                         adType,
                                                         textColor1,
                                                         textColor2,
                                                         context.fetchColor(adName),
                                                         mediaMaxHeight
                                                     )
-                                                }
-                                                viewGroup.removeAllViews()
-                                                viewGroup.addView(adView)
                                                 refreshNativeService(adName)
                                             }
 
@@ -5981,52 +5274,21 @@ object AdSdk {
                             object :NativeInternalCallback{
                                 override fun onSuccess(nativeAd: NativeAd?) {
                                     nativeAdLoadCallback?.onAdLoaded()
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6) {
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                        .setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                        background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                        .setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
+                                    if (nativeAd != null)
                                         populateUnifiedNativeAdView(
+                                            viewGroup,
+                                            populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             adType,
                                             textColor1,
                                             textColor2,
                                             context.fetchColor(adName),
                                             mediaMaxHeight
                                         )
-                                    }
-                                    viewGroup.removeAllViews()
-                                    viewGroup.addView(adView)
                                     refreshNativeService(adName)
                                 }
 
@@ -6070,52 +5332,21 @@ object AdSdk {
                         object :NativeInternalCallback{
                             override fun onSuccess(nativeAd: NativeAd?) {
                                 nativeAdLoadCallback?.onAdLoaded()
-                                val adView = layoutInflater.inflate(layoutId, null)
-                                        as NativeAdView
-                                if (background != null) {
-                                    when (background) {
-                                        is String -> {
-                                            adView.setBackgroundColor(Color.parseColor(background))
-                                        }
-                                        is Drawable -> {
-                                            adView.background = background
-                                        }
-                                        is Int -> {
-                                            adView.setBackgroundColor(background)
-                                        }
-                                    }
-                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                    .setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                    background
-                                            }
-                                            is Int -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                    .setBackgroundColor(background)
-                                            }
-                                        }
-                                    }
-                                }
-                                if (populator != null) {
-                                    populator.invoke(nativeAd!!, adView)
-                                } else {
+                                if (nativeAd != null)
                                     populateUnifiedNativeAdView(
+                                        viewGroup,
+                                        populator,
+                                        context,
+                                        layoutInflater,
+                                        background,
+                                        adName,
                                         nativeAd!!,
-                                        adView,
                                         adType,
                                         textColor1,
                                         textColor2,
                                         context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
-                                }
-                                viewGroup.removeAllViews()
-                                viewGroup.addView(adView)
                                 refreshNativeService(adName)
                             }
 
@@ -6146,52 +5377,21 @@ object AdSdk {
                                         object :NativeInternalCallback{
                                             override fun onSuccess(nativeAd: NativeAd?) {
                                                 nativeAdLoadCallback?.onAdLoaded()
-                                                val adView = layoutInflater.inflate(layoutId, null)
-                                                        as NativeAdView
-                                                if (background != null) {
-                                                    when (background) {
-                                                        is String -> {
-                                                            adView.setBackgroundColor(Color.parseColor(background))
-                                                        }
-                                                        is Drawable -> {
-                                                            adView.background = background
-                                                        }
-                                                        is Int -> {
-                                                            adView.setBackgroundColor(background)
-                                                        }
-                                                    }
-                                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                    .setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                    background
-                                                            }
-                                                            is Int -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                    .setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (populator != null) {
-                                                    populator.invoke(nativeAd!!, adView)
-                                                } else {
+                                                if (nativeAd != null)
                                                     populateUnifiedNativeAdView(
+                                                    viewGroup,
+                                                    populator,
+                                                        context,
+                                                        layoutInflater,
+                                                        background,
+                                                        adName,
                                                         nativeAd!!,
-                                                        adView,
                                                         adType,
                                                         textColor1,
                                                         textColor2,
                                                         context.fetchColor(adName),
                                                         mediaMaxHeight
                                                     )
-                                                }
-                                                viewGroup.removeAllViews()
-                                                viewGroup.addView(adView)
                                                 refreshNativeService(adName)
                                             }
 
@@ -6221,52 +5421,21 @@ object AdSdk {
                                                     object :NativeInternalCallback{
                                                         override fun onSuccess(nativeAd: NativeAd?) {
                                                             nativeAdLoadCallback?.onAdLoaded()
-                                                            val adView = layoutInflater.inflate(layoutId, null)
-                                                                    as NativeAdView
-                                                            if (background != null) {
-                                                                when (background) {
-                                                                    is String -> {
-                                                                        adView.setBackgroundColor(Color.parseColor(background))
-                                                                    }
-                                                                    is Drawable -> {
-                                                                        adView.background = background
-                                                                    }
-                                                                    is Int -> {
-                                                                        adView.setBackgroundColor(background)
-                                                                    }
-                                                                }
-                                                                if (layoutId == R.layout.native_admob_ad_t6) {
-                                                                    when (background) {
-                                                                        is String -> {
-                                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                                .setBackgroundColor(Color.parseColor(background))
-                                                                        }
-                                                                        is Drawable -> {
-                                                                            adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                                background
-                                                                        }
-                                                                        is Int -> {
-                                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                                .setBackgroundColor(background)
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                            if (populator != null) {
-                                                                populator.invoke(nativeAd!!, adView)
-                                                            } else {
+                                                            if (nativeAd != null)
                                                                 populateUnifiedNativeAdView(
+                                                                    viewGroup,
+                                                                    populator,
+                                                                    context,
+                                                                    layoutInflater,
+                                                                    background,
+                                                                    adName,
                                                                     nativeAd!!,
-                                                                    adView,
                                                                     adType,
                                                                     textColor1,
                                                                     textColor2,
                                                                     context.fetchColor(adName),
                                                                     mediaMaxHeight
                                                                 )
-                                                            }
-                                                            viewGroup.removeAllViews()
-                                                            viewGroup.addView(adView)
                                                             refreshNativeService(adName)
                                                         }
 
@@ -6309,52 +5478,21 @@ object AdSdk {
                                         object :NativeInternalCallback{
                                             override fun onSuccess(nativeAd: NativeAd?) {
                                                 nativeAdLoadCallback?.onAdLoaded()
-                                                val adView = layoutInflater.inflate(layoutId, null)
-                                                        as NativeAdView
-                                                if (background != null) {
-                                                    when (background) {
-                                                        is String -> {
-                                                            adView.setBackgroundColor(Color.parseColor(background))
-                                                        }
-                                                        is Drawable -> {
-                                                            adView.background = background
-                                                        }
-                                                        is Int -> {
-                                                            adView.setBackgroundColor(background)
-                                                        }
-                                                    }
-                                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                    .setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                    background
-                                                            }
-                                                            is Int -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                    .setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (populator != null) {
-                                                    populator.invoke(nativeAd!!, adView)
-                                                } else {
+                                                if (nativeAd != null)
                                                     populateUnifiedNativeAdView(
+                                                        viewGroup,
+                                                        populator,
+                                                        context,
+                                                        layoutInflater,
+                                                        background,
+                                                        adName,
                                                         nativeAd!!,
-                                                        adView,
                                                         adType,
                                                         textColor1,
                                                         textColor2,
                                                         context.fetchColor(adName),
                                                         mediaMaxHeight
                                                     )
-                                                }
-                                                viewGroup.removeAllViews()
-                                                viewGroup.addView(adView)
                                                 refreshNativeService(adName)
                                             }
 
@@ -6398,52 +5536,21 @@ object AdSdk {
                         object :NativeInternalCallback{
                             override fun onSuccess(nativeAd: NativeAd?) {
                                 nativeAdLoadCallback?.onAdLoaded()
-                                val adView = layoutInflater.inflate(layoutId, null)
-                                        as NativeAdView
-                                if (background != null) {
-                                    when (background) {
-                                        is String -> {
-                                            adView.setBackgroundColor(Color.parseColor(background))
-                                        }
-                                        is Drawable -> {
-                                            adView.background = background
-                                        }
-                                        is Int -> {
-                                            adView.setBackgroundColor(background)
-                                        }
-                                    }
-                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                    .setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                    background
-                                            }
-                                            is Int -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                    .setBackgroundColor(background)
-                                            }
-                                        }
-                                    }
-                                }
-                                if (populator != null) {
-                                    populator.invoke(nativeAd!!, adView)
-                                } else {
+                                if (nativeAd != null)
                                     populateUnifiedNativeAdView(
+                                        viewGroup,
+                                        populator,
+                                        context,
+                                        layoutInflater,
+                                        background,
+                                        adName,
                                         nativeAd!!,
-                                        adView,
                                         adType,
                                         textColor1,
                                         textColor2,
                                         context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
-                                }
-                                viewGroup.removeAllViews()
-                                viewGroup.addView(adView)
                                 refreshNativeService(adName)
                             }
 
@@ -6473,52 +5580,21 @@ object AdSdk {
                                     object :NativeInternalCallback{
                                         override fun onSuccess(nativeAd: NativeAd?) {
                                             nativeAdLoadCallback?.onAdLoaded()
-                                            val adView = layoutInflater.inflate(layoutId, null)
-                                                    as NativeAdView
-                                            if (background != null) {
-                                                when (background) {
-                                                    is String -> {
-                                                        adView.setBackgroundColor(Color.parseColor(background))
-                                                    }
-                                                    is Drawable -> {
-                                                        adView.background = background
-                                                    }
-                                                    is Int -> {
-                                                        adView.setBackgroundColor(background)
-                                                    }
-                                                }
-                                                if (layoutId == R.layout.native_admob_ad_t6) {
-                                                    when (background) {
-                                                        is String -> {
-                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                .setBackgroundColor(Color.parseColor(background))
-                                                        }
-                                                        is Drawable -> {
-                                                            adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                                background
-                                                        }
-                                                        is Int -> {
-                                                            adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                                .setBackgroundColor(background)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            if (populator != null) {
-                                                populator.invoke(nativeAd!!, adView)
-                                            } else {
+                                            if (nativeAd != null)
                                                 populateUnifiedNativeAdView(
+                                                    viewGroup,
+                                                    populator,
+                                                    context,
+                                                    layoutInflater,
+                                                    background,
+                                                    adName,
                                                     nativeAd!!,
-                                                    adView,
                                                     adType,
                                                     textColor1,
                                                     textColor2,
                                                     context.fetchColor(adName),
                                                     mediaMaxHeight
                                                 )
-                                            }
-                                            viewGroup.removeAllViews()
-                                            viewGroup.addView(adView)
                                             refreshNativeService(adName)
                                         }
 
@@ -6561,52 +5637,21 @@ object AdSdk {
                         object :NativeInternalCallback{
                             override fun onSuccess(nativeAd: NativeAd?) {
                                 nativeAdLoadCallback?.onAdLoaded()
-                                val adView = layoutInflater.inflate(layoutId, null)
-                                        as NativeAdView
-                                if (background != null) {
-                                    when (background) {
-                                        is String -> {
-                                            adView.setBackgroundColor(Color.parseColor(background))
-                                        }
-                                        is Drawable -> {
-                                            adView.background = background
-                                        }
-                                        is Int -> {
-                                            adView.setBackgroundColor(background)
-                                        }
-                                    }
-                                    if (layoutId == R.layout.native_admob_ad_t6) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                    .setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout).background =
-                                                    background
-                                            }
-                                            is Int -> {
-                                                adView.findViewById<LinearLayout>(R.id.main_layout)
-                                                    .setBackgroundColor(background)
-                                            }
-                                        }
-                                    }
-                                }
-                                if (populator != null) {
-                                    populator.invoke(nativeAd!!, adView)
-                                } else {
+                                if (nativeAd != null)
                                     populateUnifiedNativeAdView(
+                                        viewGroup,
+                                        populator,
+                                        context,
+                                        layoutInflater,
+                                        background,
+                                        adName,
                                         nativeAd!!,
-                                        adView,
                                         adType,
                                         textColor1,
                                         textColor2,
                                         context.fetchColor(adName),
                                         mediaMaxHeight
                                     )
-                                }
-                                viewGroup.removeAllViews()
-                                viewGroup.addView(adView)
                                 refreshNativeService(adName)
                             }
 
@@ -6838,40 +5883,14 @@ object AdSdk {
                             override fun onSuccess(nativeAd: NativeAd?) {
                                 Log.d("preload_native", "onSuccess: First Shown" + System.currentTimeMillis()/1000)
                                 if (nativeAd != null) {
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
                                         populateUnifiedNativeAdView(
+                                            null,
+                                            populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             newAdSize,
                                             textColor1,
                                             textColor2,
@@ -6879,10 +5898,6 @@ object AdSdk {
                                             mediaMaxHeight1
                                         )
                                         Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                    }
-                                    if (preloadNativeAds != null) {
-                                        preloadNativeAds.ad = adView
-                                    }
                                 }
                             }
 
@@ -6899,51 +5914,21 @@ object AdSdk {
                                             override fun onSuccess(nativeAd: NativeAd?) {
                                                 Log.d("preload_native", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
                                                 if (nativeAd != null) {
-                                                    val adView = layoutInflater.inflate(layoutId, null)
-                                                            as NativeAdView
-                                                    if (background != null) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (populator != null) {
-                                                        populator.invoke(nativeAd!!, adView)
-                                                    } else {
                                                         populateUnifiedNativeAdView(
+                                                            null,
+                                                            populator,
+                                                            context,
+                                                            layoutInflater,
+                                                            background,
+                                                            adName,
                                                             nativeAd!!,
-                                                            adView,
-                                                            newAdSize,
+                                                            adType,
                                                             textColor1,
                                                             textColor2,
                                                             context.fetchColor(adName),
-                                                            mediaMaxHeight1
+                                                            mediaMaxHeight
                                                         )
                                                         Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                                    }
-                                                    if (preloadNativeAds != null) {
-                                                        preloadNativeAds.ad = adView
-                                                    }
                                                 }
                                             }
 
@@ -6959,51 +5944,26 @@ object AdSdk {
                                                         override fun onSuccess(nativeAd: NativeAd?) {
                                                             Log.d("preload_native", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
                                                             if (nativeAd != null) {
-                                                                val adView = layoutInflater.inflate(layoutId, null)
-                                                                        as NativeAdView
-                                                                if (background != null) {
-                                                                    when (background) {
-                                                                        is String -> {
-                                                                            adView.setBackgroundColor(Color.parseColor(background))
-                                                                        }
-                                                                        is Drawable -> {
-                                                                            adView.background = background
-                                                                        }
-                                                                        is Int -> {
-                                                                            adView.setBackgroundColor(background)
-                                                                        }
-                                                                    }
-                                                                    if (layoutId == R.layout.native_admob_ad_t6){
-                                                                        when (background) {
-                                                                            is String -> {
-                                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                            }
-                                                                            is Drawable -> {
-                                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                            }
-                                                                            is Int -> {
-                                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                                if (populator != null) {
-                                                                    populator.invoke(nativeAd!!, adView)
-                                                                } else {
-                                                                    populateUnifiedNativeAdView(
-                                                                        nativeAd!!,
-                                                                        adView,
-                                                                        newAdSize,
-                                                                        textColor1,
-                                                                        textColor2,
-                                                                        context.fetchColor(adName),
-                                                                        mediaMaxHeight1
+                                                                populateUnifiedNativeAdView(
+                                                                    null,
+                                                                    populator,
+                                                                    context,
+                                                                    layoutInflater,
+                                                                    background,
+                                                                    adName,
+                                                                    nativeAd!!,
+                                                                    adType,
+                                                                    textColor1,
+                                                                    textColor2,
+                                                                    context.fetchColor(adName),
+                                                                    mediaMaxHeight
+                                                                )
+                                                                Log.d(
+                                                                    "preloadColor",
+                                                                    "onSuccess: " + context.fetchColor(
+                                                                        adName
                                                                     )
-                                                                    Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                                                }
-                                                                if (preloadNativeAds != null) {
-                                                                    preloadNativeAds.ad = adView
-                                                                }
+                                                                )
                                                             }
                                                         }
 
@@ -7030,51 +5990,21 @@ object AdSdk {
                                             override fun onSuccess(nativeAd: NativeAd?) {
                                                 Log.d("preload_native", "onSuccess: primary else Fallback Shown" + System.currentTimeMillis()/1000)
                                                 if (nativeAd != null) {
-                                                    val adView = layoutInflater.inflate(layoutId, null)
-                                                            as NativeAdView
-                                                    if (background != null) {
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                                            when (background) {
-                                                                is String -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                                }
-                                                                is Drawable -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                                }
-                                                                is Int -> {
-                                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    if (populator != null) {
-                                                        populator.invoke(nativeAd!!, adView)
-                                                    } else {
                                                         populateUnifiedNativeAdView(
+                                                            null,
+                                                            populator,
+                                                            context,
+                                                            layoutInflater,
+                                                            background,
+                                                            adName,
                                                             nativeAd!!,
-                                                            adView,
-                                                            newAdSize,
+                                                            adType,
                                                             textColor1,
                                                             textColor2,
                                                             context.fetchColor(adName),
-                                                            mediaMaxHeight1
+                                                            mediaMaxHeight
                                                         )
                                                         Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                                    }
-                                                    if (preloadNativeAds != null) {
-                                                        preloadNativeAds.ad = adView
-                                                    }
                                                 }
                                             }
 
@@ -7102,40 +6032,14 @@ object AdSdk {
                             override fun onSuccess(nativeAd: NativeAd?) {
                                 Log.d("preload_native", "onSuccess: Second Shown" + System.currentTimeMillis()/1000)
                                 if (nativeAd != null) {
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
                                         populateUnifiedNativeAdView(
+                                            null,
+                                            populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             newAdSize,
                                             textColor1,
                                             textColor2,
@@ -7143,10 +6047,6 @@ object AdSdk {
                                             mediaMaxHeight1
                                         )
                                         Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                    }
-                                    if (preloadNativeAds != null) {
-                                        preloadNativeAds.ad = adView
-                                    }
                                 }
                             }
 
@@ -7162,40 +6062,14 @@ object AdSdk {
                                         override fun onSuccess(nativeAd: NativeAd?) {
                                             Log.d("preload_native", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
                                             if (nativeAd != null) {
-                                                val adView = layoutInflater.inflate(layoutId, null)
-                                                        as NativeAdView
-                                                if (background != null) {
-                                                    when (background) {
-                                                        is String -> {
-                                                            adView.setBackgroundColor(Color.parseColor(background))
-                                                        }
-                                                        is Drawable -> {
-                                                            adView.background = background
-                                                        }
-                                                        is Int -> {
-                                                            adView.setBackgroundColor(background)
-                                                        }
-                                                    }
-                                                    if (layoutId == R.layout.native_admob_ad_t6){
-                                                        when (background) {
-                                                            is String -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                            }
-                                                            is Drawable -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                            }
-                                                            is Int -> {
-                                                                adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (populator != null) {
-                                                    populator.invoke(nativeAd!!, adView)
-                                                } else {
                                                     populateUnifiedNativeAdView(
+                                                        null,
+                                                        populator,
+                                                        context,
+                                                        layoutInflater,
+                                                        background,
+                                                        adName,
                                                         nativeAd!!,
-                                                        adView,
                                                         newAdSize,
                                                         textColor1,
                                                         textColor2,
@@ -7203,10 +6077,6 @@ object AdSdk {
                                                         mediaMaxHeight1
                                                     )
                                                     Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                                }
-                                                if (preloadNativeAds != null) {
-                                                    preloadNativeAds.ad = adView
-                                                }
                                             }
                                         }
 
@@ -7233,40 +6103,14 @@ object AdSdk {
                             override fun onSuccess(nativeAd: NativeAd?) {
                                 Log.d("preload_native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
                                 if (nativeAd != null) {
-                                    val adView = layoutInflater.inflate(layoutId, null)
-                                            as NativeAdView
-                                    if (background != null) {
-                                        when (background) {
-                                            is String -> {
-                                                adView.setBackgroundColor(Color.parseColor(background))
-                                            }
-                                            is Drawable -> {
-                                                adView.background = background
-                                            }
-                                            is Int -> {
-                                                adView.setBackgroundColor(background)
-                                            }
-                                        }
-                                        if (layoutId == R.layout.native_admob_ad_t6){
-                                            when (background) {
-                                                is String -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
-                                                }
-                                                is Drawable -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).background = background
-                                                }
-                                                is Int -> {
-                                                    adView.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (populator != null) {
-                                        populator.invoke(nativeAd!!, adView)
-                                    } else {
                                         populateUnifiedNativeAdView(
+                                            null,
+                                            populator,
+                                            context,
+                                            layoutInflater,
+                                            background,
+                                            adName,
                                             nativeAd!!,
-                                            adView,
                                             newAdSize,
                                             textColor1,
                                             textColor2,
@@ -7274,10 +6118,6 @@ object AdSdk {
                                             mediaMaxHeight1
                                         )
                                         Log.d("preloadColor", "onSuccess: "+ context.fetchColor(adName))
-                                    }
-                                    if (preloadNativeAds != null) {
-                                        preloadNativeAds.ad = adView
-                                    }
                                 }
                             }
 
@@ -7385,15 +6225,150 @@ object AdSdk {
 
     }
 
+    internal fun generateLayout(nativeAd: NativeAd?):Int{
+        var aspectRatio = nativeAd?.mediaContent?.aspectRatio
+        @LayoutRes var layoutIdNew:Int = R.layout.native_admob_ad_t6
+        if (aspectRatio != null) {
+            if (aspectRatio < 1.toFloat()){
+                layoutIdNew = R.layout.native_admob_dynamic8_sidelarge
+            }
+            else if (aspectRatio == 1.toFloat()){
+                layoutIdNew = R.layout.native_admob_dynamic8_side1x1
+            }
+            else if (aspectRatio > 1.toFloat() && aspectRatio <= 1.5.toFloat()){
+                layoutIdNew = R.layout.native_admob_dynamic8_center16x9
+            }
+
+            else if (aspectRatio > 1.5.toFloat()){
+                layoutIdNew = R.layout.native_admob_dynamic8_center16x9
+            }
+        }
+        return layoutIdNew
+    }
+
     fun populateUnifiedNativeAdView(
+        viewGroup: ViewGroup?=null,
+        populator: ((nativeAd: NativeAd, adView: NativeAdView) -> Unit)? = null,
+        application:Context,
+        layoutInflater: LayoutInflater? = null,
+        background: Any?,
+        adName: String,
         nativeAd: NativeAd,
-        adView: NativeAdView?,
         adType: String,
         textColor1: Int?,
         textColor2: Int?,
         buttonColor: String?,
         mediaMaxHeight: Int = 300,
     ) {
+
+        var mediaMaxHeight1 = mediaMaxHeight
+        var newAdSize = adType
+        @LayoutRes val layoutId = when (newAdSize) {
+            "6" -> {
+                mediaMaxHeight1 = 200
+                R.layout.native_admob_ad_t6
+            }/*DEFAULT_AD*/
+            "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+            "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+            "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+            "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+            "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+            "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
+            "8" -> generateLayout(nativeAd)/*DYNAMIC*/
+            else -> R.layout.native_admob_ad_t1
+        }
+
+        lateinit var adViewNew: NativeAdView
+        if (layoutInflater == null)
+            adViewNew = View.inflate(application,layoutId, null) as NativeAdView
+        else
+            adViewNew = layoutInflater.inflate(layoutId,null) as NativeAdView
+
+        if (background != null) {
+            when (background) {
+                is String -> {
+                    adViewNew.setBackgroundColor(Color.parseColor(background))
+                }
+                is Drawable -> {
+                    adViewNew.background = background
+                }
+                is Int -> {
+                    adViewNew.setBackgroundColor(background)
+                }
+            }
+            if (layoutId == R.layout.native_admob_ad_t6){
+                when (background) {
+                    is String -> {
+                        adViewNew.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor(background))
+                    }
+                    is Drawable -> {
+                        adViewNew.findViewById<LinearLayout>(R.id.main_layout).background = background
+                    }
+                    is Int -> {
+                        adViewNew.findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(background)
+                    }
+                }
+            }
+        }
+
+        if (populator != null) {
+            nativeAd?.let {
+                populator.invoke(it, adViewNew)
+            }
+        }
+        else {
+            if (adType == "8"){
+                populateUnifiedNative(
+                    adName,
+                    nativeAd,
+                    adViewNew,
+                    adType,
+                    textColor1,
+                    textColor2,
+                    buttonColor,
+                    mediaMaxHeight1,
+                    true
+                )
+            }
+            else {
+                populateUnifiedNative(
+                    adName,
+                    nativeAd,
+                    adViewNew,
+                    adType,
+                    textColor1,
+                    textColor2,
+                    buttonColor,
+                    mediaMaxHeight1,
+                    false
+                )
+            }
+        }
+
+        if (viewGroup != null){
+            viewGroup.removeAllViews()
+            viewGroup.addView(adViewNew)
+        }
+        else {
+            val preloadNativeAds = preloadNativeAdList?.get(adName)
+            if (preloadNativeAds != null) {
+                preloadNativeAds.ad = adViewNew
+            }
+        }
+
+    }
+
+    internal fun populateUnifiedNative(
+      adName: String,
+      nativeAd: NativeAd,
+      adView: NativeAdView?,
+      adType: String,
+      textColor1: Int?,
+      textColor2: Int?,
+      buttonColor: String?,
+      mediaMaxHeight: Int = 300,
+      isDynamic: Boolean = false
+    ){
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
         val icon = nativeAd.icon
@@ -7416,8 +6391,12 @@ object AdSdk {
         }
 
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
-        adView.mediaView = mediaView
-        mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
+        if (!isDynamic)
+            mediaView.setImageScaleType(ImageView.ScaleType.FIT_CENTER)
+        else {
+            mediaView.setImageScaleType(ImageView.ScaleType.FIT_XY)
+            Log.d(TAG, "populateUnifiedNativeAdViewAspectRatioNew: "+adName+":"+ nativeAd.mediaContent?.aspectRatio)
+        }
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
                 val maxHeightPixels = mediaMaxHeight
@@ -7437,14 +6416,19 @@ object AdSdk {
 
             override fun onChildViewRemoved(parent: View, child: View) {}
         })
+        adView.mediaView = mediaView
+
+
         val mediaIcon = nativeAd.mediaContent
         if (mediaIcon == null || adType == "4") {
             adView.mediaView?.visibility = View.GONE
             adView.mediaView
         } else {
+            Log.d(TAG, "populateUnifiedNativeAdViewAspectRatio: "+adName+":"+ nativeAd.mediaContent!!.aspectRatio)
             adView.mediaView?.visibility = VISIBLE
             (adView.mediaView as MediaView).setMediaContent(mediaIcon)
         }
+
 
         val adHeadline = adView.findViewById(R.id.headline) as TextView
         adView.headlineView = adHeadline
@@ -7500,8 +6484,6 @@ object AdSdk {
 
             }
         }
-
-
     }
 
     fun showAvailableInterstitialAd(activity: Activity,interstitialAd: InterstitialAd?=null,adManagerInterstitialAd: AdManagerInterstitialAd? = null){

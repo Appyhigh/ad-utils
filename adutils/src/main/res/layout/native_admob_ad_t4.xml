@@ -63,6 +63,7 @@
                     android:layout_gravity="center_horizontal"
                     android:layout_margin="5dp"
                     android:maxHeight="200dp"
+                    android:background="@color/cardview_dark_background"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"

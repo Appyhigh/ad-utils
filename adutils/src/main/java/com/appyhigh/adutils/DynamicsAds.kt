@@ -31,23 +31,23 @@ class DynamicsAds {
         val updateJSON = JSONObject()
         var adMobNew: List<AdMod> = ArrayList()
 
-        fun getDynamicAdsId(context: Context, fallBackAdId: String, adName: String): String {
-            return if (context != null){
-                try {
-                    if (!context!!.fetchPrimaryById(adName).isEmpty()) {
-                        val string = context!!.fetchPrimaryById(adName)?.get(0)
-                        string
-                    }
-                    else{
-                        fallBackAdId
-                    }
-                } catch (e: Exception) {
-                    fallBackAdId
-                }
-            }
-            else
-                fallBackAdId
-        }
+//        fun getDynamicAdsId(context: Context, fallBackAdId: String, adName: String): String {
+//            return if (context != null){
+//                try {
+//                    if (!context!!.fetchPrimaryById(adName).isEmpty()) {
+//                        val string = context!!.fetchPrimaryById(adName)?.get(0)
+//                        string
+//                    }
+//                    else{
+//                        fallBackAdId
+//                    }
+//                } catch (e: Exception) {
+//                    fallBackAdId
+//                }
+//            }
+//            else
+//                fallBackAdId
+//        }
 
         @SuppressLint("CheckResult")
         fun getDynamicAds(

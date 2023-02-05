@@ -90,6 +90,10 @@ class MainActivity : AppCompatActivity(), VersionControlCallback {
             AdSdk.showAvailableInterstitialAd(this,interstitialAd,adManagerAd)
         }
 
+        binding.btnNativeAdNew.setOnClickListener {
+            startActivity(Intent(this, NewNative::class.java))
+        }
+
         binding.btnRewardedInterstitialAd.setOnClickListener {
             AdSdk.showRewardedIntersAd(this, "ca-app-pub-3940256099942544/5354046379","util_reward_interstitial", object : InterstitialCallback {
                 override fun moveNext() {
