@@ -3090,7 +3090,7 @@ object AdSdk {
             if (application != null){
                 if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     var mediaMaxHeight1 = mediaMaxHeight
-                    var newAdSize = application.fetchAdSize(adName,adType)
+                    var newAdSize = adType
                     @LayoutRes val layoutId = when (newAdSize) {
                         "6" -> {
                             mediaMaxHeight1 = 200
