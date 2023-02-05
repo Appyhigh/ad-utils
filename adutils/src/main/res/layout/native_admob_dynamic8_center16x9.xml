@@ -45,7 +45,6 @@
                 android:layout_gravity="center_horizontal"
                 android:background="@color/cardview_dark_background"
                 android:layout_margin="5dp"
-                android:adjustToBound="true"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
