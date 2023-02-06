@@ -6228,21 +6228,27 @@ object AdSdk {
     internal fun generateLayout(nativeAd: NativeAd?):Int{
         var aspectRatio = nativeAd?.mediaContent?.aspectRatio
         @LayoutRes var layoutIdNew:Int = R.layout.native_admob_ad_t6
-        if (aspectRatio != null) {
-            if (aspectRatio < 1.toFloat()){
-                layoutIdNew = R.layout.native_admob_dynamic8_sidelarge
-            }
-            else if (aspectRatio == 1.toFloat()){
-                layoutIdNew = R.layout.native_admob_dynamic8_side1x1
-            }
-            else if (aspectRatio > 1.toFloat() && aspectRatio <= 1.5.toFloat()){
-                layoutIdNew = R.layout.native_admob_dynamic8_center16x9
-            }
+        if (nativeAd?.mediaContent?.hasVideoContent() == true){
+            if (aspectRatio != null) {
+                if (aspectRatio < 1.toFloat()){
+                    layoutIdNew = R.layout.native_admob_dynamic8_sidelarge
+                }
+                else if (aspectRatio == 1.toFloat()){
+                    layoutIdNew = R.layout.native_admob_dynamic8_side1x1
+                }
+                else if (aspectRatio > 1.toFloat() && aspectRatio <= 1.5.toFloat()){
+                    layoutIdNew = R.layout.native_admob_dynamic8_center16x9
+                }
 
-            else if (aspectRatio > 1.5.toFloat()){
-                layoutIdNew = R.layout.native_admob_dynamic8_center16x9
+                else if (aspectRatio > 1.5.toFloat()){
+                    layoutIdNew = R.layout.native_admob_dynamic8_center16x9
+                }
             }
         }
+        else {
+            layoutIdNew = R.layout.native_admob_ad_t1
+        }
+
         return layoutIdNew
     }
 
@@ -6317,7 +6323,7 @@ object AdSdk {
             }
         }
         else {
-            if (adType == "8"){
+            if (adType == "8" && layoutId != R.layout.native_admob_ad_t1){
                 populateUnifiedNative(
                     adName,
                     nativeAd,
@@ -6403,36 +6409,41 @@ object AdSdk {
         mediaView.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View, child: View) {
                 val maxHeightPixels = mediaMaxHeight
-                if (child is ImageView) { //Images
-                    child.adjustViewBounds = true
-                    if (layoutId == R.layout.native_admob_dynamic8_sidelarge || layoutId == R.layout.native_admob_dynamic8_side1x1){
-                        val params = child.layoutParams
-                        params.width = MATCH_PARENT
-                        params.height = MATCH_PARENT
-                        child.layoutParams = params
-                    }
-                    else {
-
+                if (isDynamic){
+                    if (child is ImageView) { //Images
+                        child.adjustViewBounds = true
                         val layoutParams1 = child.layoutParams
                         layoutParams1.width = MATCH_PARENT
-                        layoutParams1.height = WRAP_CONTENT
+                        layoutParams1.height = mediaMaxHeight
                         child.layoutParams = layoutParams1
+                    } else { //Videos
+                        if (layoutId == R.layout.native_admob_dynamic8_sidelarge || layoutId == R.layout.native_admob_dynamic8_side1x1){
+                            val params = child.layoutParams
+                            params.width = MATCH_PARENT
+                            params.height = MATCH_PARENT
+                            child.layoutParams = params
+                        }
+                        else {
+                            val params = child.layoutParams
+                            params.width = MATCH_PARENT
+                            params.height = WRAP_CONTENT
+                            child.layoutParams = params
+                        }
                     }
-
-                } else { //Videos
-                    if (layoutId == R.layout.native_admob_dynamic8_sidelarge || layoutId == R.layout.native_admob_dynamic8_side1x1){
+                }
+                else {
+                    if (child is ImageView) { //Images
+                        child.adjustViewBounds = true
+                        val layoutParams1 = child.layoutParams
+                        layoutParams1.width = MATCH_PARENT
+                        layoutParams1.height = mediaMaxHeight
+                        child.layoutParams = layoutParams1
+                    } else { //Videos
                         val params = child.layoutParams
                         params.width = MATCH_PARENT
-                        params.height = MATCH_PARENT
+                        params.height = maxHeightPixels
                         child.layoutParams = params
                     }
-                    else {
-                        val params = child.layoutParams
-                        params.width = MATCH_PARENT
-                        params.height = WRAP_CONTENT
-                        child.layoutParams = params
-                    }
-
                 }
             }
 
