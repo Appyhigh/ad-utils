@@ -6327,7 +6327,8 @@ object AdSdk {
                     textColor2,
                     buttonColor,
                     mediaMaxHeight1,
-                    true
+                    true,
+                    layoutId
                 )
             }
             else {
@@ -6340,7 +6341,8 @@ object AdSdk {
                     textColor2,
                     buttonColor,
                     mediaMaxHeight1,
-                    false
+                    false,
+                    layoutId
                 )
             }
         }
@@ -6367,7 +6369,8 @@ object AdSdk {
       textColor2: Int?,
       buttonColor: String?,
       mediaMaxHeight: Int = 300,
-      isDynamic: Boolean = false
+      isDynamic: Boolean = false,
+      layoutId: Int
     ){
         val iconView = adView?.findViewById(R.id.icon) as ImageView
         Log.e("$TAG: nativead", "ad body : " + nativeAd.body)
@@ -6402,15 +6405,34 @@ object AdSdk {
                 val maxHeightPixels = mediaMaxHeight
                 if (child is ImageView) { //Images
                     child.adjustViewBounds = true
-                    val layoutParams1 = child.layoutParams
-                    layoutParams1.width = MATCH_PARENT
-                    layoutParams1.height = WRAP_CONTENT
-                    child.layoutParams = layoutParams1
+                    if (layoutId == R.layout.native_admob_dynamic8_sidelarge || layoutId == R.layout.native_admob_dynamic8_side1x1){
+                        val params = child.layoutParams
+                        params.width = MATCH_PARENT
+                        params.height = MATCH_PARENT
+                        child.layoutParams = params
+                    }
+                    else {
+
+                        val layoutParams1 = child.layoutParams
+                        layoutParams1.width = MATCH_PARENT
+                        layoutParams1.height = WRAP_CONTENT
+                        child.layoutParams = layoutParams1
+                    }
+
                 } else { //Videos
-                    val params = child.layoutParams
-                    params.width = MATCH_PARENT
-                    params.height = WRAP_CONTENT
-                    child.layoutParams = params
+                    if (layoutId == R.layout.native_admob_dynamic8_sidelarge || layoutId == R.layout.native_admob_dynamic8_side1x1){
+                        val params = child.layoutParams
+                        params.width = MATCH_PARENT
+                        params.height = MATCH_PARENT
+                        child.layoutParams = params
+                    }
+                    else {
+                        val params = child.layoutParams
+                        params.width = MATCH_PARENT
+                        params.height = WRAP_CONTENT
+                        child.layoutParams = params
+                    }
+
                 }
             }
 

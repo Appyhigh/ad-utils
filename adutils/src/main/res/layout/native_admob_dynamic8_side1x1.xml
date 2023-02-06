@@ -22,19 +22,19 @@
             android:orientation="horizontal"
             android:layout_weight="1"
             android:weightSum="1"
-            android:layout_height="wrap_content">
+            android:layout_height="200dp">
 
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:weightSum="0.5"
                 android:layout_weight="0.5"
                 android:orientation="vertical">
 
                 <com.google.android.gms.ads.nativead.MediaView
                     android:id="@+id/ad_media"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:layout_gravity="center_horizontal"
                     android:background="@color/cardview_dark_background"
                     android:layout_margin="5dp" />
@@ -82,7 +82,7 @@
 
                         <LinearLayout
                             android:id="@+id/linearLayout4"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_margin="5dp"
                             android:orientation="horizontal"
@@ -93,7 +93,7 @@
                             <LinearLayout
                                 android:id="@+id/linearLayout"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
+                                android:layout_height="match_parent"
                                 android:layout_weight="1"
                                 android:orientation="vertical"
                                 android:padding="8dip">
@@ -102,6 +102,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     app:cardCornerRadius="5dp"
+                                    android:layout_gravity="center"
                                     app:cardElevation="5dp">
 
                                     <ImageView
@@ -118,6 +119,7 @@
                                     android:layout_width="fill_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_marginLeft="5dip"
+                                    android:layout_marginTop="5dp"
                                     android:orientation="vertical">
 
                                     <TextView
