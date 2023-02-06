@@ -6406,7 +6406,6 @@ object AdSdk {
                     layoutParams1.width = MATCH_PARENT
                     layoutParams1.height = WRAP_CONTENT
                     child.layoutParams = layoutParams1
-                    child.setAdjustViewBounds(true);
                 } else { //Videos
                     val params = child.layoutParams
                     params.width = MATCH_PARENT
