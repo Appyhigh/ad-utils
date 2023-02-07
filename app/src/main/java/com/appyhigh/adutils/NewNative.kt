@@ -27,13 +27,13 @@ class NewNative : AppCompatActivity() {
         AdSdk.loadNativeAd(
             this@NewNative,
             lifecycle = lifecycle,
-            adUnit = adUnit2,
+            adUnit = "ca-app-pub-3940256099942544/1044960115",
             adName = "util_native_default",
             viewGroup = binding.llRoot,
             adType = AdSdk.ADType.DYNAMIC,
             callback = nativeAdLoadCallback("3"),
             background = null, textColor1 = null, textColor2 = null,
-            loadTimeOut = 4000
+            loadTimeOut = 20000
         )
     }
 

@@ -3236,7 +3236,7 @@ object AdSdk {
 
                 var fetchedTimer:Int = application.fetchAdLoadTimeout(adName)
                 if (fetchedTimer == 0){
-                    fetchedTimer = loadTimeOut
+                fetchedTimer = loadTimeOut
                 }
                 var primaryIds = application.fetchPrimaryById(adName)
                 var secondaryIds = application.fetchSecondaryById(adName)
