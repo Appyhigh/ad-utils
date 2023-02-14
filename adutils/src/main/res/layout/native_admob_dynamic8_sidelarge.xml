@@ -7,30 +7,26 @@
     android:layout_height="wrap_content"
     android:layout_centerInParent="true"
     android:layout_gravity="center"
-    android:background="@android:color/transparent"
+    android:background="@drawable/nad_bg_empty"
     android:layout_margin="5dp"
     android:elevation="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:orientation="horizontal"
-        android:layout_weight="1"
-        android:weightSum="1"
         android:layout_height="wrap_content">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:weightSum="0.5"
-            android:layout_weight="0.5"
+            android:gravity="center"
             android:orientation="vertical">
 
             <com.google.android.gms.ads.nativead.MediaView
                 android:id="@+id/ad_media"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="160dp"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:background="@color/cardview_dark_background"
                 android:layout_margin="5dp" />
 
         </LinearLayout>
@@ -39,9 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:weightSum="0.5"
             android:layout_gravity="center"
-            android:layout_weight="0.5"
             android:orientation="vertical">
 
             <RelativeLayout
@@ -70,6 +64,7 @@
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:layout_below="@+id/ad_notification_view5"
+                    android:layout_centerHorizontal="true"
                     android:orientation="vertical"
                     android:paddingBottom="5dp">
 
@@ -121,7 +116,8 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:ellipsize="end"
-                                    android:maxLines="1"
+                                    android:maxLines="2"
+                                    android:textAlignment="center"
                                     android:textColor="@color/headLineColor"
                                     android:textSize="16sp" />
 

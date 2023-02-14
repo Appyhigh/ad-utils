@@ -22,5 +22,7 @@ data class AdMod(
     @SerializedName("size")
     val size: String = "",
     @SerializedName("primary_adload_timeout_ms")
-    val primary_adload_timeout_ms: Int = 0
+    val primary_adload_timeout_ms: Int = 0,
+    @SerializedName("background_threshold")
+    val background_threshold: Int? = 0
 )

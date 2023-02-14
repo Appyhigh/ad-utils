@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.*
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
@@ -35,6 +36,7 @@ import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.utils.AdMobUtil.fetchAdLoadTimeout
 import com.appyhigh.adutils.utils.AdMobUtil.fetchAdSize
 import com.appyhigh.adutils.utils.AdMobUtil.fetchAdStatusFromAdId
+import com.appyhigh.adutils.utils.AdMobUtil.fetchBackgroundTime
 import com.appyhigh.adutils.utils.AdMobUtil.fetchBannerAdSize
 import com.appyhigh.adutils.utils.AdMobUtil.fetchColor
 import com.appyhigh.adutils.utils.AdMobUtil.fetchPrimaryById
@@ -500,13 +502,14 @@ object AdSdk {
             if (application != null){
                 if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     if (!AppOpenManager.initialized) {
+                        var newbackgroundtreshold = application.fetchBackgroundTime(adName,backgroundThreshold)
                         val appOpenManager =
                             AppOpenManager(
                                 application,
                                 appOpenAdUnit,
                                 adName,
                                 isShownOnlyOnce,
-                                backgroundThreshold,
+                                newbackgroundtreshold,
                                 appOpenAdCallback,
                                 isAdmanager,
                                 loadTimeOut,
@@ -3090,7 +3093,7 @@ object AdSdk {
             if (application != null){
                 if (AppPref.getBoolean(application,AppPref.showAppAds) && application.fetchAdStatusFromAdId(adName)) {
                     var mediaMaxHeight1 = mediaMaxHeight
-                    var newAdSize = adType
+                    var newAdSize = application.fetchAdSize(adName,adType)
                     @LayoutRes val layoutId = when (newAdSize) {
                         "6" -> {
                             mediaMaxHeight1 = 200
@@ -3235,7 +3238,9 @@ object AdSdk {
                 if (adUnit.isBlank()) return
 
                 var fetchedTimer:Int = application.fetchAdLoadTimeout(adName)
-                fetchedTimer = loadTimeOut
+                if (fetchedTimer == 0){
+                    fetchedTimer = loadTimeOut
+                }
                 var primaryIds = application.fetchPrimaryById(adName)
                 var secondaryIds = application.fetchSecondaryById(adName)
 
@@ -3267,6 +3272,10 @@ object AdSdk {
                     "7" -> {
                         inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
                     }
+//                    DYNAMIC
+                    "8" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                    }
                     /*GRID_AD*/
                     else -> {
                         inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
@@ -3281,463 +3290,407 @@ object AdSdk {
 
                 Log.d("native","OnStart:" + System.currentTimeMillis()/1000)
                 if (!isAdmanager){
-                    loadNativeAd(
-                        application,
-                        id,
-                        lifecycle,
-                        adName,
-                        viewGroup,
-                        nativeAdLoadCallback,
-                        layoutId,
-                        populator,
-                        adType,
-                        background,
-                        textColor1,
-                        textColor2,
-                        mediaMaxHeight,
-                        loadingTextSize,
-                        contentURL,
-                        neighbourContentURL,
-                        showLoadingMessage,
-                        listOf(adUnit),
-                        fetchedTimer,
-                        object: NativeInternalCallback{
-                            override fun onSuccess(nativeAd: NativeAd?) {
-                                Log.d("native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
-                                nativeAdLoadCallback?.onAdLoaded()
-                                if (nativeAd != null) {
-                                    nativeAd?.let {
-                                        try {
-                                            populateUnifiedNativeAdView(
+                    if (primaryIds.size > 0){
+                        loadNativeAd(
+                            application,
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            primaryIds,
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                        nativeAd?.let {
+                                            try {
+                                                populateUnifiedNativeAdView(
+                                                    viewGroup,
+                                                    populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
+                                                )
+                                            }
+                                            catch (e:Exception){
+
+                                            }
+                                        }
+
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    if (secondaryIds.size >0){
+                                        loadNativeAd(
+                                            application,
+                                            id,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            layoutId,
+                                            populator,
+                                            adType,
+                                            background,
+                                            textColor1,
+                                            textColor2,
+                                            mediaMaxHeight,
+                                            loadingTextSize,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            showLoadingMessage,
+                                            secondaryIds,
+                                            fetchedTimer,
+                                            object: NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("native", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    if (nativeAd != null) {
+                                                            nativeAd?.let {
+                                                                try {
+                                                                    populateUnifiedNativeAdView(
+                                                                        viewGroup,
+                                                                        populator,
+                                                                        application,
+                                                                        background = background,
+                                                                        adName = adName,
+                                                                        nativeAd = it,
+                                                                        adType = adType,
+                                                                        textColor1 = textColor1,
+                                                                        textColor2 = textColor2,
+                                                                        buttonColor = application.fetchColor(adName),
+                                                                        mediaMaxHeight = mediaMaxHeight
+                                                                    )
+                                                                 }
+                                                                catch (e:Exception){
+
+                                                                }
+                                                            }
+                                                        refreshNative(adName)
+                                                    }
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    loadNativeAd(
+                                                        application,
+                                                        id,
+                                                        lifecycle,
+                                                        adName,
+                                                        viewGroup,
+                                                        nativeAdLoadCallback,
+                                                        layoutId,
+                                                        populator,
+                                                        adType,
+                                                        background,
+                                                        textColor1,
+                                                        textColor2,
+                                                        mediaMaxHeight,
+                                                        loadingTextSize,
+                                                        contentURL,
+                                                        neighbourContentURL,
+                                                        showLoadingMessage,
+                                                        listOf(adUnit),
+                                                        fetchedTimer,
+                                                        object: NativeInternalCallback{
+                                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                                Log.d("native", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
+                                                                nativeAdLoadCallback?.onAdLoaded()
+                                                                if (nativeAd != null) {
+                                                                        nativeAd?.let {
+                                                                            try {
+                                                                            populateUnifiedNativeAdView(
+                                                                                viewGroup,
+                                                                                populator,
+                                                                                application,
+                                                                                background = background,
+                                                                                adName = adName,
+                                                                                nativeAd = it,
+                                                                                adType = adType,
+                                                                                textColor1 = textColor1,
+                                                                                textColor2 = textColor2,
+                                                                                buttonColor = application.fetchColor(adName),
+                                                                                mediaMaxHeight = mediaMaxHeight
+                                                                            )
+                                                                        }
+                                                                            catch (e:Exception){
+
+                                                                            }
+                                                                        }
+                                                                    refreshNative(adName)
+                                                                }
+                                                            }
+
+                                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                            }
+
+                                                        },
+                                                        isAdmanager = isAdmanager,
+                                                    )
+                                                }
+
+                                            },
+                                            isAdmanager = isAdmanager,
+                                        )
+                                    }
+                                    else{
+                                        loadNativeAd(
+                                            application,
+                                            id,
+                                            lifecycle,
+                                            adName,
+                                            viewGroup,
+                                            nativeAdLoadCallback,
+                                            layoutId,
+                                            populator,
+                                            adType,
+                                            background,
+                                            textColor1,
+                                            textColor2,
+                                            mediaMaxHeight,
+                                            loadingTextSize,
+                                            contentURL,
+                                            neighbourContentURL,
+                                            showLoadingMessage,
+                                            listOf(adUnit),
+                                            fetchedTimer,
+                                            object: NativeInternalCallback{
+                                                override fun onSuccess(nativeAd: NativeAd?) {
+                                                    Log.d("native", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
+                                                    nativeAdLoadCallback?.onAdLoaded()
+                                                    if (nativeAd != null) {
+                                                            nativeAd?.let {
+                                                                try {
+                                                                populateUnifiedNativeAdView(
+                                                                viewGroup,
+                                                                populator,
+                                                                    application,
+                                                                    background = background,
+                                                                    adName = adName,
+                                                                    nativeAd = it,
+                                                                    adType = adType,
+                                                                    textColor1 = textColor1,
+                                                                    textColor2 = textColor2,
+                                                                    buttonColor = application.fetchColor(adName),
+                                                                    mediaMaxHeight = mediaMaxHeight
+                                                                )
+                                                            }
+                                                                catch (e:Exception){
+
+                                                                }
+                                                            }
+                                                        refreshNative(adName)
+                                                    }
+                                                }
+
+                                                override fun onFailure(loadAdError: LoadAdError?) {
+                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                                }
+
+                                            },
+                                            isAdmanager = isAdmanager,
+                                        )
+                                    }
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                    else if (secondaryIds.size >0){
+                        loadNativeAd(
+                            application,
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            secondaryIds,
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                            nativeAd?.let {
+                                                try {
+                                                populateUnifiedNativeAdView(
                                                 viewGroup,
                                                 populator,
-                                                application,
-                                                background = background,
-                                                adName = adName,
-                                                nativeAd = it,
-                                                adType = adType,
-                                                textColor1 = textColor1,
-                                                textColor2 = textColor2,
-                                                buttonColor = application.fetchColor(adName),
-                                                mediaMaxHeight = mediaMaxHeight
-                                            )
-                                        }
-                                        catch (e:Exception){
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
+                                                )
+                                            }
+                                                catch (e:Exception){
 
-                                        }
+                                                }
+                                            }
+                                        refreshNative(adName)
                                     }
-                                    refreshNative(adName)
                                 }
-                            }
 
-                            override fun onFailure(loadAdError: LoadAdError?) {
-                                nativeAdLoadCallback?.onAdFailed(loadAdError)
-                            }
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    loadNativeAd(
+                                        application,
+                                        id,
+                                        lifecycle,
+                                        adName,
+                                        viewGroup,
+                                        nativeAdLoadCallback,
+                                        layoutId,
+                                        populator,
+                                        adType,
+                                        background,
+                                        textColor1,
+                                        textColor2,
+                                        mediaMaxHeight,
+                                        loadingTextSize,
+                                        contentURL,
+                                        neighbourContentURL,
+                                        showLoadingMessage,
+                                        listOf(adUnit),
+                                        fetchedTimer,
+                                        object: NativeInternalCallback{
+                                            override fun onSuccess(nativeAd: NativeAd?) {
+                                                Log.d("native", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
+                                                nativeAdLoadCallback?.onAdLoaded()
+                                                if (nativeAd != null) {
+                                                        nativeAd?.let {
+                                                            try {
+                                                            populateUnifiedNativeAdView(
+                                                            viewGroup,
+                                                                populator,
+                                                                application,
+                                                                background = background,
+                                                                adName = adName,
+                                                                nativeAd = it,
+                                                                adType = adType,
+                                                                textColor1 = textColor1,
+                                                                textColor2 = textColor2,
+                                                                buttonColor = application.fetchColor(adName),
+                                                                mediaMaxHeight = mediaMaxHeight
+                                                            )
+                                                        }
+                                                            catch (e:Exception){
 
-                        },
-                        isAdmanager = isAdmanager,
-                    )
-//                    if (primaryIds.size > 0){
-//                        loadNativeAd(
-//                            application,
-//                            id,
-//                            lifecycle,
-//                            adName,
-//                            viewGroup,
-//                            nativeAdLoadCallback,
-//                            layoutId,
-//                            populator,
-//                            adType,
-//                            background,
-//                            textColor1,
-//                            textColor2,
-//                            mediaMaxHeight,
-//                            loadingTextSize,
-//                            contentURL,
-//                            neighbourContentURL,
-//                            showLoadingMessage,
-//                            primaryIds,
-//                            fetchedTimer,
-//                            object: NativeInternalCallback{
-//
-//                                override fun onSuccess(nativeAd: NativeAd?) {
-//                                    Log.d("native", "onSuccess: Primary Shown" + System.currentTimeMillis()/1000)
-//                                    nativeAdLoadCallback?.onAdLoaded()
-//                                    if (nativeAd != null) {
-//                                        nativeAd?.let {
-//                                            try {
-//                                                populateUnifiedNativeAdView(
-//                                                    viewGroup,
-//                                                    populator,
-//                                                    application,
-//                                                    background = background,
-//                                                    adName = adName,
-//                                                    nativeAd = it,
-//                                                    adType = adType,
-//                                                    textColor1 = textColor1,
-//                                                    textColor2 = textColor2,
-//                                                    buttonColor = application.fetchColor(adName),
-//                                                    mediaMaxHeight = mediaMaxHeight
-//                                                )
-//                                            }
-//                                            catch (e:Exception){
-//
-//                                            }
-//                                        }
-//
-//                                        refreshNative(adName)
-//                                    }
-//                                }
-//
-//                                override fun onFailure(loadAdError: LoadAdError?) {
-//                                    if (secondaryIds.size >0){
-//                                        loadNativeAd(
-//                                            application,
-//                                            id,
-//                                            lifecycle,
-//                                            adName,
-//                                            viewGroup,
-//                                            nativeAdLoadCallback,
-//                                            layoutId,
-//                                            populator,
-//                                            adType,
-//                                            background,
-//                                            textColor1,
-//                                            textColor2,
-//                                            mediaMaxHeight,
-//                                            loadingTextSize,
-//                                            contentURL,
-//                                            neighbourContentURL,
-//                                            showLoadingMessage,
-//                                            secondaryIds,
-//                                            fetchedTimer,
-//                                            object: NativeInternalCallback{
-//                                                override fun onSuccess(nativeAd: NativeAd?) {
-//                                                    Log.d("native", "onSuccess: First Secondary Shown" + System.currentTimeMillis()/1000)
-//                                                    nativeAdLoadCallback?.onAdLoaded()
-//                                                    if (nativeAd != null) {
-//                                                            nativeAd?.let {
-//                                                                try {
-//                                                                    populateUnifiedNativeAdView(
-//                                                                        viewGroup,
-//                                                                        populator,
-//                                                                        application,
-//                                                                        background = background,
-//                                                                        adName = adName,
-//                                                                        nativeAd = it,
-//                                                                        adType = adType,
-//                                                                        textColor1 = textColor1,
-//                                                                        textColor2 = textColor2,
-//                                                                        buttonColor = application.fetchColor(adName),
-//                                                                        mediaMaxHeight = mediaMaxHeight
-//                                                                    )
-//                                                                 }
-//                                                                catch (e:Exception){
-//
-//                                                                }
-//                                                            }
-//                                                        refreshNative(adName)
-//                                                    }
-//                                                }
-//
-//                                                override fun onFailure(loadAdError: LoadAdError?) {
-//                                                    loadNativeAd(
-//                                                        application,
-//                                                        id,
-//                                                        lifecycle,
-//                                                        adName,
-//                                                        viewGroup,
-//                                                        nativeAdLoadCallback,
-//                                                        layoutId,
-//                                                        populator,
-//                                                        adType,
-//                                                        background,
-//                                                        textColor1,
-//                                                        textColor2,
-//                                                        mediaMaxHeight,
-//                                                        loadingTextSize,
-//                                                        contentURL,
-//                                                        neighbourContentURL,
-//                                                        showLoadingMessage,
-//                                                        listOf(adUnit),
-//                                                        fetchedTimer,
-//                                                        object: NativeInternalCallback{
-//                                                            override fun onSuccess(nativeAd: NativeAd?) {
-//                                                                Log.d("native", "onSuccess: First Fallback Shown" + System.currentTimeMillis()/1000)
-//                                                                nativeAdLoadCallback?.onAdLoaded()
-//                                                                if (nativeAd != null) {
-//                                                                        nativeAd?.let {
-//                                                                            try {
-//                                                                            populateUnifiedNativeAdView(
-//                                                                                viewGroup,
-//                                                                                populator,
-//                                                                                application,
-//                                                                                background = background,
-//                                                                                adName = adName,
-//                                                                                nativeAd = it,
-//                                                                                adType = adType,
-//                                                                                textColor1 = textColor1,
-//                                                                                textColor2 = textColor2,
-//                                                                                buttonColor = application.fetchColor(adName),
-//                                                                                mediaMaxHeight = mediaMaxHeight
-//                                                                            )
-//                                                                        }
-//                                                                            catch (e:Exception){
-//
-//                                                                            }
-//                                                                        }
-//                                                                    refreshNative(adName)
-//                                                                }
-//                                                            }
-//
-//                                                            override fun onFailure(loadAdError: LoadAdError?) {
-//                                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
-//                                                            }
-//
-//                                                        },
-//                                                        isAdmanager = isAdmanager,
-//                                                    )
-//                                                }
-//
-//                                            },
-//                                            isAdmanager = isAdmanager,
-//                                        )
-//                                    }
-//                                    else{
-//                                        loadNativeAd(
-//                                            application,
-//                                            id,
-//                                            lifecycle,
-//                                            adName,
-//                                            viewGroup,
-//                                            nativeAdLoadCallback,
-//                                            layoutId,
-//                                            populator,
-//                                            adType,
-//                                            background,
-//                                            textColor1,
-//                                            textColor2,
-//                                            mediaMaxHeight,
-//                                            loadingTextSize,
-//                                            contentURL,
-//                                            neighbourContentURL,
-//                                            showLoadingMessage,
-//                                            listOf(adUnit),
-//                                            fetchedTimer,
-//                                            object: NativeInternalCallback{
-//                                                override fun onSuccess(nativeAd: NativeAd?) {
-//                                                    Log.d("native", "onSuccess: First else Fallback Shown" + System.currentTimeMillis()/1000)
-//                                                    nativeAdLoadCallback?.onAdLoaded()
-//                                                    if (nativeAd != null) {
-//                                                            nativeAd?.let {
-//                                                                try {
-//                                                                populateUnifiedNativeAdView(
-//                                                                viewGroup,
-//                                                                populator,
-//                                                                    application,
-//                                                                    background = background,
-//                                                                    adName = adName,
-//                                                                    nativeAd = it,
-//                                                                    adType = adType,
-//                                                                    textColor1 = textColor1,
-//                                                                    textColor2 = textColor2,
-//                                                                    buttonColor = application.fetchColor(adName),
-//                                                                    mediaMaxHeight = mediaMaxHeight
-//                                                                )
-//                                                            }
-//                                                                catch (e:Exception){
-//
-//                                                                }
-//                                                            }
-//                                                        refreshNative(adName)
-//                                                    }
-//                                                }
-//
-//                                                override fun onFailure(loadAdError: LoadAdError?) {
-//                                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
-//                                                }
-//
-//                                            },
-//                                            isAdmanager = isAdmanager,
-//                                        )
-//                                    }
-//                                }
-//
-//                            },
-//                            isAdmanager = isAdmanager,
-//                        )
-//                    }
-//                    else if (secondaryIds.size >0){
-//                        loadNativeAd(
-//                            application,
-//                            id,
-//                            lifecycle,
-//                            adName,
-//                            viewGroup,
-//                            nativeAdLoadCallback,
-//                            layoutId,
-//                            populator,
-//                            adType,
-//                            background,
-//                            textColor1,
-//                            textColor2,
-//                            mediaMaxHeight,
-//                            loadingTextSize,
-//                            contentURL,
-//                            neighbourContentURL,
-//                            showLoadingMessage,
-//                            secondaryIds,
-//                            fetchedTimer,
-//                            object: NativeInternalCallback{
-//                                override fun onSuccess(nativeAd: NativeAd?) {
-//                                    Log.d("native", "onSuccess: Second Secondary Shown" + System.currentTimeMillis()/1000)
-//                                    nativeAdLoadCallback?.onAdLoaded()
-//                                    if (nativeAd != null) {
-//                                            nativeAd?.let {
-//                                                try {
-//                                                populateUnifiedNativeAdView(
-//                                                viewGroup,
-//                                                populator,
-//                                                    application,
-//                                                    background = background,
-//                                                    adName = adName,
-//                                                    nativeAd = it,
-//                                                    adType = adType,
-//                                                    textColor1 = textColor1,
-//                                                    textColor2 = textColor2,
-//                                                    buttonColor = application.fetchColor(adName),
-//                                                    mediaMaxHeight = mediaMaxHeight
-//                                                )
-//                                            }
-//                                                catch (e:Exception){
-//
-//                                                }
-//                                            }
-//                                        refreshNative(adName)
-//                                    }
-//                                }
-//
-//                                override fun onFailure(loadAdError: LoadAdError?) {
-//                                    loadNativeAd(
-//                                        application,
-//                                        id,
-//                                        lifecycle,
-//                                        adName,
-//                                        viewGroup,
-//                                        nativeAdLoadCallback,
-//                                        layoutId,
-//                                        populator,
-//                                        adType,
-//                                        background,
-//                                        textColor1,
-//                                        textColor2,
-//                                        mediaMaxHeight,
-//                                        loadingTextSize,
-//                                        contentURL,
-//                                        neighbourContentURL,
-//                                        showLoadingMessage,
-//                                        listOf(adUnit),
-//                                        fetchedTimer,
-//                                        object: NativeInternalCallback{
-//                                            override fun onSuccess(nativeAd: NativeAd?) {
-//                                                Log.d("native", "onSuccess: Second Fallback Shown" + System.currentTimeMillis()/1000)
-//                                                nativeAdLoadCallback?.onAdLoaded()
-//                                                if (nativeAd != null) {
-//                                                        nativeAd?.let {
-//                                                            try {
-//                                                            populateUnifiedNativeAdView(
-//                                                            viewGroup,
-//                                                                populator,
-//                                                                application,
-//                                                                background = background,
-//                                                                adName = adName,
-//                                                                nativeAd = it,
-//                                                                adType = adType,
-//                                                                textColor1 = textColor1,
-//                                                                textColor2 = textColor2,
-//                                                                buttonColor = application.fetchColor(adName),
-//                                                                mediaMaxHeight = mediaMaxHeight
-//                                                            )
-//                                                        }
-//                                                            catch (e:Exception){
-//
-//                                                            }
-//                                                        }
-//                                                    refreshNative(adName)
-//                                                }
-//                                            }
-//
-//                                            override fun onFailure(loadAdError: LoadAdError?) {
-//                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
-//                                            }
-//
-//                                        },
-//                                        isAdmanager = isAdmanager,
-//                                    )
-//                                }
-//
-//                            },
-//                            isAdmanager = isAdmanager,
-//                        )
-//                    }
-//                    else{
-//                        loadNativeAd(
-//                            application,
-//                            id,
-//                            lifecycle,
-//                            adName,
-//                            viewGroup,
-//                            nativeAdLoadCallback,
-//                            layoutId,
-//                            populator,
-//                            adType,
-//                            background,
-//                            textColor1,
-//                            textColor2,
-//                            mediaMaxHeight,
-//                            loadingTextSize,
-//                            contentURL,
-//                            neighbourContentURL,
-//                            showLoadingMessage,
-//                            listOf(adUnit),
-//                            fetchedTimer,
-//                            object: NativeInternalCallback{
-//                                override fun onSuccess(nativeAd: NativeAd?) {
-//                                    Log.d("native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
-//                                    nativeAdLoadCallback?.onAdLoaded()
-//                                    if (nativeAd != null) {
-//                                            nativeAd?.let {
-//                                                try {
-//                                                populateUnifiedNativeAdView(
-//                                                viewGroup,
-//                                                populator,
-//                                                    application,
-//                                                    background = background,
-//                                                    adName = adName,
-//                                                    nativeAd = it,
-//                                                    adType = adType,
-//                                                    textColor1 = textColor1,
-//                                                    textColor2 = textColor2,
-//                                                    buttonColor = application.fetchColor(adName),
-//                                                    mediaMaxHeight = mediaMaxHeight
-//                                                )
-//                                            }
-//                                                catch (e:Exception){
-//
-//                                                }
-//                                            }
-//                                        refreshNative(adName)
-//                                    }
-//                                }
-//
-//                                override fun onFailure(loadAdError: LoadAdError?) {
-//                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
-//                                }
-//
-//                            },
-//                            isAdmanager = isAdmanager,
-//                        )
-//                    }
+                                                            }
+                                                        }
+                                                    refreshNative(adName)
+                                                }
+                                            }
+
+                                            override fun onFailure(loadAdError: LoadAdError?) {
+                                                nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                            }
+
+                                        },
+                                        isAdmanager = isAdmanager,
+                                    )
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
+                    else{
+                        loadNativeAd(
+                            application,
+                            id,
+                            lifecycle,
+                            adName,
+                            viewGroup,
+                            nativeAdLoadCallback,
+                            layoutId,
+                            populator,
+                            adType,
+                            background,
+                            textColor1,
+                            textColor2,
+                            mediaMaxHeight,
+                            loadingTextSize,
+                            contentURL,
+                            neighbourContentURL,
+                            showLoadingMessage,
+                            listOf(adUnit),
+                            fetchedTimer,
+                            object: NativeInternalCallback{
+                                override fun onSuccess(nativeAd: NativeAd?) {
+                                    Log.d("native", "onSuccess: else Fallback Shown" + System.currentTimeMillis()/1000)
+                                    nativeAdLoadCallback?.onAdLoaded()
+                                    if (nativeAd != null) {
+                                            nativeAd?.let {
+                                                try {
+                                                populateUnifiedNativeAdView(
+                                                viewGroup,
+                                                populator,
+                                                    application,
+                                                    background = background,
+                                                    adName = adName,
+                                                    nativeAd = it,
+                                                    adType = adType,
+                                                    textColor1 = textColor1,
+                                                    textColor2 = textColor2,
+                                                    buttonColor = application.fetchColor(adName),
+                                                    mediaMaxHeight = mediaMaxHeight
+                                                )
+                                            }
+                                                catch (e:Exception){
+
+                                                }
+                                            }
+                                        refreshNative(adName)
+                                    }
+                                }
+
+                                override fun onFailure(loadAdError: LoadAdError?) {
+                                    nativeAdLoadCallback?.onAdFailed(loadAdError)
+                                }
+
+                            },
+                            isAdmanager = isAdmanager,
+                        )
+                    }
                 }
                 else {
                     if (primaryIds.size > 0){
@@ -4444,6 +4397,10 @@ object AdSdk {
                         "7" -> {
                             inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
                         }
+                        //                    DYNAMIC
+                        "8" -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                        }
                         /*GRID_AD*/
                         else -> {
                             inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
@@ -4740,6 +4697,10 @@ object AdSdk {
                         "7" -> {
                             inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
                         }
+                        //                    DYNAMIC
+                        "8" -> {
+                            inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
+                        }
                         /*GRID_AD*/
                         else -> {
                             inflate.findViewById<LinearLayout>(R.id.shim_default).visibility = View.VISIBLE
@@ -4936,6 +4897,10 @@ object AdSdk {
                 /*BIGV3*/
                 "7" -> {
                     inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                }
+                //                    DYNAMIC
+                "8" -> {
+                    inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
                 }
                 /*GRID_AD*/
                 else -> {
@@ -5864,19 +5829,19 @@ object AdSdk {
             if (adUnit != "STOP" && AppPref.getBoolean(context,AppPref.showAppAds) && context.fetchAdStatusFromAdId(adName)) {
                 var mediaMaxHeight1 = mediaMaxHeight
                 var newAdSize = context.fetchAdSize(adName,adType)
-                @LayoutRes val layoutId = when (newAdSize) {
-                    "6" -> {
-                        mediaMaxHeight1 = 200
-                        R.layout.native_admob_ad_t6
-                    }/*DEFAULT_AD*/
-                    "3" -> R.layout.native_admob_ad_t3/*SMALL*/
-                    "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
-                    "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
-                    "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
-                    "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
-                    "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
-                    else -> R.layout.native_admob_ad_t1
-                }
+//                @LayoutRes val layoutId = when (newAdSize) {
+//                    "6" -> {
+//                        mediaMaxHeight1 = 200
+//                        R.layout.native_admob_ad_t6
+//                    }/*DEFAULT_AD*/
+//                    "3" -> R.layout.native_admob_ad_t3/*SMALL*/
+//                    "4" -> R.layout.native_admob_ad_t4/*MEDIUM*/
+//                    "1" -> R.layout.native_admob_ad_t1/*BIGV1*/
+//                    "5" -> R.layout.native_admob_ad_t5/*BIGV2*/
+//                    "2" -> R.layout.native_admob_ad_t2/*BIGV3*/
+//                    "7" -> R.layout.native_admob_ad_t7/*GRID_AD*/
+//                    else -> R.layout.native_admob_ad_t1
+//                }
                 if (adUnit.isBlank()) return
 
                 var fetchedTimer:Int = context.fetchAdLoadTimeout(adName)
@@ -5916,6 +5881,10 @@ object AdSdk {
                     /*BIGV3*/
                     "7" -> {
                         inflate.findViewById<LinearLayout>(R.id.shim_gridad).visibility = View.VISIBLE
+                    }
+                    //                    DYNAMIC
+                    "8" -> {
+                        inflate.findViewById<LinearLayout>(R.id.shim_bigv1).visibility = View.VISIBLE
                     }
                     /*GRID_AD*/
                     else -> {
@@ -6291,7 +6260,7 @@ object AdSdk {
                     layoutIdNew = R.layout.native_admob_dynamic8_side1x1
                 }
                 else if (aspectRatio > 1.toFloat() && aspectRatio <= 1.5.toFloat()){
-                    layoutIdNew = R.layout.native_admob_dynamic8_center16x9
+                    layoutIdNew = R.layout.native_admob_dynamic8_side1x1
                 }
 
                 else if (aspectRatio > 1.5.toFloat()){
@@ -6322,7 +6291,7 @@ object AdSdk {
     ) {
 
         var mediaMaxHeight1 = mediaMaxHeight
-        var newAdSize = adType
+        var newAdSize = application.fetchAdSize(adName,adType)
         @LayoutRes val layoutId = when (newAdSize) {
             "6" -> {
                 mediaMaxHeight1 = 200
@@ -6420,6 +6389,12 @@ object AdSdk {
 
     }
 
+    internal fun dpToPx(dp: Int,context: Context): Int {
+        val density: Float = context.resources
+            .getDisplayMetrics().density
+        return Math.round(dp.toFloat() * density)
+    }
+
     internal fun populateUnifiedNative(
       adName: String,
       nativeAd: NativeAd,
@@ -6471,10 +6446,20 @@ object AdSdk {
                         layoutParams1.height = mediaMaxHeight
                         child.layoutParams = layoutParams1
                     } else { //Videos
-                        if (layoutId == R.layout.native_admob_dynamic8_sidelarge || layoutId == R.layout.native_admob_dynamic8_side1x1){
+                        if (layoutId == R.layout.native_admob_dynamic8_sidelarge){
                             val params = child.layoutParams
-                            params.width = MATCH_PARENT
-                            params.height = MATCH_PARENT
+                            params.height =
+                                dpToPx((nativeAd?.mediaContent?.aspectRatio?.let {
+                                    160.div(it)
+                                })?.toInt()
+                                    ?: 285,adView.context)
+                            child.layoutParams = params
+                        }
+                        else if (layoutId == R.layout.native_admob_dynamic8_side1x1){
+                            val params = child.layoutParams
+                            params.width =
+                                dpToPx((nativeAd?.mediaContent?.aspectRatio?.times(180))?.toInt()
+                                    ?: 200,adView.context)
                             child.layoutParams = params
                         }
                         else {
@@ -6543,14 +6528,19 @@ object AdSdk {
 
         val adStore = adView.findViewById<TextView>(R.id.ad_store)
         adView.storeView = adStore
-        if (nativeAd.store != null && adType == "4") {
-            adView.storeView?.visibility = VISIBLE
-            val textView1 = adView.storeView as TextView
-            textView1.text = nativeAd.store
-            if (textColor2 != null) {
-                textView1.setTextColor(textColor2)
+        try {
+            if (nativeAd.store != null && adType == "4") {
+                adView.storeView?.visibility = VISIBLE
+                val textView1 = adView.storeView as TextView
+                textView1.text = nativeAd.store
+                if (textColor2 != null) {
+                    textView1.setTextColor(textColor2)
+                }
+            } else {
+                adView.storeView?.visibility = View.GONE
             }
-        } else {
+        }
+        catch (e:Exception){
             adView.storeView?.visibility = View.GONE
         }
 

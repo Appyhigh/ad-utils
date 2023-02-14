@@ -22,18 +22,96 @@ class NewNative : AppCompatActivity() {
         val adUnit2 =
             "ca-app-pub-3940256099942544/2247696110"
         val adUnit3 =
-            "ca-app-pub-3940256099942544/2247696110"
+            "ca-app-pub-3940256099942544/1044960115"
 
         AdSdk.loadNativeAd(
             this@NewNative,
             lifecycle = lifecycle,
-            adUnit = "ca-app-pub-3940256099942544/1044960115",
-            adName = "util_native_default",
+            adUnit = adUnit3,
+            adName = "util_native_preload2",
             viewGroup = binding.llRoot,
             adType = AdSdk.ADType.DYNAMIC,
             callback = nativeAdLoadCallback("3"),
             background = null, textColor1 = null, textColor2 = null,
             loadTimeOut = 20000
+        )
+
+        AdSdk.loadNativeAd(
+            this@NewNative,
+            lifecycle = lifecycle,
+            adUnit = adUnit3,
+            adName = "util_native_preload2",
+            viewGroup = binding.llRoot1,
+            adType = AdSdk.ADType.DYNAMIC,
+            callback = nativeAdLoadCallback("3"),
+            background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 20000
+        )
+
+        AdSdk.loadNativeAd(
+            this@NewNative,
+            lifecycle = lifecycle,
+            adUnit = adUnit3,
+            adName = "util_native_preload2",
+            viewGroup = binding.llRoot2,
+            adType = AdSdk.ADType.DYNAMIC,
+            callback = nativeAdLoadCallback("3"),
+            background = null, textColor1 = null, textColor2 = null,
+            loadTimeOut = 20000
+        )
+
+//        AdSdk.loadNativeAd(
+//            this@NewNative,
+//            lifecycle = lifecycle,
+//            adUnit = adUnit3,
+//            adName = "util_native_default",
+//            viewGroup = binding.llRoot3,
+//            adType = AdSdk.ADType.DYNAMIC,
+//            callback = nativeAdLoadCallback("3"),
+//            background = null, textColor1 = null, textColor2 = null,
+//            loadTimeOut = 20000
+//        )
+//
+//        AdSdk.loadNativeAd(
+//            this@NewNative,
+//            lifecycle = lifecycle,
+//            adUnit = adUnit3,
+//            adName = "util_native_default",
+//            viewGroup = binding.llRoot4,
+//            adType = AdSdk.ADType.DYNAMIC,
+//            callback = nativeAdLoadCallback("3"),
+//            background = null, textColor1 = null, textColor2 = null,
+//            loadTimeOut = 20000
+//        )
+
+        AdSdk.loadNativeAdFromSrvs(
+            context = applicationContext,
+            lifecycle = lifecycle,
+            layoutInflater = layoutInflater,
+            adUnit = adUnit,
+            adName = "util_native_preload2",
+            viewGroup = binding.llRoot3,
+            adType = AdSdk.ADType.DYNAMIC,
+            background = null, textColor1 = null, textColor2 = null,
+            nativeAdLoadCallback = null,
+            preloadAds = true,
+            autoRefresh = true,
+            loadTimeOut = 4000
+        )
+
+        AdSdk.loadNativeAdFromSrvs(
+            context = applicationContext,
+            lifecycle = lifecycle,
+            layoutInflater = layoutInflater,
+            adUnit = adUnit,
+            adName = "util_native_preload2",
+            viewGroup = binding.llRoot4,
+            adType = AdSdk.ADType.DYNAMIC,
+            background = null, textColor1 = null, textColor2 = null,
+            nativeAdLoadCallback = null,
+            preloadAds = true,
+            autoRefresh = true,
+            loadTimeOut = 4000
         )
     }
 

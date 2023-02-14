@@ -42,6 +42,15 @@ class SplashActivity : AppCompatActivity() {
                 loadTimeOut = 4000
             )
         )
+        preloadingNativeAdList.put(
+            "util_native_preload2",
+            PreloadNativeAds(
+                "ca-app-pub-3940256099942544/1044960115",
+                "util_native_preload2",
+                AdSdk.ADType.DYNAMIC,
+                loadTimeOut = 4000
+            )
+        )
 
         AdSdk.initialize(
             app = applicationContext as MyApp,
@@ -52,9 +61,6 @@ class SplashActivity : AppCompatActivity() {
             preloadingNativeAdList = preloadingNativeAdList,
             fetchingCallback = object : AdSdk.FetchingCallback {
                 override fun OnComplete(app: AppsData?) {
-                }
-                override fun OnInitialized() {
-                    applicationContext.printData()
                     AdSdk.loadAppOpenAd(
                         this@SplashActivity,
                         "ca-app-pub-3940256099942544/3419835294",
@@ -99,6 +105,10 @@ class SplashActivity : AppCompatActivity() {
                         }, 6000
                     )
                 }
+                override fun OnInitialized() {
+                    applicationContext.printData()
+
+                }
             },
             versionControlCallback = object : VersionControlCallback {
                 override fun OnSoftUpdate() {
@@ -106,7 +116,8 @@ class SplashActivity : AppCompatActivity() {
 
                 override fun OnHardUpdate() {
                 }
-            }
+            },
+            isTestingMode = true
         )
     }
 }

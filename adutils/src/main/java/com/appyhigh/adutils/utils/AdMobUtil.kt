@@ -7,6 +7,7 @@ import com.appyhigh.adutils.AdSdk
 import com.appyhigh.adutils.models.apimodels.AdMod
 import com.appyhigh.adutils.models.apimodels.AppsData
 import com.appyhigh.adutils.models.apimodels.SingleAppResponse
+import com.appyhigh.adutils.utils.AdMobUtil.fetchAdLoadTimeout
 import com.appyhigh.adutils.utils.AdMobUtil.fetchAllAds
 import com.appyhigh.adutils.utils.AdMobUtil.fetchColor
 import com.appyhigh.adutils.utils.AdMobUtil.fetchCriticalVersion
@@ -281,6 +282,7 @@ object AdMobUtil {
                         ad?.size?.trim().equals("bigv2",ignoreCase = true) -> AdSdk.ADType.BIGV2
                         ad?.size?.trim().equals("bigv3",ignoreCase = true) -> AdSdk.ADType.BIGV3
                         ad?.size?.trim().equals("grid_ad",ignoreCase = true) -> AdSdk.ADType.GRID_AD
+                        ad?.size?.trim().equals("dynamic",ignoreCase = true) -> AdSdk.ADType.DYNAMIC
                         else -> AdSdk.ADType.DEFAULT_AD
                     }
                 else
@@ -290,6 +292,31 @@ object AdMobUtil {
         }
         catch (e:Exception){
             return adSize
+        }
+    }
+
+    fun Context.fetchBackgroundTime(name:String,defaultTime:Int):Int{
+        try {
+            var ads = AppPref.getString(this,AppPref.ads)
+            if (!ads.equals("")){
+                try {
+                    val type: Type = object : TypeToken<List<AdMod?>?>() {}.type
+                    var adsObj:List<AdMod> = Gson().fromJson(ads,type)
+                    var value = adsObj.filter { ad -> ad.ad_name.equals(name)}.get(0).background_threshold!!
+                    if (value == 0){
+                        return defaultTime
+                    }
+                    else
+                        return value
+                }
+                catch (e:Exception){
+                    return defaultTime
+                }
+            }
+            return defaultTime
+        }
+        catch (e:Exception){
+            return defaultTime
         }
     }
 
