@@ -7469,12 +7469,16 @@ object AdSdk {
         val adStore = adView.findViewById<TextView>(R.id.ad_store)
         adView.storeView = adStore
         if (nativeAd.store != null && adType == "4") {
-            adView.storeView?.visibility = VISIBLE
-            val textView1 = adView.storeView as TextView
-            textView1.text = nativeAd.store
-            if (textColor2 != null) {
-                textView1.setTextColor(textColor2)
-            }
+           try {
+               adView.storeView?.visibility = VISIBLE
+               val textView1 = adView.storeView as TextView
+               textView1.text = nativeAd.store
+               if (textColor2 != null) {
+                   textView1.setTextColor(textColor2)
+               }
+           }catch (e:java.lang.Exception){
+               adView.storeView?.visibility = View.GONE
+           }
         } else {
             adView.storeView?.visibility = View.GONE
         }
