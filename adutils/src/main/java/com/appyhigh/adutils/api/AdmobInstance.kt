@@ -16,7 +16,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object AdmobInstance {
     val API = "https://admob-automation.apyhi.com/"
-    val TEST_API = "https://admob-automation-qa.apyhi.com/"
+    val TEST_API = "https://nine-oranges-clean-122-175-71-157.loca.lt/"
 
     fun ApiBuilder(activity: Context): AdmobApi{
         val token = DynamicsAds.fetchToken(activity)
@@ -39,7 +39,7 @@ object AdmobInstance {
         clientBuilder.addInterceptor(interceptor)
 
         val retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(API)
+            .baseUrl(TEST_API)
             .client(clientBuilder.build())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(GsonConverterFactory.create())
